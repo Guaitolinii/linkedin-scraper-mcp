@@ -14,24 +14,24 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PACKAGE_DIR = ROOT / "linkedin_mcp_server" / "linkedin"
+PACKAGE_DIR = ROOT / "linkedin_scraper_mcp" / "linkedin"
 OUTPUT = ROOT / "docs" / "linkedin-architecture.md"
-PACKAGE = "linkedin_mcp_server.linkedin"
+PACKAGE = "linkedin_scraper_mcp.linkedin"
 FORBIDDEN_LAYER_MODULES = frozenset(
-    {"linkedin_mcp_server.core", "linkedin_mcp_server.core.browser"}
+    {"linkedin_scraper_mcp.core", "linkedin_scraper_mcp.core.browser"}
 )
 FORBIDDEN_LAYER_PREFIXES = (
-    "linkedin_mcp_server.browser_",
-    "linkedin_mcp_server.core.browser.",
-    "linkedin_mcp_server.daemon",
-    "linkedin_mcp_server.drivers",
-    "linkedin_mcp_server.hidden_target",
-    "linkedin_mcp_server.private_state",
-    "linkedin_mcp_server.process_",
-    "linkedin_mcp_server.profile_claim",
-    "linkedin_mcp_server.profile_lease",
-    "linkedin_mcp_server.server_role",
-    "linkedin_mcp_server.session_state",
+    "linkedin_scraper_mcp.browser_",
+    "linkedin_scraper_mcp.core.browser.",
+    "linkedin_scraper_mcp.daemon",
+    "linkedin_scraper_mcp.drivers",
+    "linkedin_scraper_mcp.hidden_target",
+    "linkedin_scraper_mcp.private_state",
+    "linkedin_scraper_mcp.process_",
+    "linkedin_scraper_mcp.profile_claim",
+    "linkedin_scraper_mcp.profile_lease",
+    "linkedin_scraper_mcp.server_role",
+    "linkedin_scraper_mcp.session_state",
 )
 
 
@@ -70,9 +70,9 @@ def _resolve_import(
 
 
 def _known_package_modules(package_dir: Path) -> frozenset[str]:
-    package_root = ROOT / "linkedin_mcp_server"
+    package_root = ROOT / "linkedin_scraper_mcp"
     paths = {*package_root.rglob("*.py"), *package_dir.rglob("*.py")}
-    modules = {"linkedin_mcp_server", PACKAGE}
+    modules = {"linkedin_scraper_mcp", PACKAGE}
     for path in paths:
         if path.is_relative_to(package_dir):
             relative = path.relative_to(package_dir).with_suffix("")
@@ -81,7 +81,7 @@ def _known_package_modules(package_dir: Path) -> frozenset[str]:
         else:
             relative = path.relative_to(package_root).with_suffix("")
             parts = relative.parts
-            prefix = "linkedin_mcp_server"
+            prefix = "linkedin_scraper_mcp"
         if parts[-1] == "__init__":
             parts = parts[:-1]
         for length in range(1, len(parts) + 1):
@@ -683,7 +683,7 @@ def inspect_modules(package_dir: Path = PACKAGE_DIR) -> tuple[ModuleInfo, ...]:
         modules.append(
             ModuleInfo(
                 name=module,
-                path=(Path("linkedin_mcp_server/linkedin") / relative_path).as_posix(),
+                path=(Path("linkedin_scraper_mcp/linkedin") / relative_path).as_posix(),
                 imports=_imports(
                     module,
                     tree,

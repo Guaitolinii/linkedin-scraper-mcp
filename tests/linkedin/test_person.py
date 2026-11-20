@@ -3,43 +3,38 @@
 from __future__ import annotations
 
 from contextlib import ExitStack, contextmanager
-from dataclasses import replace
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import importlib.util
 
 import pytest
 
-from linkedin_mcp_server.callbacks import ProgressCallback
-from linkedin_mcp_server.core.exceptions import (
-    AuthenticationError,
+from linkedin_scraper_mcp.callbacks import ProgressCallback
+from linkedin_scraper_mcp.core.exceptions import (
     InvalidReferenceError,
     LinkedInOperationError,
-    ProxyConnectionError,
 )
-from linkedin_mcp_server.linkedin import person as person_module
-from linkedin_mcp_server.linkedin import text as text_module
-from linkedin_mcp_server.linkedin.capture import CaptureMode, SectionCapture
-from linkedin_mcp_server.linkedin.content import PageContentReader
-from linkedin_mcp_server.linkedin.contracts import (
+from linkedin_scraper_mcp.linkedin import person as person_module
+from linkedin_scraper_mcp.linkedin.capture import CaptureMode, SectionCapture
+from linkedin_scraper_mcp.linkedin.content import PageContentReader
+from linkedin_scraper_mcp.linkedin.contracts import (
     RATE_LIMITED_SECTION_TEXT,
     ExtractedSection,
 )
-from linkedin_mcp_server.linkedin.link_metadata import Reference
-from linkedin_mcp_server.linkedin.navigation import PageNavigator
-from linkedin_mcp_server.linkedin.person import PersonReader
-from linkedin_mcp_server.linkedin.profile_page import ProfilePageReader
-from linkedin_mcp_server.linkedin.session import PageSession
+from linkedin_scraper_mcp.linkedin.link_metadata import Reference
+from linkedin_scraper_mcp.linkedin.navigation import PageNavigator
+from linkedin_scraper_mcp.linkedin.person import PersonReader
+from linkedin_scraper_mcp.linkedin.profile_page import ProfilePageReader
+from linkedin_scraper_mcp.linkedin.session import PageSession
 
 
 def _reader(page, *, message_target: Any = None) -> PersonReader:
     """Wire the person owner the way the facade does.
 
-    The top-card read the profile URN comes from belongs to the facade until
-    the message sender owns it, so the default here is what a page with no
-    resolvable action answers: no target, and therefore no URN.
+    The profile URN comes from the profile URN reader, so the default here is
+    what a page with no resolvable top-card action answers: no target, and
+    therefore no URN.
     """
     session = PageSession(page)
     navigator = PageNavigator(session)
@@ -85,7 +80,7 @@ class TestReadPersonUrls:
                 return_value=extracted(""),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -112,7 +107,7 @@ class TestReadPersonUrls:
                 return_value=extracted(""),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -147,7 +142,7 @@ class TestReadPersonUrls:
                 return_value=extracted(""),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -193,7 +188,7 @@ class TestReadPersonUrls:
                 return_value=extracted(""),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -219,7 +214,7 @@ class TestReadPersonUrls:
                 ],
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -246,7 +241,7 @@ class TestReadPersonUrls:
                 return_value=extracted(""),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -291,7 +286,7 @@ class TestReadPersonUrls:
                 return_value=extracted("contact text"),
             ) as mock_overlay,
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -339,7 +334,7 @@ class TestReadPersonUrls:
                 return_value=extracted(""),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -365,7 +360,7 @@ class TestReadPersonUrls:
                 return_value=extracted(""),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -391,7 +386,7 @@ class TestReadPersonUrls:
                 return_value=extracted(""),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -417,7 +412,7 @@ class TestReadPersonUrls:
                 return_value=extracted(""),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -443,7 +438,7 @@ class TestReadPersonUrls:
                 return_value=extracted(""),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -469,7 +464,7 @@ class TestReadPersonUrls:
                 return_value=extracted(""),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -518,7 +513,7 @@ class TestReadPersonUrls:
                 side_effect=record_overlay,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -714,7 +709,7 @@ class TestReadPersonSectionOutcomes:
                 return_value=extracted(""),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -745,7 +740,7 @@ class TestReadPersonSectionOutcomes:
                 side_effect=extract_with_failure,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.person.build_issue_diagnostics",
+                "linkedin_scraper_mcp.linkedin.person.build_issue_diagnostics",
                 return_value={"issue_template_path": "/tmp/issue.md"},
             ),
             patch.object(
@@ -755,7 +750,7 @@ class TestReadPersonSectionOutcomes:
                 return_value=extracted(""),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -800,7 +795,7 @@ class TestReadPersonSectionOutcomes:
                 return_value=extracted(""),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -835,7 +830,7 @@ class TestReadPersonSectionOutcomes:
                 side_effect=RuntimeError("execution context destroyed"),
             ) as mock_urn,
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -864,7 +859,7 @@ class TestReadPersonSectionOutcomes:
                 return_value=extracted(""),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -956,24 +951,24 @@ class TestMissingContactOverlay:
             patch.object(reader._navigator, "_navigate_to_page", side_effect=navigate),
             patch.object(PageSession, "delay", side_effect=delay),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.capture.build_issue_diagnostics",
+                "linkedin_scraper_mcp.linkedin.capture.build_issue_diagnostics",
                 side_effect=diagnostic_failure,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.person.build_issue_diagnostics",
+                "linkedin_scraper_mcp.linkedin.person.build_issue_diagnostics",
                 side_effect=diagnostic_failure,
             ),
         )
@@ -1110,7 +1105,7 @@ class TestReadPersonCallbacks:
                 return_value=extracted("overlay text"),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1147,7 +1142,7 @@ class TestReadPersonCallbacks:
                 return_value=extracted("text"),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1171,7 +1166,7 @@ class TestReadPersonCallbacks:
                 side_effect=LinkedInOperationError("boom"),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1226,7 +1221,7 @@ class TestMainProfileAlreadyLoaded:
                 PageNavigator, "_navigate_to_page", new_callable=AsyncMock
             ) as nav,
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1254,7 +1249,7 @@ class TestMainProfileAlreadyLoaded:
                 new_callable=AsyncMock,
             ) as loaded,
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1283,7 +1278,7 @@ class TestMainProfileAlreadyLoaded:
                 return_value=extracted("retry succeeded"),
             ) as extract_page,
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1315,7 +1310,7 @@ class TestReadPersonProfileUrn:
                 return_value=urn,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1340,7 +1335,7 @@ class TestReadPersonProfileUrn:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1369,7 +1364,7 @@ class TestGetMyProfileAlias:
             ) as mock_extract,
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1389,471 +1384,6 @@ class TestGetMyProfileAlias:
             with pytest.raises(InvalidReferenceError):
                 await reader.read_person("me", {"main_profile"})
         mock_extract.assert_not_called()
-
-
-class TestGetSidebarProfiles:
-    async def test_returns_sidebar_profiles_from_all_sections(self, mock_page):
-        """Happy path: extracts profiles from all sections, merges Show all results."""
-        sidebar_js_result = {
-            "sections": {
-                "more_profiles_for_you": ["/in/alice/", "/in/bob/"],
-                "explore_premium_profiles": ["/in/carol/"],
-                "people_you_may_know": ["/in/dave/"],
-            },
-            "showAllUrls": {
-                "more_profiles_for_you": "https://www.linkedin.com/search/results/people/?keywords=test",
-            },
-        }
-        show_all_js_result = ["/in/alice/", "/in/eve/", "/in/frank/"]
-
-        mock_page.evaluate = AsyncMock(
-            side_effect=[sidebar_js_result, show_all_js_result]
-        )
-        mock_page.url = "https://www.linkedin.com/in/testuser/"
-
-        reader = _reader(mock_page)
-        with (
-            patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
-            patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
-                new_callable=AsyncMock,
-            ),
-            patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
-                new_callable=AsyncMock,
-                return_value=False,
-            ),
-            patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
-                new_callable=AsyncMock,
-            ),
-        ):
-            result = await reader.get_sidebar_profiles("testuser")
-
-        assert result["url"] == "https://www.linkedin.com/in/testuser/"
-        mpfy = result["sidebar_profiles"]["more_profiles_for_you"]
-        # sidebar links first, then show_all expansion, deduped
-        assert mpfy == ["/in/alice/", "/in/bob/", "/in/eve/", "/in/frank/"]
-        assert result["sidebar_profiles"]["explore_premium_profiles"] == ["/in/carol/"]
-        assert result["sidebar_profiles"]["people_you_may_know"] == ["/in/dave/"]
-
-    async def test_two_show_all_navigations_have_one_gap_before_the_second(
-        self, mock_page
-    ):
-        first_url = "https://www.linkedin.com/search/results/people/?keywords=first"
-        second_url = "https://www.linkedin.com/search/results/people/?keywords=second"
-        sidebar_data = {
-            "sections": {"first": [], "second": []},
-            "showAllUrls": {"first": first_url, "second": second_url},
-        }
-        mock_page.evaluate = AsyncMock(
-            side_effect=[sidebar_data, ["/in/alice/"], ["/in/bob/"]]
-        )
-        events = []
-
-        async def navigate(url):
-            events.append(("navigate", url))
-            mock_page.url = url
-
-        async def delay(seconds):
-            events.append(("delay", seconds))
-
-        reader = _reader(mock_page)
-        with (
-            patch.object(reader._navigator, "_navigate_to_page", side_effect=navigate),
-            patch.object(PageSession, "delay", side_effect=delay),
-            patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
-                new_callable=AsyncMock,
-            ),
-            patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
-                new_callable=AsyncMock,
-                return_value=False,
-            ),
-        ):
-            await reader.get_sidebar_profiles("testuser")
-
-        assert events == [
-            ("navigate", "https://www.linkedin.com/in/testuser/"),
-            ("navigate", first_url),
-            ("delay", 2.0),
-            ("navigate", second_url),
-        ]
-
-    async def test_literal_premium_url_does_not_consume_first_attempt_slot(
-        self, mock_page
-    ):
-        useful_url = "https://www.linkedin.com/search/results/people/?keywords=useful"
-        sidebar_data = {
-            "sections": {"premium": ["/in/alice/"], "useful": []},
-            "showAllUrls": {
-                "premium": "https://www.linkedin.com/premium/products/",
-                "useful": useful_url,
-            },
-        }
-        mock_page.evaluate = AsyncMock(side_effect=[sidebar_data, ["/in/bob/"]])
-        events = []
-
-        async def navigate(url):
-            events.append(("navigate", url))
-            mock_page.url = url
-
-        async def delay(seconds):
-            events.append(("delay", seconds))
-
-        reader = _reader(mock_page)
-        with (
-            patch.object(reader._navigator, "_navigate_to_page", side_effect=navigate),
-            patch.object(PageSession, "delay", side_effect=delay),
-            patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
-                new_callable=AsyncMock,
-            ),
-            patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
-                new_callable=AsyncMock,
-                return_value=False,
-            ),
-        ):
-            await reader.get_sidebar_profiles("testuser")
-
-        assert events == [
-            ("navigate", "https://www.linkedin.com/in/testuser/"),
-            ("navigate", useful_url),
-        ]
-
-    @pytest.mark.parametrize("first_outcome", ["failure", "premium-redirect"])
-    async def test_unsuccessful_show_all_attempt_paces_the_next_one(
-        self, mock_page, first_outcome
-    ):
-        first_url = "https://www.linkedin.com/search/results/people/?keywords=first"
-        second_url = "https://www.linkedin.com/search/results/people/?keywords=second"
-        sidebar_data = {
-            "sections": {"first": ["/in/alice/"], "second": []},
-            "showAllUrls": {"first": first_url, "second": second_url},
-        }
-        mock_page.evaluate = AsyncMock(side_effect=[sidebar_data, ["/in/bob/"]])
-        events = []
-
-        async def navigate(url):
-            events.append(("navigate", url))
-            if url == first_url:
-                if first_outcome == "failure":
-                    raise RuntimeError("navigation failed")
-                mock_page.url = "https://www.linkedin.com/premium/products/"
-                return
-            mock_page.url = url
-
-        async def delay(seconds):
-            events.append(("delay", seconds))
-
-        reader = _reader(mock_page)
-        with (
-            patch.object(reader._navigator, "_navigate_to_page", side_effect=navigate),
-            patch.object(PageSession, "delay", side_effect=delay),
-            patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
-                new_callable=AsyncMock,
-            ),
-            patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
-                new_callable=AsyncMock,
-                return_value=False,
-            ),
-        ):
-            await reader.get_sidebar_profiles("testuser")
-
-        assert events == [
-            ("navigate", "https://www.linkedin.com/in/testuser/"),
-            ("navigate", first_url),
-            ("delay", 2.0),
-            ("navigate", second_url),
-        ]
-
-    @pytest.mark.parametrize(
-        ("error_type", "message"),
-        [
-            pytest.param(
-                AuthenticationError,
-                "Run with --login",
-                id="authentication-error",
-            ),
-            pytest.param(
-                ProxyConnectionError,
-                "Proxy unavailable",
-                id="proxy-connection-error",
-            ),
-        ],
-    )
-    async def test_operation_error_from_show_all_propagates(
-        self,
-        mock_page,
-        error_type: type[LinkedInOperationError],
-        message: str,
-    ):
-        sidebar_js_result = {
-            "sections": {"more_profiles_for_you": ["/in/alice/"]},
-            "showAllUrls": {
-                "more_profiles_for_you": "https://www.linkedin.com/search/results/people/?keywords=test"
-            },
-        }
-        mock_page.evaluate = AsyncMock(return_value=sidebar_js_result)
-        mock_page.url = "https://www.linkedin.com/in/testuser/"
-
-        reader = _reader(mock_page)
-        with (
-            patch.object(
-                PageNavigator,
-                "_navigate_to_page",
-                new_callable=AsyncMock,
-                side_effect=[None, error_type(message)],
-            ),
-            patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
-                new_callable=AsyncMock,
-            ),
-            patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
-                new_callable=AsyncMock,
-                return_value=False,
-            ),
-            pytest.raises(error_type, match=message),
-        ):
-            await reader.get_sidebar_profiles("testuser")
-
-    async def test_raw_exception_from_show_all_keeps_inline_profiles(self, mock_page):
-        show_all_url = "https://www.linkedin.com/search/results/people/?keywords=test"
-        sidebar_js_result = {
-            "sections": {"more_profiles_for_you": ["/in/alice/"]},
-            "showAllUrls": {"more_profiles_for_you": show_all_url},
-        }
-        mock_page.evaluate = AsyncMock(return_value=sidebar_js_result)
-        mock_page.url = "https://www.linkedin.com/in/testuser/"
-
-        reader = _reader(mock_page)
-        with (
-            patch.object(
-                PageNavigator,
-                "_navigate_to_page",
-                new_callable=AsyncMock,
-                side_effect=[None, RuntimeError("navigation failed")],
-            ),
-            patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
-                new_callable=AsyncMock,
-            ),
-            patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
-                new_callable=AsyncMock,
-                return_value=False,
-            ),
-            patch.object(person_module.logger, "debug") as debug_mock,
-        ):
-            result = await reader.get_sidebar_profiles("testuser")
-
-        assert result == {
-            "url": "https://www.linkedin.com/in/testuser/",
-            "sidebar_profiles": {"more_profiles_for_you": ["/in/alice/"]},
-        }
-        debug_mock.assert_called_once_with(
-            "Failed to navigate to Show all for section %s: %s",
-            "more_profiles_for_you",
-            show_all_url,
-        )
-
-    async def test_skips_show_all_when_url_contains_premium(self, mock_page):
-        """Show all URL containing /premium is skipped without navigation."""
-        sidebar_js_result = {
-            "sections": {"explore_premium_profiles": ["/in/carol/"]},
-            "showAllUrls": {
-                "explore_premium_profiles": "https://www.linkedin.com/premium/products/"
-            },
-        }
-        mock_page.evaluate = AsyncMock(return_value=sidebar_js_result)
-        mock_page.url = "https://www.linkedin.com/in/testuser/"
-
-        reader = _reader(mock_page)
-        navigate_mock = AsyncMock()
-        with (
-            patch.object(PageNavigator, "_navigate_to_page", navigate_mock),
-            patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
-                new_callable=AsyncMock,
-            ),
-            patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
-                new_callable=AsyncMock,
-                return_value=False,
-            ),
-        ):
-            result = await reader.get_sidebar_profiles("testuser")
-
-        navigate_mock.assert_awaited_once()  # only the initial profile navigation
-        mock_page.evaluate.assert_awaited_once()  # no show_all JS call
-        assert result["sidebar_profiles"]["explore_premium_profiles"] == ["/in/carol/"]
-
-    @pytest.mark.parametrize(
-        "show_all_url",
-        [
-            "https://evil.example/in/alice/",
-            "https://linkedin.com.evil.example/search/results/people/",
-            "http://www.linkedin.com/search/results/people/",
-            "javascript:alert(1)",
-        ],
-    )
-    async def test_skips_show_all_that_is_not_a_linkedin_url(
-        self, mock_page, show_all_url
-    ):
-        """A Show all href off LinkedIn is never navigated to."""
-        sidebar_js_result = {
-            "sections": {"more_profiles_for_you": ["/in/alice/"]},
-            "showAllUrls": {"more_profiles_for_you": show_all_url},
-        }
-        mock_page.evaluate = AsyncMock(return_value=sidebar_js_result)
-        mock_page.url = "https://www.linkedin.com/in/testuser/"
-
-        reader = _reader(mock_page)
-        navigate_mock = AsyncMock()
-        with (
-            patch.object(PageNavigator, "_navigate_to_page", navigate_mock),
-            patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
-                new_callable=AsyncMock,
-            ),
-            patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
-                new_callable=AsyncMock,
-                return_value=False,
-            ),
-        ):
-            result = await reader.get_sidebar_profiles("testuser")
-
-        navigate_mock.assert_awaited_once_with("https://www.linkedin.com/in/testuser/")
-        assert result["sidebar_profiles"]["more_profiles_for_you"] == ["/in/alice/"]
-
-    async def test_skips_show_all_when_page_redirects_to_premium(self, mock_page):
-        """If navigating to Show all lands on a /premium URL, skip that section."""
-        sidebar_js_result = {
-            "sections": {"more_profiles_for_you": ["/in/alice/"]},
-            "showAllUrls": {
-                "more_profiles_for_you": "https://www.linkedin.com/search/results/people/?keywords=test"
-            },
-        }
-        mock_page.evaluate = AsyncMock(return_value=sidebar_js_result)
-        mock_page.url = "https://www.linkedin.com/in/testuser/"
-
-        navigate_call_count = 0
-
-        async def fake_navigate(url: str) -> None:
-            nonlocal navigate_call_count
-            navigate_call_count += 1
-            if navigate_call_count >= 2:
-                mock_page.url = "https://www.linkedin.com/premium/grow-your-network/"
-
-        reader = _reader(mock_page)
-        with (
-            patch.object(PageNavigator, "_navigate_to_page", side_effect=fake_navigate),
-            patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
-                new_callable=AsyncMock,
-            ),
-            patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
-                new_callable=AsyncMock,
-                return_value=False,
-            ),
-            patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
-                new_callable=AsyncMock,
-            ),
-        ):
-            result = await reader.get_sidebar_profiles("testuser")
-
-        mock_page.evaluate.assert_awaited_once()  # sidebar JS only, no show_all expansion
-        assert result["sidebar_profiles"]["more_profiles_for_you"] == ["/in/alice/"]
-
-    async def test_returns_empty_sidebar_profiles_when_no_sections_found(
-        self, mock_page
-    ):
-        """No matching sidebar headings -> empty sidebar_profiles dict."""
-        mock_page.evaluate = AsyncMock(return_value={"sections": {}, "showAllUrls": {}})
-        mock_page.url = "https://www.linkedin.com/in/testuser/"
-
-        reader = _reader(mock_page)
-        with (
-            patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
-            patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
-                new_callable=AsyncMock,
-            ),
-            patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
-                new_callable=AsyncMock,
-                return_value=False,
-            ),
-        ):
-            result = await reader.get_sidebar_profiles("testuser")
-
-        assert result == {
-            "url": "https://www.linkedin.com/in/testuser/",
-            "sidebar_profiles": {},
-        }
-
-
-class TestSidebarProgramText:
-    """The program `get_sidebar_profiles` evaluates, as text."""
-
-    def test_every_substituted_heading_carries_the_template_indent(self):
-        # `",\n".join(...)` indents the first heading and nothing after it,
-        # because only the first one lands on the template's own indented
-        # line. Whitespace alone, and `program_digest` strips per-line
-        # whitespace before fingerprinting, so the traces hold the claim
-        # `_js_literal` makes about byte identity open on exactly this.
-        block = ",\n".join(
-            f'{" " * 20}"{heading}"'
-            for heading in text_module.SIDEBAR_CHROME_EN.section_headings
-        )
-
-        assert f"const SIDEBAR_SECTIONS = [\n{block}\n" in (
-            person_module._SIDEBAR_PROFILES_JS
-        )
-        assert not [
-            line
-            for line in person_module._SIDEBAR_PROFILES_JS.splitlines()[1:]
-            if line and not line.startswith(" ")
-        ]
-
-    @pytest.mark.parametrize(
-        ("value", "quote"),
-        [("voir l'ensemble", "'"), ('the "all" list', '"'), ("back\\slash", "'")],
-    )
-    def test_an_unquotable_locale_label_is_refused(self, value, quote):
-        with pytest.raises(ValueError, match="cannot be quoted"):
-            person_module._js_literal(value, quote)
-
-    def test_an_unquotable_locale_label_stops_the_import(self, monkeypatch):
-        # The only call sites are module-level, so a table entry carrying an
-        # apostrophe has to fail here rather than as a JavaScript
-        # `SyntaxError` out of the unguarded `page.evaluate` below — which
-        # surfaces against live LinkedIn only, and only once this table grows
-        # the locale it exists to accept. Loaded as a throwaway copy, so the
-        # module every other test holds is left alone.
-        monkeypatch.setattr(
-            text_module,
-            "SIDEBAR_CHROME_EN",
-            replace(
-                text_module.SIDEBAR_CHROME_EN, show_all_prefixes=("voir l'ensemble",)
-            ),
-        )
-        spec = importlib.util.spec_from_file_location(
-            "person_locale_probe", person_module.__file__
-        )
-        assert spec is not None and spec.loader is not None
-        probe = importlib.util.module_from_spec(spec)
-
-        with pytest.raises(ValueError, match="cannot be quoted"):
-            spec.loader.exec_module(probe)
 
 
 class TestSearchPeople:

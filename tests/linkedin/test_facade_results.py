@@ -4,15 +4,15 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from linkedin_mcp_server.core.exceptions import InvalidReferenceError
-from linkedin_mcp_server.linkedin import LinkedInExtractor
-from linkedin_mcp_server.linkedin.capture import SectionCapture
-from linkedin_mcp_server.linkedin.contracts import (
+from linkedin_scraper_mcp.core.exceptions import InvalidReferenceError
+from linkedin_scraper_mcp.linkedin import LinkedInExtractor
+from linkedin_scraper_mcp.linkedin.capture import SectionCapture
+from linkedin_scraper_mcp.linkedin.contracts import (
     RATE_LIMITED_SECTION_TEXT,
     ExtractedSection,
 )
-from linkedin_mcp_server.linkedin.link_metadata import Reference
-from linkedin_mcp_server.linkedin.navigation import PageNavigator
+from linkedin_scraper_mcp.linkedin.link_metadata import Reference
+from linkedin_scraper_mcp.linkedin.navigation import PageNavigator
 
 
 def extracted(
@@ -51,13 +51,9 @@ class TestEveryNormalizedEntryPoint:
         "method,args,kwargs",
         [
             ("read_person", ("../../feed", {"main_profile"}), {}),
-            ("connect_with_person", ("../../feed",), {}),
-            ("get_sidebar_profiles", ("../../feed",), {}),
-            ("send_message", ("../../feed", "hi"), {"confirm_send": False}),
             ("read_company", ("../../feed", {"about"}), {}),
             ("get_company_employees", ("../../feed",), {}),
             ("read_job", ("../../feed",), {}),
-            ("get_conversation", (), {"thread_id": "../../feed"}),
         ],
     )
     async def test_refuses_a_traversal_value_before_navigating(

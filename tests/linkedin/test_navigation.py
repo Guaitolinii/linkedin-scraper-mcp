@@ -8,17 +8,17 @@ from patchright.async_api import Error as PatchrightError
 
 import pytest
 
-from linkedin_mcp_server.core.exceptions import (
+from linkedin_scraper_mcp.core.exceptions import (
     AccountRestrictedError,
     AuthenticationError,
     OffLinkedInLandingError,
     ProxyConnectionError,
 )
-from linkedin_mcp_server.linkedin import session as session_module
-from linkedin_mcp_server.linkedin.capture import SectionCapture
-from linkedin_mcp_server.linkedin.content import PageContentReader
-from linkedin_mcp_server.linkedin.navigation import PageNavigator
-from linkedin_mcp_server.linkedin.session import PageSession
+from linkedin_scraper_mcp.linkedin import session as session_module
+from linkedin_scraper_mcp.linkedin.capture import SectionCapture
+from linkedin_scraper_mcp.linkedin.content import PageContentReader
+from linkedin_scraper_mcp.linkedin.navigation import PageNavigator
+from linkedin_scraper_mcp.linkedin.session import PageSession
 from .support.navigation import navigate
 
 
@@ -47,12 +47,12 @@ class TestNavigationDiagnostics:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 side_effect=[True],
             ) as mock_resolve,
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier_quick",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier_quick",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
@@ -82,11 +82,11 @@ class TestNavigationDiagnostics:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new=refused_after_the_page_left,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier_quick",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier_quick",
                 new_callable=AsyncMock,
                 return_value="account picker",
             ),
@@ -113,12 +113,12 @@ class TestNavigationDiagnostics:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=True,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier_quick",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier_quick",
                 new_callable=AsyncMock,
                 side_effect=["account picker", None],
             ),
@@ -147,16 +147,16 @@ class TestNavigationDiagnostics:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 side_effect=[True, False],
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.record_page_trace",
+                "linkedin_scraper_mcp.linkedin.navigation.record_page_trace",
                 new_callable=AsyncMock,
             ) as mock_trace,
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
@@ -201,12 +201,12 @@ class TestNavigationDiagnostics:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
@@ -231,12 +231,12 @@ class TestNavigationDiagnostics:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
@@ -272,12 +272,12 @@ class TestNavigationListenerIdentity:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
@@ -311,12 +311,12 @@ class TestNavigationListenerIdentity:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=True,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier_quick",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier_quick",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
@@ -334,12 +334,12 @@ class TestNavigationListenerIdentity:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=True,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier_quick",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier_quick",
                 new_callable=AsyncMock,
                 side_effect=["account picker", None],
             ),
@@ -377,12 +377,12 @@ class TestRememberMeRetriesOnlyOnce:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=True,
             ) as mock_resolve,
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
@@ -401,12 +401,12 @@ class TestRememberMeRetriesOnlyOnce:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=True,
             ) as mock_resolve,
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier_quick",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier_quick",
                 new_callable=AsyncMock,
                 return_value="account picker",
             ),
@@ -425,7 +425,7 @@ class TestRememberMeRetriesOnlyOnce:
         navigator = PageNavigator(PageSession(mock_page))
 
         with patch(
-            "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier_quick",
             new_callable=AsyncMock,
             return_value=None,
         ):
@@ -472,12 +472,12 @@ class TestRememberMeRetriesOnlyOnce:
         barriers = ["remember me", None] if prompt_after == "barrier" else [None]
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=True,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier_quick",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier_quick",
                 new_callable=AsyncMock,
                 side_effect=barriers,
             ),
@@ -580,7 +580,7 @@ class TestSettleNavigation:
         with (
             patch.object(session_module, "time", clock),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 side_effect=self._sleep(clock, hops, mock_page),
             ),
         ):
@@ -604,7 +604,7 @@ class TestSettleNavigation:
         with (
             patch.object(session_module, "time", clock),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 side_effect=self._sleep(clock, hops, mock_page, [0.05]),
             ),
         ):
@@ -628,7 +628,7 @@ class TestSettleNavigation:
         with (
             patch.object(session_module, "time", clock),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 side_effect=self._sleep(clock, hops, mock_page, [0.05, 0.4]),
             ),
         ):
@@ -658,7 +658,7 @@ class TestSettleNavigation:
         with (
             patch.object(session_module, "time", clock),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 side_effect=self._sleep(clock, hops, mock_page),
             ),
         ):
@@ -685,7 +685,7 @@ class TestSettleNavigation:
         with (
             patch.object(session_module, "time", clock),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 side_effect=self._sleep(clock, hops, mock_page, [0.05]),
             ),
         ):
@@ -720,7 +720,7 @@ class TestProxyNavigationFailures:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.record_page_trace",
+                "linkedin_scraper_mcp.linkedin.navigation.record_page_trace",
                 new_callable=AsyncMock,
             ) as mock_trace,
             pytest.raises(ProxyConnectionError),
@@ -738,7 +738,7 @@ class TestProxyNavigationFailures:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -763,13 +763,13 @@ class TestNavigationFailureLogRedaction:
     ):
         import logging
 
-        from linkedin_mcp_server.config.schema import AppConfig
+        from linkedin_scraper_mcp.config.schema import AppConfig
 
         config = AppConfig()
         config.browser.proxy_server = "http://gate.example:7000"
         config.browser.proxy_username = "acctzone9"
         config.browser.proxy_password = "s3cr3t"
-        monkeypatch.setattr("linkedin_mcp_server.config.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.config.get_config", lambda: config)
 
         navigator = PageNavigator(PageSession(mock_page))
         # No proxy marker, so it is not converted and reaches the logger.
@@ -781,7 +781,7 @@ class TestNavigationFailureLogRedaction:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -807,13 +807,13 @@ class TestNavigationFailureCrossesTheToolBoundaryClean:
     async def test_reraised_exception_carries_no_credentials(
         self, mock_page, monkeypatch
     ):
-        from linkedin_mcp_server.config.schema import AppConfig
+        from linkedin_scraper_mcp.config.schema import AppConfig
 
         config = AppConfig()
         config.browser.proxy_server = "http://gate.example:7000"
         config.browser.proxy_username = "acctzone9"
         config.browser.proxy_password = "s3cr3t"
-        monkeypatch.setattr("linkedin_mcp_server.config.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.config.get_config", lambda: config)
 
         navigator = PageNavigator(PageSession(mock_page))
         mock_page.goto = AsyncMock(
@@ -824,7 +824,7 @@ class TestNavigationFailureCrossesTheToolBoundaryClean:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -866,7 +866,7 @@ class TestARestrictedAccountStopsTheRead:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -904,7 +904,7 @@ class TestALandingOffLinkedInStopsTheRead:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.linkedin.navigation.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=True,
             ) as remember_me,

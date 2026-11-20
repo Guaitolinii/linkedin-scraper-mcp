@@ -24,11 +24,11 @@ from typing import Any, cast
 
 import pytest
 
-import linkedin_mcp_server.process_gate as process_gate
-import linkedin_mcp_server.process_guardian as process_guardian
-from linkedin_mcp_server.process_protocol import new_nonce
-import linkedin_mcp_server.process_tree as process_tree
-from linkedin_mcp_server.profile_lease import ProfileLease
+import linkedin_scraper_mcp.process_gate as process_gate
+import linkedin_scraper_mcp.process_guardian as process_guardian
+from linkedin_scraper_mcp.process_protocol import new_nonce
+import linkedin_scraper_mcp.process_tree as process_tree
+from linkedin_scraper_mcp.profile_lease import ProfileLease
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _POSIX_ONLY = pytest.mark.skipif(os.name == "nt", reason="POSIX process groups")
@@ -56,7 +56,7 @@ import sys
 import time
 from pathlib import Path
 
-from linkedin_mcp_server.process_tree import terminate_process_group
+from linkedin_scraper_mcp.process_tree import terminate_process_group
 
 if ctypes.CDLL("libc.so.6", use_errno=True).prctl(
     {_PR_SET_CHILD_SUBREAPER}, 1, 0, 0, 0
@@ -363,7 +363,7 @@ def _supervisor(target_script: str) -> subprocess.Popen[str]:
             sys.executable,
             "-I",
             "-m",
-            "linkedin_mcp_server.installer_supervisor",
+            "linkedin_scraper_mcp.installer_supervisor",
             "--",
             sys.executable,
             "-c",
@@ -1531,7 +1531,7 @@ class TestPosixProcessGroups:
 import json, os, secrets, subprocess, sys
 repo, target = sys.argv[1], sys.argv[2]
 proc = subprocess.Popen(
-    [sys.executable, "-I", "-m", "linkedin_mcp_server.installer_supervisor",
+    [sys.executable, "-I", "-m", "linkedin_scraper_mcp.installer_supervisor",
      "--", sys.executable, "-c", target],
     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     text=True, start_new_session=True, cwd=repo,
@@ -2693,8 +2693,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from linkedin_mcp_server import process_tree
-from linkedin_mcp_server.daemon import owner as daemon_owner
+from linkedin_scraper_mcp import process_tree
+from linkedin_scraper_mcp.daemon import owner as daemon_owner
 
 child = subprocess.Popen(
     [sys.executable, "-c", "import time; time.sleep(600)"],
@@ -2850,12 +2850,12 @@ import sys
 import time
 from pathlib import Path
 
-from linkedin_mcp_server.process_tree import (
+from linkedin_scraper_mcp.process_tree import (
     new_browser_process_marker,
     remember_detached_process_groups,
     start_browser_guardian,
 )
-from linkedin_mcp_server.profile_lease import ProfileLease
+from linkedin_scraper_mcp.profile_lease import ProfileLease
 
 auth_root = Path(sys.argv[1])
 auth_root.mkdir(parents=True)
@@ -2960,11 +2960,11 @@ import sys
 import time
 from pathlib import Path
 
-from linkedin_mcp_server.process_tree import (
+from linkedin_scraper_mcp.process_tree import (
     new_browser_process_marker,
     start_browser_guardian,
 )
-from linkedin_mcp_server.profile_lease import ProfileLease
+from linkedin_scraper_mcp.profile_lease import ProfileLease
 
 auth_root = Path(sys.argv[1])
 auth_root.mkdir(parents=True)
@@ -3279,8 +3279,8 @@ import subprocess
 import sys
 import threading
 
-from linkedin_mcp_server.daemon import owner as daemon_owner
-from linkedin_mcp_server.process_tree import WindowsJob
+from linkedin_scraper_mcp.daemon import owner as daemon_owner
+from linkedin_scraper_mcp.process_tree import WindowsJob
 
 name = sys.argv[1]
 WindowsJob.verify_current_process(name)
@@ -3476,7 +3476,7 @@ time.sleep(600)
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.PIPE,
         )
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         target_pid: int | None = None
         descendant_pid: int | None = None
@@ -3561,7 +3561,7 @@ import sys
 import time
 from pathlib import Path
 
-from linkedin_mcp_server import process_tree
+from linkedin_scraper_mcp import process_tree
 
 win32api = importlib.import_module("win32api")
 win32job = importlib.import_module("win32job")

@@ -22,9 +22,9 @@ import pytest
 from fastmcp import FastMCP
 from patchright.async_api import Page, async_playwright
 
-from linkedin_mcp_server.core.utils import _JOB_CARD_SELECTOR, scroll_job_sidebar
-from linkedin_mcp_server.linkedin.job_pages import JOB_IDS_JS
-from linkedin_mcp_server.sequential_tool_middleware import (
+from linkedin_scraper_mcp.core.utils import _JOB_CARD_SELECTOR, scroll_job_sidebar
+from linkedin_scraper_mcp.linkedin.job_pages import JOB_IDS_JS
+from linkedin_scraper_mcp.sequential_tool_middleware import (
     SequentialToolExecutionMiddleware,
 )
 
@@ -300,7 +300,7 @@ class TestSidebarScroll:
         await dom_page.set_content(sidebar(total=200, batch=1, delays=[900]))
 
         started = time.monotonic()
-        with caplog.at_level(logging.DEBUG, logger="linkedin_mcp_server.core.utils"):
+        with caplog.at_level(logging.DEBUG, logger="linkedin_scraper_mcp.core.utils"):
             await scroll_job_sidebar(dom_page, settle_timeout=2.0, deadline=3.0)
         elapsed = time.monotonic() - started
 
@@ -318,7 +318,7 @@ class TestSidebarScroll:
         """
         await dom_page.set_content(sidebar(total=16, batch=5, delays=[30]))
 
-        with caplog.at_level(logging.DEBUG, logger="linkedin_mcp_server.core.utils"):
+        with caplog.at_level(logging.DEBUG, logger="linkedin_scraper_mcp.core.utils"):
             await scroll_job_sidebar(dom_page, settle_timeout=0.6)
 
         assert await cards(dom_page) == 16
@@ -329,7 +329,7 @@ class TestSidebarScroll:
         """Card counts alone cannot fail here, so assert which branch ran."""
         await dom_page.set_content('<body><a href="/jobs/view/111/">One</a></body>')
 
-        with caplog.at_level(logging.DEBUG, logger="linkedin_mcp_server.core.utils"):
+        with caplog.at_level(logging.DEBUG, logger="linkedin_scraper_mcp.core.utils"):
             await scroll_job_sidebar(dom_page, settle_timeout=0.3)
 
         assert "No scrollable container found" in caplog.text
@@ -337,7 +337,7 @@ class TestSidebarScroll:
     async def test_no_cards_at_all(self, dom_page, caplog):
         await dom_page.set_content("<body><main>No matching jobs found</main></body>")
 
-        with caplog.at_level(logging.DEBUG, logger="linkedin_mcp_server.core.utils"):
+        with caplog.at_level(logging.DEBUG, logger="linkedin_scraper_mcp.core.utils"):
             await scroll_job_sidebar(dom_page)
 
         assert "skipping sidebar scroll" in caplog.text
@@ -353,7 +353,7 @@ class TestSidebarScroll:
             sidebar(total=25, batch=5, delays=[300], links_per_card=2)
         )
 
-        with caplog.at_level(logging.DEBUG, logger="linkedin_mcp_server.core.utils"):
+        with caplog.at_level(logging.DEBUG, logger="linkedin_scraper_mcp.core.utils"):
             await scroll_job_sidebar(dom_page, settle_timeout=0.6)
 
         assert await rail_cards(dom_page) == 50  # 25 jobs, two links each
@@ -511,7 +511,7 @@ class TestSidebarScroll:
         """The cap must be distinguishable from an exhausted list in the log."""
         await dom_page.set_content(sidebar(total=200, batch=1, delays=[30]))
 
-        with caplog.at_level(logging.DEBUG, logger="linkedin_mcp_server.core.utils"):
+        with caplog.at_level(logging.DEBUG, logger="linkedin_scraper_mcp.core.utils"):
             await scroll_job_sidebar(dom_page, max_scrolls=3)
 
         assert "scroll cap reached" in caplog.text
@@ -523,7 +523,7 @@ class TestSidebarScroll:
         await dom_page.set_content(sidebar(total=25, batch=5, delays=[30]))
         await dom_page.close()  # stands in for a navigation mid-scroll
 
-        with caplog.at_level(logging.DEBUG, logger="linkedin_mcp_server.core.utils"):
+        with caplog.at_level(logging.DEBUG, logger="linkedin_scraper_mcp.core.utils"):
             await scroll_job_sidebar(dom_page, deadline=1.0)
 
         assert "scroll failed" in caplog.text
@@ -693,7 +693,7 @@ class TestSidebarScroll:
             "</body>"
         )
 
-        with caplog.at_level(logging.DEBUG, logger="linkedin_mcp_server.core.utils"):
+        with caplog.at_level(logging.DEBUG, logger="linkedin_scraper_mcp.core.utils"):
             await scroll_job_sidebar(dom_page, settle_timeout=0.6)
 
         # Three beats the pane's two only while the accented ids are read.

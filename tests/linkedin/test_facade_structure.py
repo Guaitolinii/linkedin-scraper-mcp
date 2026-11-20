@@ -12,16 +12,16 @@ import sys
 
 import pytest
 
-from linkedin_mcp_server.linkedin import LinkedInExtractor
-from linkedin_mcp_server.linkedin import contracts, text
+from linkedin_scraper_mcp.linkedin import LinkedInExtractor
+from linkedin_scraper_mcp.linkedin import contracts, text
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PACKAGE = ROOT / "linkedin_mcp_server"
+PACKAGE = ROOT / "linkedin_scraper_mcp"
 LINKEDIN = PACKAGE / "linkedin"
 EXTRACTOR = LINKEDIN / "extractor.py"
 FACADE_PACKAGE_IMPORTERS = {
-    Path("linkedin_mcp_server/dependencies.py"),
+    Path("linkedin_scraper_mcp/dependencies.py"),
     Path("tests/linkedin/policy_scenarios.py"),
     Path("tests/linkedin/test_facade_contracts.py"),
     Path("tests/linkedin/test_facade_results.py"),
@@ -31,99 +31,58 @@ FACADE_PACKAGE_IMPORTERS = {
 
 PUBLIC_SIGNATURES = {
     "click_button_by_text": "(self, text: 'str', *, scope: 'str' = 'main', timeout: 'int' = 5000) -> 'bool'",
-    "connect_with_person": "(self, username: 'str', *, note: 'str | None' = None) -> 'dict[str, Any]'",
-    "extract_feed": "(self, num_posts: 'int' = 10) -> 'ExtractedSection'",
     "extract_page": "(self, url: 'str', section_name: 'str', max_scrolls: 'int | None' = None) -> 'ExtractedSection'",
     "get_company_employees": "(self, company_name: 'str', keywords: 'str | None' = None) -> 'dict[str, Any]'",
-    "get_conversation": "(self, linkedin_username: 'str | None' = None, thread_id: 'str | None' = None, index: 'int' = 0) -> 'dict[str, Any]'",
-    "get_inbox": "(self, limit: 'int' = 20) -> 'dict[str, Any]'",
     "get_job_apply_url": "(self, job_id: 'str') -> 'dict[str, Any]'",
-    "get_easy_apply_form": "(self, job_id: 'str') -> 'dict[str, Any]'",
     "get_my_profile": "(self, sections: 'set[str] | None' = None, callbacks: 'ProgressCallback | None' = None, max_scrolls: 'int | None' = None) -> 'dict[str, Any]'",
     "get_page_text": "(self) -> 'str'",
     "get_saved_jobs": "(self, max_pages: 'int' = 3, stage: 'JobsTrackerStage' = 'saved') -> 'dict[str, Any]'",
-    "dismiss_job": "(self, job_id: 'str') -> 'dict[str, Any]'",
-    "get_sidebar_profiles": "(self, username: 'str') -> 'dict[str, Any]'",
     "read_company": "(self, company_name: 'str', requested: 'set[str]', callbacks: 'ProgressCallback | None' = None) -> 'dict[str, Any]'",
     "read_job": "(self, job_id: 'str') -> 'dict[str, Any]'",
     "read_person": "(self, username: 'str', requested: 'set[str]', callbacks: 'ProgressCallback | None' = None, max_scrolls: 'int | None' = None, *, main_profile_already_loaded: 'bool' = False, allow_self_alias: 'bool' = False) -> 'dict[str, Any]'",
     "search_companies": "(self, keywords: 'str') -> 'dict[str, Any]'",
-    "search_conversations": "(self, keywords: 'str', limit: 'int' = 20) -> 'dict[str, Any]'",
-    "archive_conversation": "(self, thread_id: 'str') -> 'dict[str, Any]'",
     "search_jobs": "(self, keywords: 'str', location: 'str | None' = None, max_pages: 'int' = 3, date_posted: 'str | None' = None, job_type: 'str | None' = None, experience_level: 'str | None' = None, work_type: 'str | None' = None, easy_apply: 'bool' = False, sort_by: 'str | None' = None, tool_timeout: 'float' = 180.0) -> 'dict[str, Any]'",
     "search_people": "(self, keywords: 'str', location: 'str | None' = None, network: 'list[str] | None' = None, current_company: 'str | None' = None, connection_of: 'str | None' = None) -> 'dict[str, Any]'",
-    "search_posts": "(self, keywords: 'str', date_posted: 'str | None' = None, max_pages: 'int' = 3, content_type: 'str | None' = None) -> 'dict[str, Any]'",
-    "send_message": "(self, linkedin_username: 'str', message: 'str', *, confirm_send: 'bool', profile_urn: 'str | None' = None) -> 'dict[str, Any]'",
-    "reply_to_conversation": "(self, thread_id: 'str', message: 'str', *, confirm_send: 'bool') -> 'dict[str, Any]'",
 }
 
 DELEGATES = {
     "click_button_by_text": ("_content", "click_button_by_text"),
-    "connect_with_person": ("_connection", "connect_with_person"),
-    "extract_feed": ("_feed", "extract_feed"),
     "extract_page": ("_capture", "extract_page"),
     "get_company_employees": ("_company", "get_company_employees"),
-    "get_conversation": ("_conversations", "get_conversation"),
-    "get_inbox": ("_conversations", "get_inbox"),
     "get_job_apply_url": ("_jobs", "get_job_apply_url"),
-    "get_easy_apply_form": ("_jobs", "get_easy_apply_form"),
     "get_my_profile": ("_person", "get_my_profile"),
     "get_page_text": ("_content", "get_page_text"),
     "get_saved_jobs": ("_jobs", "get_saved_jobs"),
-    "dismiss_job": ("_jobs", "dismiss_job"),
-    "get_sidebar_profiles": ("_person", "get_sidebar_profiles"),
     "read_company": ("_company", "read_company"),
     "read_job": ("_jobs", "read_job"),
     "read_person": ("_person", "read_person"),
     "search_companies": ("_company", "search_companies"),
-    "search_conversations": ("_conversations", "search_conversations"),
-    "archive_conversation": ("_conversations", "archive_conversation"),
     "search_jobs": ("_jobs", "search_jobs"),
     "search_people": ("_person", "search_people"),
-    "search_posts": ("_posts", "search_posts"),
-    "send_message": ("_message_sender", "send_message"),
-    "reply_to_conversation": ("_message_sender", "reply_to_conversation"),
 }
 
 DELEGATE_CALLS = {
     "click_button_by_text": "self._content.click_button_by_text(text, scope=scope, timeout=timeout)",
-    "connect_with_person": "self._connection.connect_with_person(username, note=note)",
-    "extract_feed": "self._feed.extract_feed(num_posts)",
     "extract_page": "self._capture.extract_page(url, section_name, max_scrolls)",
     "get_company_employees": "self._company.get_company_employees(company_name, keywords)",
-    "get_conversation": "self._conversations.get_conversation(linkedin_username, thread_id, index)",
-    "get_inbox": "self._conversations.get_inbox(limit)",
     "get_job_apply_url": "self._jobs.get_job_apply_url(job_id)",
-    "get_easy_apply_form": "self._jobs.get_easy_apply_form(job_id)",
     "get_my_profile": "self._person.get_my_profile(sections, callbacks, max_scrolls)",
     "get_page_text": "self._content.get_page_text()",
     "get_saved_jobs": "self._jobs.get_saved_jobs(max_pages, stage)",
-    "dismiss_job": "self._jobs.dismiss_job(job_id)",
-    "get_sidebar_profiles": "self._person.get_sidebar_profiles(username)",
     "read_company": "self._company.read_company(company_name, requested, callbacks)",
     "read_job": "self._jobs.read_job(job_id)",
     "read_person": "self._person.read_person(username, requested, callbacks, max_scrolls, main_profile_already_loaded=main_profile_already_loaded, allow_self_alias=allow_self_alias)",
     "search_companies": "self._company.search_companies(keywords)",
-    "search_conversations": "self._conversations.search_conversations(keywords, limit)",
-    "archive_conversation": "self._conversations.archive_conversation(thread_id)",
     "search_jobs": "self._jobs.search_jobs(keywords, location, max_pages, date_posted, job_type, experience_level, work_type, easy_apply, sort_by, tool_timeout)",
     "search_people": "self._person.search_people(keywords, location=location, network=network, current_company=current_company, connection_of=connection_of)",
-    "search_posts": "self._posts.search_posts(keywords, date_posted=date_posted, max_pages=max_pages, content_type=content_type)",
-    "send_message": "self._message_sender.send_message(linkedin_username, message, confirm_send=confirm_send, profile_urn=profile_urn)",
-    "reply_to_conversation": "self._message_sender.reply_to_conversation(thread_id, message, confirm_send=confirm_send)",
 }
 
 FACADE_STATE = {
     "_capture",
     "_company",
-    "_connection",
     "_content",
-    "_conversations",
-    "_feed",
     "_jobs",
-    "_message_sender",
     "_person",
-    "_posts",
 }
 
 PERMANENT_ALIASES = {
@@ -135,16 +94,16 @@ PERMANENT_ALIASES = {
 }
 
 FORBIDDEN_LAYER_PREFIXES = (
-    "linkedin_mcp_server.browser_",
-    "linkedin_mcp_server.daemon",
-    "linkedin_mcp_server.drivers",
-    "linkedin_mcp_server.hidden_target",
-    "linkedin_mcp_server.private_state",
-    "linkedin_mcp_server.process_",
-    "linkedin_mcp_server.profile_claim",
-    "linkedin_mcp_server.profile_lease",
-    "linkedin_mcp_server.server_role",
-    "linkedin_mcp_server.session_state",
+    "linkedin_scraper_mcp.browser_",
+    "linkedin_scraper_mcp.daemon",
+    "linkedin_scraper_mcp.drivers",
+    "linkedin_scraper_mcp.hidden_target",
+    "linkedin_scraper_mcp.private_state",
+    "linkedin_scraper_mcp.process_",
+    "linkedin_scraper_mcp.profile_claim",
+    "linkedin_scraper_mcp.profile_lease",
+    "linkedin_scraper_mcp.server_role",
+    "linkedin_scraper_mcp.session_state",
 )
 
 
@@ -260,15 +219,15 @@ def _imports(path: Path, source: str) -> set[str]:
 def _assert_package_dependencies(sources: dict[Path, str]) -> None:
     graph: dict[str, set[str]] = defaultdict(set)
     for path, source in sources.items():
-        module = f"linkedin_mcp_server.linkedin.{path.stem}"
+        module = f"linkedin_scraper_mcp.linkedin.{path.stem}"
         for imported in _imports(path, source):
             assert not imported.startswith(FORBIDDEN_LAYER_PREFIXES)
             if path.name not in {"__init__.py", "extractor.py"}:
                 assert imported not in {
-                    "linkedin_mcp_server.linkedin",
-                    "linkedin_mcp_server.linkedin.extractor",
+                    "linkedin_scraper_mcp.linkedin",
+                    "linkedin_scraper_mcp.linkedin.extractor",
                 }
-            if imported.startswith("linkedin_mcp_server.linkedin."):
+            if imported.startswith("linkedin_scraper_mcp.linkedin."):
                 graph[module].add(imported)
 
     visiting: set[str] = set()
@@ -296,7 +255,7 @@ def _assert_no_private_facade_accesses(sources: dict[Path, str]) -> None:
         for node in ast.walk(tree):
             if not isinstance(node, ast.ImportFrom):
                 continue
-            if _resolved_import_module(path, node) != "linkedin_mcp_server.linkedin":
+            if _resolved_import_module(path, node) != "linkedin_scraper_mcp.linkedin":
                 continue
             facade_classes.update(
                 alias.asname or alias.name
@@ -379,16 +338,16 @@ def _facade_package_imports(
     imports: list[ast.Import | ast.ImportFrom] = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Import) and any(
-            alias.name == "linkedin_mcp_server.linkedin" for alias in node.names
+            alias.name == "linkedin_scraper_mcp.linkedin" for alias in node.names
         ):
             imports.append(node)
         elif isinstance(node, ast.ImportFrom):
             resolved = _resolved_import_module(path, node)
-            if resolved == "linkedin_mcp_server" and any(
+            if resolved == "linkedin_scraper_mcp" and any(
                 alias.name == "linkedin" for alias in node.names
             ):
                 imports.append(node)
-            elif resolved == "linkedin_mcp_server.linkedin" and any(
+            elif resolved == "linkedin_scraper_mcp.linkedin" and any(
                 alias.name in {"LinkedInExtractor", "*"} for alias in node.names
             ):
                 imports.append(node)
@@ -396,7 +355,7 @@ def _facade_package_imports(
 
 
 def _assert_no_obsolete_extractor_seams(sources: dict[Path, str]) -> None:
-    extractor_module = "linkedin_mcp_server.linkedin.extractor"
+    extractor_module = "linkedin_scraper_mcp.linkedin.extractor"
     for path, source in sources.items():
         tree = ast.parse(source, filename=str(path))
         if path not in FACADE_PACKAGE_IMPORTERS:
@@ -412,13 +371,13 @@ def _assert_no_obsolete_extractor_seams(sources: dict[Path, str]) -> None:
                 names = {alias.name for alias in node.names}
                 if imported_from == extractor_module:
                     package_export = path == Path(
-                        "linkedin_mcp_server/linkedin/__init__.py"
+                        "linkedin_scraper_mcp/linkedin/__init__.py"
                     ) and names == {"LinkedInExtractor"}
                     permanent_aliases = path == Path(
                         "tests/linkedin/test_facade_contracts.py"
                     ) and names <= set(PERMANENT_ALIASES)
                     assert package_export or permanent_aliases
-                if imported_from == "linkedin_mcp_server.linkedin":
+                if imported_from == "linkedin_scraper_mcp.linkedin":
                     assert "extractor" not in names
                     if "LinkedInExtractor" in names:
                         assert path in FACADE_PACKAGE_IMPORTERS
@@ -435,7 +394,7 @@ def _assert_no_obsolete_extractor_seams(sources: dict[Path, str]) -> None:
                     and isinstance(target.value, str)
                 ):
                     assert not target.value.startswith(
-                        "linkedin_mcp_server.linkedin.extractor."
+                        "linkedin_scraper_mcp.linkedin.extractor."
                     )
 
 
@@ -466,7 +425,7 @@ def test_facade_state_and_delegate_bodies_are_explicit():
 
 
 def test_package_export_and_permanent_aliases_keep_identity():
-    module = sys.modules["linkedin_mcp_server.linkedin.extractor"]
+    module = sys.modules["linkedin_scraper_mcp.linkedin.extractor"]
     assert LinkedInExtractor is module.LinkedInExtractor
     for name, owner in PERMANENT_ALIASES.items():
         assert getattr(module, name) is owner
@@ -477,9 +436,9 @@ def test_package_dependencies_are_one_way_acyclic_and_layered():
 
 
 def test_imports_canonicalize_absolute_and_relative_from_imports():
-    path = Path("linkedin_mcp_server/linkedin/nested/module.py")
+    path = Path("linkedin_scraper_mcp/linkedin/nested/module.py")
     source = """
-from linkedin_mcp_server import process_protocol
+from linkedin_scraper_mcp import process_protocol
 from .. import capture
 from ..capture import SectionCapture
 from ...config import settings
@@ -487,9 +446,9 @@ from ...config import settings
 
     imports = _imports(path, source)
 
-    assert "linkedin_mcp_server.process_protocol" in imports
-    assert "linkedin_mcp_server.linkedin.capture" in imports
-    assert "linkedin_mcp_server.config" in imports
+    assert "linkedin_scraper_mcp.process_protocol" in imports
+    assert "linkedin_scraper_mcp.linkedin.capture" in imports
+    assert "linkedin_scraper_mcp.config" in imports
 
 
 def test_obsolete_extractor_seams_and_private_accesses_are_absent():
@@ -523,7 +482,7 @@ def test_obsolete_extractor_seams_and_private_accesses_are_absent():
         ),
         (
             lambda value: value.replace(
-                "self._jobs.search_jobs", "self._posts.search_jobs", 1
+                "self._jobs.search_jobs", "self._company.search_jobs", 1
             ),
             _assert_delegate_bodies,
         ),
@@ -546,28 +505,28 @@ def test_facade_ast_guards_reject_representative_mutations(mutate, guard):
     "path,addition",
     [
         (
-            Path("linkedin_mcp_server/linkedin/content.py"),
+            Path("linkedin_scraper_mcp/linkedin/content.py"),
             "from . import capture\n",
         ),
         (
-            Path("linkedin_mcp_server/linkedin/content.py"),
+            Path("linkedin_scraper_mcp/linkedin/content.py"),
             "from .capture import SectionCapture\n",
         ),
         (
-            Path("linkedin_mcp_server/linkedin/content.py"),
-            "from linkedin_mcp_server import process_protocol\n",
+            Path("linkedin_scraper_mcp/linkedin/content.py"),
+            "from linkedin_scraper_mcp import process_protocol\n",
         ),
         (
-            Path("linkedin_mcp_server/linkedin/content.py"),
+            Path("linkedin_scraper_mcp/linkedin/content.py"),
             "from .. import process_protocol\n",
         ),
         (
-            Path("linkedin_mcp_server/linkedin/content.py"),
-            "from linkedin_mcp_server.daemon.owner import owner\n",
+            Path("linkedin_scraper_mcp/linkedin/content.py"),
+            "from linkedin_scraper_mcp.daemon.owner import owner\n",
         ),
         (
-            Path("linkedin_mcp_server/linkedin/content.py"),
-            "from linkedin_mcp_server.linkedin import LinkedInExtractor\n",
+            Path("linkedin_scraper_mcp/linkedin/content.py"),
+            "from linkedin_scraper_mcp.linkedin import LinkedInExtractor\n",
         ),
     ],
 )
@@ -582,55 +541,55 @@ def test_dependency_guards_reject_cycles_layers_and_reverse_imports(path, additi
     "path,addition",
     [
         (
-            Path("linkedin_mcp_server/tools/feed.py"),
-            "from linkedin_mcp_server.linkedin.extractor import LinkedInExtractor\n",
+            Path("linkedin_scraper_mcp/tools/feed.py"),
+            "from linkedin_scraper_mcp.linkedin.extractor import LinkedInExtractor\n",
         ),
         (
             Path("tests/test_tools.py"),
-            "import linkedin_mcp_server.linkedin.extractor as extractor_module\n"
+            "import linkedin_scraper_mcp.linkedin.extractor as extractor_module\n"
             "patch.object(extractor_module, '_drain_listener_tasks', fake)\n",
         ),
         (
             Path("tests/test_tools.py"),
-            "import linkedin_mcp_server.linkedin.extractor as extractor_module\n"
+            "import linkedin_scraper_mcp.linkedin.extractor as extractor_module\n"
             "monkeypatch.setattr("
             "extractor_module, '_drain_listener_tasks', fake, raising=False)\n",
         ),
         (
-            Path("linkedin_mcp_server/server.py"),
-            "from linkedin_mcp_server.linkedin import extractor as extractor_module\n",
+            Path("linkedin_scraper_mcp/server.py"),
+            "from linkedin_scraper_mcp.linkedin import extractor as extractor_module\n",
         ),
         (
-            Path("linkedin_mcp_server/server.py"),
-            "import linkedin_mcp_server.linkedin\n",
+            Path("linkedin_scraper_mcp/server.py"),
+            "import linkedin_scraper_mcp.linkedin\n",
         ),
         (
-            Path("linkedin_mcp_server/server.py"),
-            "import linkedin_mcp_server.linkedin as pages\n",
+            Path("linkedin_scraper_mcp/server.py"),
+            "import linkedin_scraper_mcp.linkedin as pages\n",
         ),
         (
-            Path("linkedin_mcp_server/server.py"),
-            "from linkedin_mcp_server import linkedin\n",
+            Path("linkedin_scraper_mcp/server.py"),
+            "from linkedin_scraper_mcp import linkedin\n",
         ),
         (
-            Path("linkedin_mcp_server/server.py"),
-            "from linkedin_mcp_server import linkedin as linkedin_package\n",
+            Path("linkedin_scraper_mcp/server.py"),
+            "from linkedin_scraper_mcp import linkedin as linkedin_package\n",
         ),
         (
-            Path("linkedin_mcp_server/server.py"),
-            "from linkedin_mcp_server.linkedin import LinkedInExtractor\n",
+            Path("linkedin_scraper_mcp/server.py"),
+            "from linkedin_scraper_mcp.linkedin import LinkedInExtractor\n",
         ),
         (
-            Path("linkedin_mcp_server/server.py"),
-            "from linkedin_mcp_server.linkedin import LinkedInExtractor as Facade\n",
+            Path("linkedin_scraper_mcp/server.py"),
+            "from linkedin_scraper_mcp.linkedin import LinkedInExtractor as Facade\n",
         ),
         (
-            Path("linkedin_mcp_server/server.py"),
-            "from linkedin_mcp_server.linkedin import *\n",
+            Path("linkedin_scraper_mcp/server.py"),
+            "from linkedin_scraper_mcp.linkedin import *\n",
         ),
         (
             Path("tests/test_tools.py"),
-            "from unittest.mock import patch\npatch('linkedin_mcp_server.linkedin.extractor.logger')\n",
+            "from unittest.mock import patch\npatch('linkedin_scraper_mcp.linkedin.extractor.logger')\n",
         ),
     ],
 )
@@ -643,27 +602,27 @@ def test_obsolete_extractor_seam_guard_rejects_mutations(path, addition):
 @pytest.mark.parametrize(
     "source",
     [
-        "import linkedin_mcp_server.linkedin\n",
-        "import linkedin_mcp_server.linkedin as pages\n",
-        "from linkedin_mcp_server import linkedin\n",
-        "from linkedin_mcp_server import linkedin as linkedin_package\n",
-        "from linkedin_mcp_server.linkedin import LinkedInExtractor\n",
-        "from linkedin_mcp_server.linkedin import LinkedInExtractor as Facade\n",
-        "from linkedin_mcp_server.linkedin import *\n",
+        "import linkedin_scraper_mcp.linkedin\n",
+        "import linkedin_scraper_mcp.linkedin as pages\n",
+        "from linkedin_scraper_mcp import linkedin\n",
+        "from linkedin_scraper_mcp import linkedin as linkedin_package\n",
+        "from linkedin_scraper_mcp.linkedin import LinkedInExtractor\n",
+        "from linkedin_scraper_mcp.linkedin import LinkedInExtractor as Facade\n",
+        "from linkedin_scraper_mcp.linkedin import *\n",
     ],
 )
 def test_approved_facade_consumers_accept_equivalent_import_forms(source):
     _assert_no_obsolete_extractor_seams(
-        {Path("linkedin_mcp_server/dependencies.py"): source}
+        {Path("linkedin_scraper_mcp/dependencies.py"): source}
     )
 
 
 def test_non_facade_package_imports_and_unrelated_scopes_are_allowed():
     _assert_no_obsolete_extractor_seams(
         {
-            Path("linkedin_mcp_server/tools/feed.py"): (
-                "from linkedin_mcp_server.linkedin import contracts, fields\n"
-                "from linkedin_mcp_server.linkedin.contracts import ExtractedSection\n"
+            Path("linkedin_scraper_mcp/tools/feed.py"): (
+                "from linkedin_scraper_mcp.linkedin import contracts, fields\n"
+                "from linkedin_scraper_mcp.linkedin.contracts import ExtractedSection\n"
                 "\n"
                 "def unrelated(pages):\n"
                 "    return pages.LinkedInExtractor\n"
@@ -677,7 +636,7 @@ def test_non_facade_package_imports_and_unrelated_scopes_are_allowed():
     [
         "extractor = LinkedInExtractor(page)\nextractor._content\n",
         "patch.object(LinkedInExtractor, '_content', replacement)\n",
-        "from linkedin_mcp_server.linkedin import LinkedInExtractor as Facade\n"
+        "from linkedin_scraper_mcp.linkedin import LinkedInExtractor as Facade\n"
         "subject = Facade(page)\n"
         "patch.object(subject, '_content', fake)\n",
     ],

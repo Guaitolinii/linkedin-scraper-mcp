@@ -2,7 +2,7 @@
 
 A bare ``ToolError`` reaches the client as ``internal``, and so does a
 ``CodedToolError`` whose code was left to its default. Both look intended in a
-diff. This walks every module under ``linkedin_mcp_server/`` and refuses either
+diff. This walks every module under ``linkedin_scraper_mcp/`` and refuses either
 construction, resolving the names imports bind: ``from ... import X as Y``,
 ``import a.b as m``, ``from a import b``, relative imports, and qualified
 calls. A name resolves the way Python scopes it: the function's own imports,
@@ -29,11 +29,11 @@ from pathlib import Path
 import pytest
 
 _ROOT = Path(__file__).resolve().parent.parent
-_PACKAGE = _ROOT / "linkedin_mcp_server"
+_PACKAGE = _ROOT / "linkedin_scraper_mcp"
 
 _TOOL_ERROR = "fastmcp.exceptions.ToolError"
-_CODED = "linkedin_mcp_server.error_handler.CodedToolError"
-_HANDLER = "linkedin_mcp_server.error_handler"
+_CODED = "linkedin_scraper_mcp.error_handler.CodedToolError"
+_HANDLER = "linkedin_scraper_mcp.error_handler"
 #: Other qualified names the same classes are reachable under.
 _SAME_CLASS = {f"{_HANDLER}.ToolError": _TOOL_ERROR}
 
@@ -193,7 +193,7 @@ def test_every_constructed_failure_names_its_code():
     assert found == [], "\n".join(found)
 
 
-_TOOLS = "linkedin_mcp_server.tools.example"
+_TOOLS = "linkedin_scraper_mcp.tools.example"
 
 
 @pytest.mark.parametrize(
@@ -221,7 +221,7 @@ _TOOLS = "linkedin_mcp_server.tools.example"
         ),
         pytest.param(
             _TOOLS,
-            "from linkedin_mcp_server.error_handler import ToolError\n"
+            "from linkedin_scraper_mcp.error_handler import ToolError\n"
             "raise ToolError('x')\n",
             id="re-exported name",
         ),
@@ -234,12 +234,12 @@ _TOOLS = "linkedin_mcp_server.tools.example"
         ),
         pytest.param(
             _TOOLS,
-            "from linkedin_mcp_server.error_handler import CodedToolError\n"
+            "from linkedin_scraper_mcp.error_handler import CodedToolError\n"
             "raise CodedToolError('x')\n",
             id="coded without a code",
         ),
         pytest.param(
-            "linkedin_mcp_server.daemon.example",
+            "linkedin_scraper_mcp.daemon.example",
             "from ..error_handler import CodedToolError as Coded\n"
             "raise Coded('x', retry_after=3)\n",
             id="relative alias without a code",
@@ -298,13 +298,13 @@ _TOOLS = "linkedin_mcp_server.tools.example"
         ),
         pytest.param(
             _TOOLS,
-            "from linkedin_mcp_server.error_handler import CodedToolError\n"
+            "from linkedin_scraper_mcp.error_handler import CodedToolError\n"
             "raise CodedToolError('x', *())\n",
             id="coded with an empty unpacking for its code",
         ),
         pytest.param(
             _TOOLS,
-            "from linkedin_mcp_server.error_handler import CodedToolError\n"
+            "from linkedin_scraper_mcp.error_handler import CodedToolError\n"
             "def fail(message, *args):\n"
             "    raise CodedToolError(message, *args)\n",
             id="coded with forwarded arguments",
@@ -333,11 +333,11 @@ _TOOLS = "linkedin_mcp_server.tools.example"
     ],
 )
 def test_an_uncoded_construction_is_refused_with_its_line(module, source):
-    found = violations(source, module, "linkedin_mcp_server/example.py")
+    found = violations(source, module, "linkedin_scraper_mcp/example.py")
 
     assert len(found) == 1
     assert found[0].startswith(
-        f"linkedin_mcp_server/example.py:{len(source.splitlines())}: "
+        f"linkedin_scraper_mcp/example.py:{len(source.splitlines())}: "
     )
 
 
@@ -358,13 +358,13 @@ def test_an_uncoded_construction_is_refused_with_its_line(module, source):
         ),
         pytest.param(
             _TOOLS,
-            "from linkedin_mcp_server.error_handler import CodedToolError, ErrorCode\n"
+            "from linkedin_scraper_mcp.error_handler import CodedToolError, ErrorCode\n"
             "raise CodedToolError('x', ErrorCode.INVALID_ARGUMENT)\n",
             id="coded with a positional code",
         ),
         pytest.param(
             _TOOLS,
-            "from linkedin_mcp_server import error_handler as eh\n"
+            "from linkedin_scraper_mcp import error_handler as eh\n"
             "raise eh.CodedToolError('x', code=eh.ErrorCode.INTERNAL)\n",
             id="coded with a keyword code",
         ),
@@ -429,4 +429,4 @@ def test_an_uncoded_construction_is_refused_with_its_line(module, source):
     ],
 )
 def test_a_coded_construction_or_a_type_reference_is_allowed(module, source):
-    assert violations(source, module, "linkedin_mcp_server/example.py") == []
+    assert violations(source, module, "linkedin_scraper_mcp/example.py") == []

@@ -15,8 +15,8 @@ from types import SimpleNamespace
 
 import pytest
 
-import linkedin_mcp_server.storage_class as storage_class
-from linkedin_mcp_server.storage_class import (
+import linkedin_scraper_mcp.storage_class as storage_class
+from linkedin_scraper_mcp.storage_class import (
     Classification,
     Mount,
     StorageClass,
@@ -69,7 +69,7 @@ class TestLinuxMounts:
     @pytest.mark.parametrize(
         ("path", "expected", "fstype"),
         [
-            ("/home/u/.linkedin-mcp", LOCAL, "xfs"),
+            ("/home/u/.linkedin-scraper-mcp", LOCAL, "xfs"),
             ("/home/u/net/profile", NONLOCAL, "nfs4"),
             ("/home/u/net drive/profile", NONLOCAL, "cifs"),
             ("/var/lib/docker/overlay/x", NONLOCAL, "overlay"),

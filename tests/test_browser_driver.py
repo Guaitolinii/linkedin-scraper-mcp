@@ -1,4 +1,4 @@
-"""Tests for linkedin_mcp_server.drivers.browser runtime-aware auth startup."""
+"""Tests for linkedin_scraper_mcp.drivers.browser runtime-aware auth startup."""
 
 import asyncio
 import json
@@ -7,21 +7,21 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from linkedin_mcp_server.config.schema import AppConfig
-from linkedin_mcp_server.core.exceptions import (
+from linkedin_scraper_mcp.config.schema import AppConfig
+from linkedin_scraper_mcp.core.exceptions import (
     AccountRestrictedError,
     OffLinkedInLandingError,
     ProxyConnectionError,
 )
-from linkedin_mcp_server.exceptions import BrowserShutdownUnconfirmedError
-from linkedin_mcp_server.drivers.browser import (
+from linkedin_scraper_mcp.exceptions import BrowserShutdownUnconfirmedError
+from linkedin_scraper_mcp.drivers.browser import (
     _feed_auth_succeeds,
     get_or_create_browser,
     reset_browser_for_testing,
     validate_imported_cookies,
 )
-import linkedin_mcp_server.drivers.browser as browser_module
-from linkedin_mcp_server.session_state import (
+import linkedin_scraper_mcp.drivers.browser as browser_module
+from linkedin_scraper_mcp.session_state import (
     portable_cookie_path,
     runtime_profile_dir,
     runtime_state_path,
@@ -42,7 +42,7 @@ def _mock_config(monkeypatch, tmp_path):
     config = AppConfig()
     config.browser.user_data_dir = str(tmp_path / "profile")
     monkeypatch.setattr(
-        "linkedin_mcp_server.drivers.browser.get_config", lambda: config
+        "linkedin_scraper_mcp.drivers.browser.get_config", lambda: config
     )
 
 
@@ -128,7 +128,7 @@ def _write_runtime_state(
 
 @pytest.mark.asyncio
 async def test_get_or_create_browser_requires_source_state():
-    from linkedin_mcp_server.core import AuthenticationError
+    from linkedin_scraper_mcp.core import AuthenticationError
 
     with pytest.raises(AuthenticationError):
         await get_or_create_browser()
@@ -141,15 +141,15 @@ async def test_same_runtime_uses_source_profile(tmp_path):
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="macos-arm64-host",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=source_browser,
         ) as ctor,
         patch(
-            "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
             new_callable=AsyncMock,
             return_value=None,
         ),
@@ -193,15 +193,15 @@ async def test_same_runtime_restores_a_store_that_opened_empty(tmp_path):
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="windows-amd64-host",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=source_browser,
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
             new_callable=AsyncMock,
             return_value=None,
         ),
@@ -223,15 +223,15 @@ async def test_a_restricted_account_stops_the_startup_feed_check(tmp_path):
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="macos-arm64-host",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=source_browser,
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+            "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
             new_callable=AsyncMock,
             return_value=False,
         ),
@@ -251,20 +251,20 @@ async def test_same_runtime_clicks_remember_me_during_feed_validation(tmp_path):
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="macos-arm64-host",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=source_browser,
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+            "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
             new_callable=AsyncMock,
             return_value=True,
         ) as remember_me,
         patch(
-            "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
             new_callable=AsyncMock,
             return_value=None,
         ),
@@ -285,12 +285,12 @@ async def test_feed_auth_retries_feed_after_remember_me_error_recovery():
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+            "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
             new_callable=AsyncMock,
             return_value=True,
         ) as remember_me,
         patch(
-            "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
             new_callable=AsyncMock,
             return_value=None,
         ),
@@ -310,17 +310,17 @@ async def test_feed_auth_records_single_post_recovery_trace():
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+            "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
             new_callable=AsyncMock,
             return_value=True,
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
             new_callable=AsyncMock,
             return_value=None,
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.record_page_trace",
+            "linkedin_scraper_mcp.drivers.browser.record_page_trace",
             new_callable=AsyncMock,
         ) as record_page_trace,
     ):
@@ -342,15 +342,15 @@ async def test_experimental_derived_runtime_reuses_matching_committed_profile(
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="linux-amd64-container",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=derived_browser,
         ) as ctor,
         patch(
-            "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
             new_callable=AsyncMock,
             return_value=None,
         ),
@@ -378,15 +378,15 @@ async def test_default_foreign_runtime_bridges_fresh_each_startup(tmp_path):
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="linux-amd64-container",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=first_browser,
         ) as ctor,
         patch(
-            "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
             new_callable=AsyncMock,
             return_value=None,
         ),
@@ -423,15 +423,15 @@ async def test_experimental_missing_derived_runtime_bridges_and_checkpoint_commi
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="linux-amd64-container",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             side_effect=[first_browser, reopened_browser],
         ) as ctor,
         patch(
-            "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
             new_callable=AsyncMock,
             return_value=None,
         ),
@@ -477,15 +477,15 @@ async def test_debug_skip_checkpoint_restart_keeps_fresh_bridged_browser(
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="linux-amd64-container",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=first_browser,
         ) as ctor,
         patch(
-            "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
             new_callable=AsyncMock,
             return_value=None,
         ),
@@ -524,15 +524,15 @@ async def test_debug_bridge_every_startup_skips_matching_committed_profile(
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="linux-amd64-container",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=first_browser,
         ) as ctor,
         patch(
-            "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
             new_callable=AsyncMock,
             return_value=None,
         ),
@@ -564,15 +564,15 @@ async def test_debug_bridge_cookie_set_flows_through_foreign_runtime_bridge(
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="linux-amd64-container",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=first_browser,
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
             new_callable=AsyncMock,
             return_value=None,
         ),
@@ -605,15 +605,15 @@ async def test_experimental_stale_derived_runtime_rebuilds_from_new_generation(
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="linux-amd64-container",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             side_effect=[first_browser, reopened_browser],
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
             new_callable=AsyncMock,
             return_value=None,
         ),
@@ -641,15 +641,15 @@ async def test_experimental_matching_derived_runtime_failure_rebridges_from_sour
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="linux-amd64-container",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             side_effect=[invalid_browser, bridged_browser],
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
             new_callable=AsyncMock,
             side_effect=["login title: linkedin login", None],
         ),
@@ -672,11 +672,11 @@ async def test_same_runtime_start_failure_closes_browser(tmp_path):
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="macos-arm64-host",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=source_browser,
         ),
         pytest.raises(RuntimeError, match="start failed"),
@@ -694,11 +694,11 @@ async def test_default_foreign_runtime_start_failure_closes_browser(tmp_path):
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="linux-amd64-container",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=first_browser,
         ),
         pytest.raises(RuntimeError, match="start failed"),
@@ -718,7 +718,7 @@ async def test_default_foreign_runtime_start_failure_closes_browser(tmp_path):
 async def test_experimental_checkpoint_reopen_failure_clears_runtime_dir(
     tmp_path, monkeypatch
 ):
-    from linkedin_mcp_server.core import AuthenticationError
+    from linkedin_scraper_mcp.core import AuthenticationError
 
     _write_source_state(
         tmp_path, runtime_id="macos-arm64-host", login_generation="gen-2"
@@ -731,15 +731,15 @@ async def test_experimental_checkpoint_reopen_failure_clears_runtime_dir(
     barrier_mock = AsyncMock(side_effect=[None, "checkpoint"])
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="linux-amd64-container",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             side_effect=[first_browser, reopened_browser],
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
             barrier_mock,
         ),
         pytest.raises(AuthenticationError),
@@ -770,15 +770,15 @@ async def test_experimental_reopen_start_failure_closes_reopened_browser(
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="linux-amd64-container",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             side_effect=[first_browser, reopened_browser],
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
             new_callable=AsyncMock,
             return_value=None,
         ),
@@ -799,7 +799,7 @@ async def test_experimental_reopen_start_failure_closes_reopened_browser(
 async def test_experimental_bridge_validation_failure_before_commit_clears_runtime_dir(
     tmp_path, monkeypatch
 ):
-    from linkedin_mcp_server.core import AuthenticationError
+    from linkedin_scraper_mcp.core import AuthenticationError
 
     _write_source_state(
         tmp_path, runtime_id="macos-arm64-host", login_generation="gen-2"
@@ -811,15 +811,15 @@ async def test_experimental_bridge_validation_failure_before_commit_clears_runti
     barrier_mock = AsyncMock(return_value="login title: linkedin login")
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.get_runtime_id",
+            "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
             return_value="linux-amd64-container",
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=first_browser,
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+            "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
             barrier_mock,
         ),
         pytest.raises(AuthenticationError),
@@ -843,11 +843,11 @@ async def test_validate_imported_cookies_returns_feed_result(tmp_path, monkeypat
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=browser,
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser._feed_auth_succeeds",
+            "linkedin_scraper_mcp.drivers.browser._feed_auth_succeeds",
             new_callable=AsyncMock,
             return_value=True,
         ) as feed_ok,
@@ -875,11 +875,11 @@ async def test_validate_imported_cookies_returns_false_when_feed_auth_fails(
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=browser,
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser._feed_auth_succeeds",
+            "linkedin_scraper_mcp.drivers.browser._feed_auth_succeeds",
             new_callable=AsyncMock,
             return_value=False,
         ) as feed_ok,
@@ -902,11 +902,11 @@ async def test_validate_imported_cookies_short_circuits_on_import_failure(
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=browser,
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser._feed_auth_succeeds",
+            "linkedin_scraper_mcp.drivers.browser._feed_auth_succeeds",
             new_callable=AsyncMock,
             return_value=True,
         ) as feed_ok,
@@ -927,7 +927,7 @@ async def test_validate_imported_cookies_closes_browser_on_error(tmp_path):
 
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=browser,
         ),
         pytest.raises(RuntimeError, match="nav boom"),
@@ -947,11 +947,11 @@ async def test_validate_uses_local_manager_not_singleton(tmp_path):
     reset_browser_for_testing()
     with (
         patch(
-            "linkedin_mcp_server.drivers.browser.BrowserManager",
+            "linkedin_scraper_mcp.drivers.browser.BrowserManager",
             return_value=browser,
         ),
         patch(
-            "linkedin_mcp_server.drivers.browser._feed_auth_succeeds",
+            "linkedin_scraper_mcp.drivers.browser._feed_auth_succeeds",
             new_callable=AsyncMock,
             return_value=True,
         ),
@@ -970,7 +970,7 @@ async def test_concurrent_get_or_create_creates_single_browser(monkeypatch):
     import asyncio
     from typing import Any, cast
 
-    from linkedin_mcp_server.drivers import browser as browser_module
+    from linkedin_scraper_mcp.drivers import browser as browser_module
 
     # Clean starting state regardless of test order; auto-restored at teardown.
     monkeypatch.setattr(browser_module, "_browser", None)
@@ -1152,15 +1152,15 @@ class TestProxyLaunchOptions:
 
         with (
             patch(
-                "linkedin_mcp_server.drivers.browser.get_runtime_id",
+                "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
                 return_value="macos-arm64-host",
             ),
             patch(
-                "linkedin_mcp_server.drivers.browser.BrowserManager",
+                "linkedin_scraper_mcp.drivers.browser.BrowserManager",
                 return_value=source_browser,
             ) as ctor,
             patch(
-                "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+                "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
@@ -1182,7 +1182,7 @@ class TestProxyFailureIsNotAnAuthFailure:
     async def test_proxy_navigation_error_raises_proxy_error(self, monkeypatch):
         browser_module.get_config().browser.proxy_server = "http://gate.example:7000"
         monkeypatch.setattr(
-            "linkedin_mcp_server.config.get_config",
+            "linkedin_scraper_mcp.config.get_config",
             browser_module.get_config,
         )
         browser = _make_mock_browser()
@@ -1199,7 +1199,7 @@ class TestProxyFailureIsNotAnAuthFailure:
         # ProxyConnectionError would otherwise be caught by the outer except.
         browser_module.get_config().browser.proxy_server = "http://gate.example:7000"
         monkeypatch.setattr(
-            "linkedin_mcp_server.config.get_config",
+            "linkedin_scraper_mcp.config.get_config",
             browser_module.get_config,
         )
         browser = _make_mock_browser()
@@ -1213,7 +1213,7 @@ class TestProxyFailureIsNotAnAuthFailure:
 
         with (
             patch(
-                "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=True,
             ) as resolver,
@@ -1229,7 +1229,7 @@ class TestProxyFailureIsNotAnAuthFailure:
         browser_module.get_config().browser.proxy_server = "http://gate.example:7000"
         browser_module.get_config().browser.proxy_password = "s3cr3t"
         monkeypatch.setattr(
-            "linkedin_mcp_server.config.get_config",
+            "linkedin_scraper_mcp.config.get_config",
             browser_module.get_config,
         )
         browser = _make_mock_browser()
@@ -1245,7 +1245,7 @@ class TestProxyFailureIsNotAnAuthFailure:
     async def test_ordinary_navigation_error_still_returns_false(self, monkeypatch):
         # The existing behaviour for a genuinely broken session is unchanged.
         monkeypatch.setattr(
-            "linkedin_mcp_server.config.get_config",
+            "linkedin_scraper_mcp.config.get_config",
             browser_module.get_config,
         )
         browser = _make_mock_browser()
@@ -1254,7 +1254,7 @@ class TestProxyFailureIsNotAnAuthFailure:
         )
 
         with patch(
-            "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+            "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
             new_callable=AsyncMock,
             return_value=False,
         ):
@@ -1274,7 +1274,7 @@ class TestAmbiguousProxyFailureKeepsTheSession:
     async def test_timeout_under_a_proxy_raises_instead_of_false(self, monkeypatch):
         browser_module.get_config().browser.proxy_server = "http://gate.example:7000"
         monkeypatch.setattr(
-            "linkedin_mcp_server.config.get_config", browser_module.get_config
+            "linkedin_scraper_mcp.config.get_config", browser_module.get_config
         )
         browser = _make_mock_browser()
         browser.page.goto = AsyncMock(
@@ -1283,7 +1283,7 @@ class TestAmbiguousProxyFailureKeepsTheSession:
 
         with (
             patch(
-                "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -1298,7 +1298,7 @@ class TestAmbiguousProxyFailureKeepsTheSession:
         # Unchanged behaviour when no proxy is configured: a broken session
         # must still be reported as one.
         monkeypatch.setattr(
-            "linkedin_mcp_server.config.get_config", browser_module.get_config
+            "linkedin_scraper_mcp.config.get_config", browser_module.get_config
         )
         browser = _make_mock_browser()
         browser.page.goto = AsyncMock(
@@ -1306,7 +1306,7 @@ class TestAmbiguousProxyFailureKeepsTheSession:
         )
 
         with patch(
-            "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+            "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
             new_callable=AsyncMock,
             return_value=False,
         ):
@@ -1318,18 +1318,18 @@ class TestAmbiguousProxyFailureKeepsTheSession:
         # evidence about the session, so the proxy must not mask it.
         browser_module.get_config().browser.proxy_server = "http://gate.example:7000"
         monkeypatch.setattr(
-            "linkedin_mcp_server.config.get_config", browser_module.get_config
+            "linkedin_scraper_mcp.config.get_config", browser_module.get_config
         )
         browser = _make_mock_browser()
 
         with (
             patch(
-                "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+                "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
                 new_callable=AsyncMock,
                 return_value="login_wall",
             ),
@@ -1347,7 +1347,7 @@ class TestAmbiguousProxyFailureKeepsTheSession:
         # AuthenticationError, is skipped for a genuinely dead session.
         browser_module.get_config().browser.proxy_server = "http://gate.example:7000"
         monkeypatch.setattr(
-            "linkedin_mcp_server.config.get_config", browser_module.get_config
+            "linkedin_scraper_mcp.config.get_config", browser_module.get_config
         )
         browser = _make_mock_browser()
         browser.page.goto = AsyncMock(
@@ -1357,12 +1357,12 @@ class TestAmbiguousProxyFailureKeepsTheSession:
 
         with (
             patch(
-                "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+                "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
                 new_callable=AsyncMock,
                 return_value="auth blocker URL: /login",
             ),
@@ -1385,7 +1385,7 @@ class TestFeedFailureDoesNotLeakCredentials:
         config.browser.proxy_username = "acctzone9"
         config.browser.proxy_password = "s3cr3t"
         monkeypatch.setattr(
-            "linkedin_mcp_server.config.get_config", browser_module.get_config
+            "linkedin_scraper_mcp.config.get_config", browser_module.get_config
         )
         browser = _make_mock_browser()
         # No proxy marker, so it reaches the trace and log below rather than
@@ -1403,17 +1403,17 @@ class TestFeedFailureDoesNotLeakCredentials:
 
         with (
             patch(
-                "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+                "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.drivers.browser.record_page_trace", capture_trace
+                "linkedin_scraper_mcp.drivers.browser.record_page_trace", capture_trace
             ),
             caplog.at_level(logging.WARNING),
             pytest.raises(ProxyConnectionError),
@@ -1454,7 +1454,7 @@ class TestTheFeedCheckNeedsLinkedInsPage:
 
         with (
             patch(
-                "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=True,
             ) as remember_me,
@@ -1476,7 +1476,7 @@ class TestTheFeedCheckNeedsLinkedInsPage:
 
         with (
             patch(
-                "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 side_effect=land_on_the_portal,
             ),
@@ -1506,7 +1506,7 @@ class TestTheFeedCheckNeedsLinkedInsPage:
         browser.page.url = landing
 
         with patch(
-            "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+            "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
             new_callable=AsyncMock,
             return_value=False,
         ):
@@ -1538,12 +1538,12 @@ class TestTheFeedCheckNeedsLinkedInsPage:
 
         with (
             patch(
-                "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+                "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
                 side_effect=redirect_while_checking,
             ),
             pytest.raises(OffLinkedInLandingError, match="portal.invalid"),
@@ -1560,7 +1560,7 @@ class TestTheFeedCheckNeedsLinkedInsPage:
 
         with (
             patch(
-                "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
                 side_effect=redirect_while_waiting,
             ),
             pytest.raises(OffLinkedInLandingError, match="portal.invalid"),
@@ -1580,7 +1580,7 @@ class TestTheFeedCheckNeedsLinkedInsPage:
 
         with (
             patch(
-                "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -1601,12 +1601,12 @@ class TestTheFeedCheckNeedsLinkedInsPage:
 
         with (
             patch(
-                "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+                "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.drivers.browser.detect_auth_barrier_quick",
+                "linkedin_scraper_mcp.drivers.browser.detect_auth_barrier_quick",
                 side_effect=redirect_while_checking,
             ),
             pytest.raises(OffLinkedInLandingError, match="portal.invalid"),
@@ -1625,7 +1625,7 @@ class TestTheFeedCheckNeedsLinkedInsPage:
         browser.page.goto = AsyncMock(side_effect=fail_to_resolve)
 
         with patch(
-            "linkedin_mcp_server.drivers.browser.resolve_remember_me_prompt",
+            "linkedin_scraper_mcp.drivers.browser.resolve_remember_me_prompt",
             new_callable=AsyncMock,
             return_value=False,
         ):
@@ -1640,11 +1640,11 @@ class TestTheFeedCheckNeedsLinkedInsPage:
 
         with (
             patch(
-                "linkedin_mcp_server.drivers.browser.get_runtime_id",
+                "linkedin_scraper_mcp.drivers.browser.get_runtime_id",
                 return_value="macos-arm64-host",
             ),
             patch(
-                "linkedin_mcp_server.drivers.browser.BrowserManager",
+                "linkedin_scraper_mcp.drivers.browser.BrowserManager",
                 return_value=source_browser,
             ),
             pytest.raises(OffLinkedInLandingError, match="portal.invalid"),
@@ -1668,7 +1668,7 @@ class TestTheCookieExportCannotStrandTheProfile:
     async def test_an_export_that_never_answers_gives_up(self):
         from unittest.mock import MagicMock, patch
 
-        from linkedin_mcp_server.core import browser as core
+        from linkedin_scraper_mcp.core import browser as core
 
         manager = core.BrowserManager.__new__(core.BrowserManager)
         context = MagicMock()

@@ -14,7 +14,7 @@ import asyncio
 import pytest
 from patchright.async_api import async_playwright
 
-from linkedin_mcp_server.linkedin.text import JOB_POSTING_EN_US
+from linkedin_scraper_mcp.linkedin.text import JOB_POSTING_EN_US
 
 #: Keep every test that launches Chromium on one worker; see
 #: ``test_root_content_dom.py``.

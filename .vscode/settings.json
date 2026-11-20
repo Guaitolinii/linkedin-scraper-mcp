@@ -16,13 +16,13 @@
     "python.defaultInterpreterPath": ".venv/bin/python",
     "python.terminal.activateEnvironment": true,
     "yaml.schemas": {
-        "https://www.schemastore.org/github-issue-config.json": "file:///Users/daniel/Documents/development/python/linkedin-mcp-server/.github/ISSUE_TEMPLATE/config.yml"
+        "https://www.schemastore.org/github-issue-config.json": "file:///Users/daniel/Documents/development/python/linkedin-scraper-mcp/.github/ISSUE_TEMPLATE/config.yml"
     },
     "cursorpyright.analysis.autoImportCompletions": true,
     "cursorpyright.analysis.diagnosticMode": "workspace",
     "cursorpyright.analysis.extraPaths": [
-        "./linkedin_mcp_server"
+        "./linkedin_scraper_mcp"
     ],
-    "cursorpyright.analysis.stubPath": "./linkedin_mcp_server",
+    "cursorpyright.analysis.stubPath": "./linkedin_scraper_mcp",
     "cursorpyright.analysis.typeCheckingMode": "off"
 }

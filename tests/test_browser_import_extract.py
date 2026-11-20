@@ -18,9 +18,9 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from linkedin_mcp_server.browser_import import extract
-from linkedin_mcp_server.browser_import.discovery import BrowserProfile
-from linkedin_mcp_server.browser_import.extract import (
+from linkedin_scraper_mcp.browser_import import extract
+from linkedin_scraper_mcp.browser_import.discovery import BrowserProfile
+from linkedin_scraper_mcp.browser_import.extract import (
     _CBC_IV,
     _SAMESITE_MAP,
     LiAtMeta,
@@ -31,7 +31,7 @@ from linkedin_mcp_server.browser_import.extract import (
     has_undecryptable_li_at,
     read_li_at_meta,
 )
-from linkedin_mcp_server.exceptions import KeystoreUnavailableError
+from linkedin_scraper_mcp.exceptions import KeystoreUnavailableError
 
 _MAC_PASSWORD = b"dGVzdHBhc3N3b3Jk"  # base64-looking string, used verbatim
 _HOST = ".linkedin.com"

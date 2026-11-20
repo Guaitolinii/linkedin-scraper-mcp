@@ -15,20 +15,20 @@ from unittest.mock import MagicMock
 import pytest
 from fastmcp.exceptions import ToolError
 
-from linkedin_mcp_server.core.throttle import (
+from linkedin_scraper_mcp.core.throttle import (
     browser_call_record,
     reset_throttle_record,
     throttle_evidence,
     throttled_count,
     watch_responses,
 )
-from linkedin_mcp_server.core.exceptions import ProfileNotFoundError, RateLimitError
-from linkedin_mcp_server.error_handler import (
+from linkedin_scraper_mcp.core.exceptions import ProfileNotFoundError, RateLimitError
+from linkedin_scraper_mcp.error_handler import (
     CodedToolError,
     ErrorCode,
     raise_tool_error,
 )
-from linkedin_mcp_server.exceptions import SessionExpiredError
+from linkedin_scraper_mcp.exceptions import SessionExpiredError
 
 
 def response(
@@ -309,7 +309,7 @@ class TestTheClientIsToldAboutThrottling:
         # The catch-all redacts a proxy password before FastMCP logs the
         # exception with its traceback. Turning the failure into a ToolError
         # must not reach back past that to the original.
-        from linkedin_mcp_server.config.schema import AppConfig
+        from linkedin_scraper_mcp.config.schema import AppConfig
 
         # Built here rather than written out: a rendered traceback quotes the
         # source line that raised, and a literal there would match by itself.
@@ -318,7 +318,7 @@ class TestTheClientIsToldAboutThrottling:
         config.browser.proxy_server = "http://gate.example:7000"
         config.browser.proxy_username = user
         config.browser.proxy_password = secret
-        monkeypatch.setattr("linkedin_mcp_server.config.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.config.get_config", lambda: config)
         record(response(429, "https://www.linkedin.com/voyager/api/messaging/x"))
 
         with pytest.raises(ToolError) as caught:
@@ -348,7 +348,7 @@ class TestTheRecordBelongsToOneCall:
         """
         from unittest.mock import AsyncMock
 
-        from linkedin_mcp_server.sequential_tool_middleware import (
+        from linkedin_scraper_mcp.sequential_tool_middleware import (
             SequentialToolExecutionMiddleware,
         )
 
@@ -357,17 +357,17 @@ class TestTheRecordBelongsToOneCall:
         lease = MagicMock()
         lease.try_acquire.return_value = True
         monkeypatch.setattr(
-            "linkedin_mcp_server.sequential_tool_middleware.get_profile_lease",
+            "linkedin_scraper_mcp.sequential_tool_middleware.get_profile_lease",
             lambda: lease,
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.drivers.browser.note_call_started", lambda: None
+            "linkedin_scraper_mcp.drivers.browser.note_call_started", lambda: None
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.drivers.browser.note_activity", lambda: None
+            "linkedin_scraper_mcp.drivers.browser.note_activity", lambda: None
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.drivers.browser.release_profile_if_idle_or_requested",
+            "linkedin_scraper_mcp.drivers.browser.release_profile_if_idle_or_requested",
             AsyncMock(),
         )
 
@@ -390,7 +390,7 @@ class TestTheRecordBelongsToOneCall:
     ):
         # get_session_status runs beside the browser lock and never clears the
         # record, so a refusal the last browser call met is still in it.
-        from linkedin_mcp_server.sequential_tool_middleware import (
+        from linkedin_scraper_mcp.sequential_tool_middleware import (
             SequentialToolExecutionMiddleware,
         )
 

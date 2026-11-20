@@ -8,9 +8,9 @@ import pytest
 
 from patchright.async_api import TimeoutError as PlaywrightTimeoutError
 
-from linkedin_mcp_server.config.schema import AppConfig
-from linkedin_mcp_server.core.exceptions import NetworkError, ProxyConnectionError
-from linkedin_mcp_server.core.proxy_errors import (
+from linkedin_scraper_mcp.config.schema import AppConfig
+from linkedin_scraper_mcp.core.exceptions import NetworkError, ProxyConnectionError
+from linkedin_scraper_mcp.core.proxy_errors import (
     as_proxy_error,
     goto_reporting_proxy_errors,
     is_proxy_error,
@@ -26,7 +26,7 @@ def proxy_config(monkeypatch):
     config.browser.proxy_server = "http://gate.example:7000"
     config.browser.proxy_username = "user"
     config.browser.proxy_password = "s3cr3t p@ss"
-    monkeypatch.setattr("linkedin_mcp_server.config.get_config", lambda: config)
+    monkeypatch.setattr("linkedin_scraper_mcp.config.get_config", lambda: config)
     return config
 
 
@@ -99,7 +99,7 @@ class TestRedaction:
 
     def test_without_a_configured_password_nothing_changes(self, monkeypatch):
         monkeypatch.setattr(
-            "linkedin_mcp_server.config.get_config", lambda: AppConfig()
+            "linkedin_scraper_mcp.config.get_config", lambda: AppConfig()
         )
         assert redact_proxy_credentials("untouched") == "untouched"
 
@@ -107,7 +107,7 @@ class TestRedaction:
         def explode():
             raise RuntimeError("config unavailable")
 
-        monkeypatch.setattr("linkedin_mcp_server.config.get_config", explode)
+        monkeypatch.setattr("linkedin_scraper_mcp.config.get_config", explode)
         converted = as_proxy_error(Exception("net::ERR_PROXY_CONNECTION_FAILED"))
         assert "the configured proxy" in str(converted)
 
@@ -129,7 +129,7 @@ class TestProxyHint:
 
     def test_no_hint_without_a_proxy(self, monkeypatch):
         monkeypatch.setattr(
-            "linkedin_mcp_server.config.get_config", lambda: AppConfig()
+            "linkedin_scraper_mcp.config.get_config", lambda: AppConfig()
         )
         assert proxy_hint() == ""
 
@@ -144,7 +144,7 @@ class TestAmbiguousAuthMarker:
         # The same code covers a site's own HTTP auth, so claiming it with no
         # proxy configured would misreport an ordinary failure.
         monkeypatch.setattr(
-            "linkedin_mcp_server.config.get_config", lambda: AppConfig()
+            "linkedin_scraper_mcp.config.get_config", lambda: AppConfig()
         )
         assert is_proxy_error(Exception("net::ERR_INVALID_AUTH_CREDENTIALS")) is False
 
@@ -266,7 +266,7 @@ class TestNavigationBudget:
         wait for that request has its own cap.
         """
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.proxy_errors.STARTUP_BUDGET_MS", 50
+            "linkedin_scraper_mcp.core.proxy_errors.STARTUP_BUDGET_MS", 50
         )
         page = _ClockPage([(2.0, _Request())], finish_after=0.01)
         with pytest.raises(PlaywrightTimeoutError, match="before the request was sent"):
@@ -368,7 +368,7 @@ class TestUsernameIsTreatedAsSecret:
         config = AppConfig()
         config.browser.proxy_server = "http://gate.example:7000"
         config.browser.proxy_username = self.USERNAME
-        monkeypatch.setattr("linkedin_mcp_server.config.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.config.get_config", lambda: config)
         return config
 
     def test_username_is_masked(self, monkeypatch):

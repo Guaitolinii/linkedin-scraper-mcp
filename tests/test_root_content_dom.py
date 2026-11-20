@@ -18,8 +18,8 @@ from typing import Any
 import pytest
 from patchright.async_api import async_playwright
 
-from linkedin_mcp_server.linkedin.content import PageContentReader
-from linkedin_mcp_server.linkedin.session import PageSession
+from linkedin_scraper_mcp.linkedin.content import PageContentReader
+from linkedin_scraper_mcp.linkedin.session import PageSession
 
 #: CI uses ``--dist loadgroup``. Keep every test that launches Chromium on one
 #: worker so browser startups cannot compete with the DOM cases' wall-clock

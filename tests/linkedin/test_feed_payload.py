@@ -2,13 +2,13 @@
 
 from pathlib import Path
 
-from linkedin_mcp_server.linkedin.feed_payload import (
+from linkedin_scraper_mcp.linkedin.feed_payload import (
     append_permalink_references,
     build_feed_references,
     is_permalink_payload_response,
     permalink_paths_from_payload,
 )
-from linkedin_mcp_server.linkedin.link_metadata import Reference
+from linkedin_scraper_mcp.linkedin.link_metadata import Reference
 
 
 class TestBuildFeedReferences:

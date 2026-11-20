@@ -16,8 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from linkedin_mcp_server.exceptions import ProfileRootRefusedError
-from linkedin_mcp_server.profile_claim import (
+from linkedin_scraper_mcp.exceptions import ProfileRootRefusedError
+from linkedin_scraper_mcp.profile_claim import (
     CLAIM_FILE,
     CLAIM_VERSION,
     claim_path,
@@ -25,7 +25,7 @@ from linkedin_mcp_server.profile_claim import (
     ensure_profile_claim,
     require_profile_claim,
 )
-from linkedin_mcp_server.session_state import (
+from linkedin_scraper_mcp.session_state import (
     clear_auth_state,
     clear_runtime_profile,
     portable_cookie_path,
@@ -130,7 +130,7 @@ class TestTheDefaultRootNeedsNoMarker:
     """The one root that is ours by definition, because nothing else can be.
 
     In the published image the default expands to
-    ``/home/pwuser/.linkedin-mcp/profile``, and the volume mounted there was
+    ``/home/pwuser/.linkedin-scraper-mcp/profile``, and the volume mounted there was
     written on a host under a completely different path. No comparison of
     recorded paths can ever succeed across that boundary, so the default has to
     stand on its own.
@@ -159,7 +159,7 @@ class TestTheDefaultRootNeedsNoMarker:
             default,
             {
                 "version": CLAIM_VERSION,
-                "profile_path": "/Users/someone/.linkedin-mcp/profile",
+                "profile_path": "/Users/someone/.linkedin-scraper-mcp/profile",
             },
         )
 
@@ -407,8 +407,8 @@ class TestClaimingACustomRoot:
         The list is spelled out rather than imported to avoid an import cycle,
         and a hand-copied constant is exactly the kind that drifts.
         """
-        from linkedin_mcp_server import bootstrap, profile_lease
-        from linkedin_mcp_server.profile_claim import (
+        from linkedin_scraper_mcp import bootstrap, profile_lease
+        from linkedin_scraper_mcp.profile_claim import (
             _IGNORED_WHEN_JUDGING_EMPTINESS as ignored,
         )
 
@@ -653,7 +653,7 @@ class TestTwoProcessesMeetingOneRoot:
         child ever gets there, because the other is still waiting to acquire;
         without it both do, both find the root free, and both write.
         """
-        import linkedin_mcp_server.profile_claim as claim_module
+        import linkedin_scraper_mcp.profile_claim as claim_module
 
         root = tmp_path / "shared"
         root.mkdir()
@@ -731,7 +731,7 @@ class TestTwoProcessesMeetingOneRoot:
         and a rotating peer never touch the same file and never need to wait for
         each other.
         """
-        from linkedin_mcp_server.profile_lease import get_profile_lease
+        from linkedin_scraper_mcp.profile_lease import get_profile_lease
 
         target = tmp_path / "custom" / "profile"
         target.parent.mkdir(parents=True)
@@ -770,8 +770,8 @@ class TestTwoProcessesMeetingOneRoot:
         They must answer from the marker while other processes are busy, which
         is every run after the first.
         """
-        from linkedin_mcp_server.profile_lease import acquire_locked_fd
-        from linkedin_mcp_server.profile_claim import CLAIM_LOCK_FILE
+        from linkedin_scraper_mcp.profile_lease import acquire_locked_fd
+        from linkedin_scraper_mcp.profile_claim import CLAIM_LOCK_FILE
 
         target = tmp_path / "custom" / "profile"
         ensure_profile_claim(target)
@@ -815,9 +815,9 @@ class TestTwoProcessesMeetingOneRoot:
         """
         import threading
 
-        from linkedin_mcp_server import profile_claim as claim_module
-        from linkedin_mcp_server.profile_claim import CLAIM_LOCK_FILE
-        from linkedin_mcp_server.profile_lease import acquire_locked_fd
+        from linkedin_scraper_mcp import profile_claim as claim_module
+        from linkedin_scraper_mcp.profile_claim import CLAIM_LOCK_FILE
+        from linkedin_scraper_mcp.profile_lease import acquire_locked_fd
 
         monkeypatch.setattr(claim_module, "_CLAIM_WAIT_SECONDS", 0.2)
         target = tmp_path / "custom" / "profile"

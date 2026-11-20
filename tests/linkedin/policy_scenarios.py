@@ -9,30 +9,27 @@ from pathlib import Path
 from typing import Any, cast
 from unittest.mock import patch
 
-import asyncio
 import inspect
 import json
 
 from patchright.async_api import Page
 from patchright.async_api import TimeoutError as PlaywrightTimeoutError
 
-from linkedin_mcp_server.callbacks import ProgressCallback
-from linkedin_mcp_server.linkedin import capture as capture_module
-from linkedin_mcp_server.linkedin import company as company_module
-from linkedin_mcp_server.linkedin import feed as feed_module
-from linkedin_mcp_server.linkedin import job_pages as job_pages_module
-from linkedin_mcp_server.linkedin import jobs as jobs_module
-from linkedin_mcp_server.linkedin import navigation as navigation_module
-from linkedin_mcp_server.linkedin import person as person_module
-from linkedin_mcp_server.linkedin import session as session_module
-from linkedin_mcp_server.linkedin import LinkedInExtractor
-from linkedin_mcp_server.linkedin.fields import COMPANY_SECTIONS, PERSON_SECTIONS
-from linkedin_mcp_server.server import create_mcp_server
+from linkedin_scraper_mcp.callbacks import ProgressCallback
+from linkedin_scraper_mcp.linkedin import capture as capture_module
+from linkedin_scraper_mcp.linkedin import company as company_module
+from linkedin_scraper_mcp.linkedin import job_pages as job_pages_module
+from linkedin_scraper_mcp.linkedin import jobs as jobs_module
+from linkedin_scraper_mcp.linkedin import navigation as navigation_module
+from linkedin_scraper_mcp.linkedin import person as person_module
+from linkedin_scraper_mcp.linkedin import session as session_module
+from linkedin_scraper_mcp.linkedin import LinkedInExtractor
+from linkedin_scraper_mcp.linkedin.fields import COMPANY_SECTIONS, PERSON_SECTIONS
+from linkedin_scraper_mcp.server import create_mcp_server
 
 from .support.policy_trace import (
     FakeClock,
     ScriptedPage,
-    ScriptedResponse,
     TraceRecorder,
     bind_effective,
 )
@@ -115,7 +112,6 @@ def _diagnostics_bindings(diagnostics: Any) -> Generator[None]:
 
     with (
         patch.object(capture_module, "build_issue_diagnostics", diagnostics),
-        patch.object(feed_module, "build_issue_diagnostics", diagnostics),
         patch.object(person_module, "build_issue_diagnostics", diagnostics),
         patch.object(company_module, "build_issue_diagnostics", diagnostics),
         patch.object(job_pages_module, "build_issue_diagnostics", diagnostics),
@@ -133,7 +129,6 @@ async def boundaries(
 ) -> AsyncGenerator[None]:
     real_scroll_body = session_module.scroll_to_bottom
     real_scroll_sidebar = session_module.scroll_job_sidebar
-    real_drain = feed_module.FeedReader._drain_listener_tasks
 
     async def trace(_page: Any, label: str, *, extra: Any = None) -> None:
         recorder.record("boundary.trace", label=label, extra=extra)
@@ -178,12 +173,6 @@ async def boundaries(
         clock.advance(0.4)
         return False
 
-    async def drain(tasks: list[Any]) -> None:
-        # The real drain is what runs; the event only marks where it happens,
-        # so swapping it with listener removal shows up as a reordered trace.
-        recorder.record("boundary.drain", pending=len(tasks))
-        await real_drain(tasks)
-
     def diagnostics(error: Exception, **values: Any) -> dict[str, Any]:
         return {
             "error_type": type(error).__name__,
@@ -199,8 +188,7 @@ async def boundaries(
         patch.object(navigation_module, "stabilize_navigation", stabilize),
         # Every binding of each shared boundary, because the workflows that
         # reach it are split across the modules mid-relocation: generic
-        # capture, the feed, conversation reader and message sender go through
-        # `PageSession`, while the job pages import the helper into
+        # capture goes through `PageSession`, while the job pages import the helper into
         # `job_pages`. Patching one side only lets the real helper loose on a
         # scripted page. The scrolls have no facade binding left at all — the job
         # reader held the last one — and neither has the modal close, whose
@@ -214,13 +202,6 @@ async def boundaries(
         patch.object(session_module, "scroll_job_sidebar", scroll_sidebar),
         patch.object(job_pages_module, "scroll_job_sidebar", scroll_sidebar),
         _diagnostics_bindings(diagnostics),
-        # `staticmethod`, or the class attribute would bind `self` in front of
-        # the pending list and the replacement would never match the call.
-        patch.object(
-            feed_module.FeedReader,
-            "_drain_listener_tasks",
-            staticmethod(drain),
-        ),
         patch.object(session_module.asyncio, "sleep", clock.sleep),
         patch.object(session_module.time, "monotonic", clock.monotonic),
     ):
@@ -394,37 +375,6 @@ async def _job_search_scenario(route: str = "/jobs/search/") -> dict[str, Any]:
     )
 
 
-async def _dismiss_job_scenario() -> dict[str, Any]:
-    recorder = TraceRecorder("dismiss_job__dismissed", _COMMON_ALLOWED | {"title"})
-    clock = FakeClock(recorder)
-    page = _page(recorder)
-    posting = "https://www.linkedin.com/jobs/view/123/"
-    search = (
-        "https://www.linkedin.com/jobs/search/"
-        "?keywords=Applied+AI+Engineer+Acme&geoId=92000000"
-    )
-    page.goto_landings.extend([posting, search, search])
-    page.script("title", "LinkedIn", "(3) Applied AI Engineer | Acme | LinkedIn")
-    page.declare_locator("button[data-mcp-dismiss]", "search_card_dismiss")
-    page.script(
-        "evaluate:job_search_card",
-        {"cards": 25, "matches": 1, "dismiss": 1, "undo": 0},
-        {"cards": 25, "matches": 1, "dismiss": 0, "undo": 1},
-        # The reload lists the other jobs, and only that makes the job's
-        # absence a confirmation.
-        {"cards": 24, "matches": 0, "dismiss": 0, "undo": 0},
-        {"cards": 24, "matches": 0, "dismiss": 0, "undo": 0},
-    )
-    page.script("search_card_dismiss.click", None)
-    extractor = _extractor(page)
-    arguments = {"job_id": "123"}
-    async with boundaries(recorder, clock):
-        with recorder.context("dismiss_job"):
-            result = await extractor.dismiss_job(**arguments)
-    page.assert_clean()
-    return recorder.trace({"method": "dismiss_job", "arguments": arguments}, result)
-
-
 async def _job_search_upgrade_scenario() -> dict[str, Any]:
     recorder = TraceRecorder(
         "search_jobs__stopping_page_metadata_upgrade", _COMMON_ALLOWED
@@ -536,74 +486,11 @@ async def _saved_jobs_scenario() -> dict[str, Any]:
     )
 
 
-async def _feed_stale_scenario() -> dict[str, Any]:
-    name = "extract_feed__stale_stop"
-    recorder = TraceRecorder(name, _COMMON_ALLOWED)
-    clock = FakeClock(recorder)
-    page = _page(recorder).script("evaluate:root_content", _root("Feed content"))
-    page.script("evaluate:feed_post_boundaries", {"posts": []})
-    extractor = _extractor(page)
-    async with boundaries(recorder, clock):
-        with recorder.context("extract_feed", "feed"):
-            result = await extractor.extract_feed(num_posts=10)
-    page.assert_clean()
-    return recorder.trace(
-        {"method": "extract_feed", "arguments": {"num_posts": 10}},
-        {"references": result.references, "text": result.text},
-    )
-
-
-async def _feed_response_scenario(*, body_failure: bool) -> dict[str, Any]:
-    suffix = "body_failure" if body_failure else "body_success"
-    recorder = TraceRecorder(
-        f"extract_feed__{suffix}",
-        _COMMON_ALLOWED | {"response.body.start", "response.body.finish"},
-    )
-    clock = FakeClock(recorder)
-    page = _page(recorder).script("evaluate:root_content", _root("Feed content"))
-    body: bytes | BaseException
-    if body_failure:
-        body = RuntimeError("response body unavailable")
-    else:
-        body = (
-            b'{"postSlugUrl":"https://www.linkedin.com/posts/'
-            b'policy-ugcPost-123-example"}'
-        )
-    response = ScriptedResponse(
-        recorder,
-        "https://www.linkedin.com/feed/",
-        body,
-    )
-    page.script("mouse.wheel", lambda: page.emit("response", response))
-    page.script("evaluate:feed_post_boundaries", {"posts": []})
-    extractor = _extractor(page)
-    async with boundaries(recorder, clock):
-        with recorder.context("extract_feed", "feed"):
-            result = await extractor.extract_feed(num_posts=1)
-    page.assert_clean()
-    return recorder.trace(
-        {"method": "extract_feed", "arguments": {"num_posts": 1}},
-        {"references": result.references, "text": result.text},
-    )
-
-
 _MESSAGE_PROFILE_URL = "https://www.linkedin.com/in/ada-lovelace/"
 _MESSAGE_COMPOSE_URL = (
     "https://www.linkedin.com/messaging/compose/"
     "?recipient=ACoAA-policy&profileUrn=urn%3Ali%3Afsd_profile%3AACoAA-policy"
 )
-_MESSAGE_ROUTE = "https://www.linkedin.com/messaging/thread/2-policy-thread==/"
-_MESSAGE_TARGET = {
-    "profilePath": "/in/ada-lovelace/",
-    "profileUrn": "ACoAA-policy",
-}
-_VALID_COMPOSER = {
-    "status": "valid",
-    "active": False,
-    "empty": True,
-    "submitCount": 1,
-    "submitUsable": True,
-}
 
 
 def _profile_target(
@@ -644,276 +531,6 @@ def _script_profile_target(
     )
 
 
-def _script_message_surface(
-    page: ScriptedPage,
-    *,
-    states: tuple[dict[str, Any], ...],
-    route: str = _MESSAGE_ROUTE,
-) -> None:
-    page.goto_landings.append(_MESSAGE_PROFILE_URL)
-    page.goto_landings.append(route)
-    _script_profile_target(page)
-    page.script("wait_for_function:message_composer_ready", None)
-    page.script("evaluate:message_composer_state", *states)
-
-
-def _script_message_owner(page: ScriptedPage, *, write: str = "written") -> None:
-    page.script("evaluate_handle:message_composer_owner", True)
-    page.script("handle-1.evaluate:message_composer_write", write)
-    page.script("handle-1.evaluate:message_composer_dispose", None)
-
-
-def _script_confirmation_cleanup(page: ScriptedPage) -> None:
-    page.script("evaluate:message_confirmation_dispose", None)
-
-
-def _script_owned_text_cleanup(page: ScriptedPage, *, removed: bool) -> None:
-    page.script("handle-1.evaluate:message_composer_cleanup", removed)
-
-
-async def _message_target_scenario(status: str) -> dict[str, Any]:
-    recorder = TraceRecorder(f"send_message__target_{status}", _COMMON_ALLOWED)
-    clock = FakeClock(recorder)
-    page = _page(recorder)
-    page.goto_landings.append(_MESSAGE_PROFILE_URL)
-    _script_profile_target(page, status)
-    extractor = _extractor(page)
-    async with boundaries(recorder, clock):
-        with recorder.context("send_message", "message"):
-            result = await extractor.send_message(
-                "ada-lovelace",
-                "New text",
-                confirm_send=True,
-                profile_urn="ACoAA-policy",
-            )
-    page.assert_clean()
-    return recorder.trace(
-        {
-            "method": "send_message",
-            "arguments": {"target_resolution": status, "confirm_send": True},
-        },
-        result,
-    )
-
-
-async def _messaging_dry_run_scenario() -> dict[str, Any]:
-    recorder = TraceRecorder("send_message__dry_run", _COMMON_ALLOWED)
-    clock = FakeClock(recorder)
-    page = _page(recorder)
-    _script_message_surface(page, states=(_VALID_COMPOSER,))
-    extractor = _extractor(page)
-    async with boundaries(recorder, clock):
-        with recorder.context("send_message", "message"):
-            result = await extractor.send_message(
-                "ada-lovelace",
-                "New text",
-                confirm_send=False,
-                profile_urn="ACoAA-policy",
-            )
-    page.assert_clean()
-    return recorder.trace(
-        {
-            "method": "send_message",
-            "arguments": {
-                "linkedin_username": "ada-lovelace",
-                "message": "New text",
-                "confirm_send": False,
-                "profile_urn": "ACoAA-policy",
-            },
-        },
-        result,
-    )
-
-
-async def _occupied_message_scenario(*, restored_during_write: bool) -> dict[str, Any]:
-    suffix = "restored_during_write" if restored_during_write else "existing_draft"
-    recorder = TraceRecorder(f"send_message__{suffix}", _COMMON_ALLOWED)
-    clock = FakeClock(recorder)
-    page = _page(recorder)
-    second_state = (
-        _VALID_COMPOSER
-        if restored_during_write
-        else {**_VALID_COMPOSER, "empty": False}
-    )
-    _script_message_surface(page, states=(_VALID_COMPOSER, second_state))
-    if restored_during_write:
-        _script_message_owner(page, write="occupied")
-        _script_owned_text_cleanup(page, removed=False)
-    extractor = _extractor(page)
-    async with boundaries(recorder, clock):
-        with recorder.context("send_message", "message"):
-            result = await extractor.send_message(
-                "ada-lovelace", "New text", confirm_send=True
-            )
-    page.assert_clean()
-    return recorder.trace(
-        {
-            "method": "send_message",
-            "arguments": {
-                "confirm_send": True,
-                "composer_occupied": suffix,
-            },
-        },
-        result,
-    )
-
-
-async def _messaging_submission_scenario(
-    outcome: str, message: str = "New text"
-) -> dict[str, Any]:
-    recorder = TraceRecorder(f"send_message__{outcome}", _COMMON_ALLOWED)
-    clock = FakeClock(recorder)
-    page = _page(recorder)
-    _script_message_surface(page, states=(_VALID_COMPOSER, _VALID_COMPOSER))
-    _script_message_owner(page)
-
-    if outcome == "pre_submit_cleanup":
-        page.script("handle-1.evaluate:message_submit_ready", "invalid")
-        _script_owned_text_cleanup(page, removed=True)
-    else:
-        ready_states = ("disabled", "ready") if outcome == "sent" else ("ready",)
-        page.script("handle-1.evaluate:message_submit_ready", *ready_states)
-        page.script("evaluate:message_confirmation_prepare", "confirmation-1")
-        if outcome == "submission_rejected":
-            page.script("handle-1.evaluate:message_submit", "invalid")
-            _script_confirmation_cleanup(page)
-            _script_owned_text_cleanup(page, removed=True)
-        elif outcome == "submission_interrupted":
-            page.script(
-                "handle-1.evaluate:message_submit",
-                RuntimeError("submission round trip interrupted"),
-            )
-            _script_confirmation_cleanup(page)
-        else:
-            page.script("handle-1.evaluate:message_submit", "clicked")
-            page.script(
-                "wait_for_function:message_confirmation_ready",
-                {"path": "/messaging/thread/2-policy-thread==/"}
-                if outcome == "sent"
-                else PlaywrightTimeoutError("same-node transition not observed"),
-            )
-            _script_confirmation_cleanup(page)
-
-    extractor = _extractor(page)
-    async with boundaries(recorder, clock):
-        with recorder.context("send_message", "message"):
-            result = await extractor.send_message(
-                "ada-lovelace", message, confirm_send=True
-            )
-    page.assert_clean()
-    arguments: dict[str, Any] = {"confirm_send": True, "submission_outcome": outcome}
-    if message != "New text":
-        arguments["message"] = message
-    return recorder.trace({"method": "send_message", "arguments": arguments}, result)
-
-
-async def _messaging_cancellation_scenario() -> dict[str, Any]:
-    recorder = TraceRecorder("send_message__confirmation_cancelled", _COMMON_ALLOWED)
-    clock = FakeClock(recorder)
-    page = _page(recorder)
-    _script_message_surface(page, states=(_VALID_COMPOSER, _VALID_COMPOSER))
-    _script_message_owner(page)
-    page.script("handle-1.evaluate:message_submit_ready", "ready")
-    page.script("evaluate:message_confirmation_prepare", "confirmation-1")
-    page.script("handle-1.evaluate:message_submit", "clicked")
-    page.script(
-        "wait_for_function:message_confirmation_ready", asyncio.CancelledError()
-    )
-    _script_confirmation_cleanup(page)
-    extractor = _extractor(page)
-    async with boundaries(recorder, clock):
-        with recorder.context("send_message", "message"):
-            try:
-                await extractor.send_message(
-                    "ada-lovelace", "New text", confirm_send=True
-                )
-            except asyncio.CancelledError:
-                result = {"raised": "CancelledError"}
-            else:
-                raise AssertionError("message confirmation cancellation was swallowed")
-    page.assert_clean()
-    return recorder.trace(
-        {
-            "method": "send_message",
-            "arguments": {"confirm_send": True, "cancelled_during": "confirmation"},
-        },
-        result,
-    )
-
-
-async def _invalid_message_scenario(message: str, label: str) -> dict[str, Any]:
-    recorder = TraceRecorder(f"send_message__invalid_{label}", _COMMON_ALLOWED)
-    clock = FakeClock(recorder)
-    page = _page(recorder)
-    extractor = _extractor(page)
-    async with boundaries(recorder, clock):
-        with recorder.context("send_message", "message"):
-            result = await extractor.send_message(
-                "ada-lovelace",
-                message,
-                confirm_send=True,
-                profile_urn="ACoAA-policy",
-            )
-    page.assert_clean()
-    return recorder.trace(
-        {
-            "method": "send_message",
-            "arguments": {
-                "linkedin_username": "ada-lovelace",
-                "message_case": label,
-                "confirm_send": True,
-            },
-        },
-        result,
-    )
-
-
-_REPLY_THREAD_ROUTE = "https://www.linkedin.com/messaging/thread/2-policy-thread==/"
-
-
-async def _reply_scenario(outcome: str) -> dict[str, Any]:
-    recorder = TraceRecorder(f"reply_to_conversation__{outcome}", _COMMON_ALLOWED)
-    clock = FakeClock(recorder)
-    page = _page(recorder)
-    if outcome == "other_thread":
-        page.goto_landings.append(
-            "https://www.linkedin.com/messaging/thread/2-other-thread/"
-        )
-    else:
-        page.goto_landings.append(_REPLY_THREAD_ROUTE)
-        page.script("wait_for_function:message_composer_ready", None)
-        states = (_VALID_COMPOSER,) * (1 if outcome == "dry_run" else 2)
-        page.script("evaluate:message_composer_state", *states)
-        page.script("evaluate:thread_participant", "Ada Lovelace")
-    if outcome == "sent":
-        _script_message_owner(page)
-        page.script("handle-1.evaluate:message_submit_ready", "ready")
-        page.script("evaluate:message_confirmation_prepare", "confirmation-1")
-        page.script("handle-1.evaluate:message_submit", "clicked")
-        page.script(
-            "wait_for_function:message_confirmation_ready",
-            {"path": "/messaging/thread/2-policy-thread==/"},
-        )
-        _script_confirmation_cleanup(page)
-    extractor = _extractor(page)
-    arguments = {
-        "thread_id": "2-policy-thread==",
-        "message": "New text",
-        "confirm_send": outcome == "sent",
-    }
-    async with boundaries(recorder, clock):
-        with recorder.context("reply_to_conversation", "message"):
-            result = await extractor.reply_to_conversation(
-                arguments["thread_id"],
-                arguments["message"],
-                confirm_send=arguments["confirm_send"],
-            )
-    page.assert_clean()
-    return recorder.trace(
-        {"method": "reply_to_conversation", "arguments": arguments}, result
-    )
-
-
 async def _single_capture_facade_scenario(method: str) -> dict[str, Any]:
     name = f"{method}__baseline"
     recorder = TraceRecorder(name, _COMMON_ALLOWED)
@@ -938,9 +555,6 @@ async def _single_capture_facade_scenario(method: str) -> dict[str, Any]:
             elif method == "search_companies":
                 arguments = {"keywords": "engine"}
                 result = await extractor.search_companies(**arguments)
-            elif method == "search_posts":
-                arguments = {"keywords": "mathematics", "max_pages": 2}
-                result = await extractor.search_posts(**arguments)
             else:
                 raise AssertionError(method)
     page.assert_clean()
@@ -1003,24 +617,6 @@ async def _job_apply_scenario() -> dict[str, Any]:
     )
 
 
-async def _easy_apply_form_scenario() -> dict[str, Any]:
-    recorder = TraceRecorder("get_easy_apply_form__closed", _COMMON_ALLOWED)
-    clock = FakeClock(recorder)
-    page = _page(recorder).script(
-        "evaluate:job_apply_signals",
-        {"easy_apply": False, "external_link": None, "applied": False, "closed": True},
-    )
-    extractor = _extractor(page)
-    arguments = {"job_id": "123"}
-    async with boundaries(recorder, clock):
-        with recorder.context("get_easy_apply_form"):
-            result = await extractor.get_easy_apply_form(**arguments)
-    page.assert_clean()
-    return recorder.trace(
-        {"method": "get_easy_apply_form", "arguments": arguments}, result
-    )
-
-
 async def _get_my_profile_scenario() -> dict[str, Any]:
     name = "get_my_profile__baseline"
     recorder = TraceRecorder(name, _COMMON_ALLOWED)
@@ -1037,192 +633,6 @@ async def _get_my_profile_scenario() -> dict[str, Any]:
     return recorder.trace(
         {"method": "get_my_profile", "arguments": {}},
         result,
-    )
-
-
-async def _connect_scenario() -> dict[str, Any]:
-    name = "connect_with_person__self_profile"
-    recorder = TraceRecorder(name, _COMMON_ALLOWED)
-    clock = FakeClock(recorder)
-    page = _page(recorder)
-    page.script("evaluate:root_content", _root("Own profile"))
-    _script_profile_target(page, "unavailable")
-    page.script(
-        "evaluate:connection_action_signals",
-        {
-            "hasInvite": False,
-            "hasComposeInActionRoot": False,
-            "hasEditIntro": True,
-            "hasLabeledActionButton": True,
-            "hasLabeledActionAnchor": False,
-            "hasIncomingActionRow": False,
-        },
-    )
-    extractor = _extractor(page)
-    async with boundaries(recorder, clock):
-        with recorder.context("connect_with_person", "main_profile"):
-            result = await extractor.connect_with_person("ada-lovelace")
-    page.assert_clean()
-    return recorder.trace(
-        {"method": "connect_with_person", "arguments": {"username": "ada-lovelace"}},
-        result,
-    )
-
-
-async def _sidebar_scenario() -> dict[str, Any]:
-    name = "get_sidebar_profiles__baseline"
-    recorder = TraceRecorder(name, _COMMON_ALLOWED)
-    clock = FakeClock(recorder)
-    page = _page(recorder).script(
-        "evaluate:sidebar_profiles", {"sections": {}, "showAllUrls": {}}
-    )
-    extractor = _extractor(page)
-    async with boundaries(recorder, clock):
-        with recorder.context("get_sidebar_profiles", "sidebar"):
-            result = await extractor.get_sidebar_profiles("ada-lovelace")
-    page.assert_clean()
-    return recorder.trace(
-        {"method": "get_sidebar_profiles", "arguments": {"username": "ada-lovelace"}},
-        result,
-    )
-
-
-async def _conversation_scenario(method: str) -> dict[str, Any]:
-    name = f"{method}__baseline"
-    recorder = TraceRecorder(name, _COMMON_ALLOWED)
-    clock = FakeClock(recorder)
-    page = _page(recorder)
-    if method != "search_conversations":
-        scrolls = 3 if method == "get_conversation" else 1
-        page.script("evaluate:scroll_main_region", *([True] * scrolls))
-    page.script("evaluate:root_content", _root("Conversation content"))
-    if method != "get_conversation":
-        page.script(
-            "wait_for_selector:conversation_rows",
-            PlaywrightTimeoutError("no scripted rows"),
-        )
-    extractor = _extractor(page)
-    async with boundaries(recorder, clock):
-        with recorder.context(method, "conversation"):
-            if method == "get_inbox":
-                arguments = {"limit": 10}
-                result = await extractor.get_inbox(limit=10)
-            elif method == "get_conversation":
-                arguments = {"thread_id": "2-abc"}
-                result = await extractor.get_conversation(thread_id="2-abc")
-            elif method == "search_conversations":
-                arguments = {"keywords": "engine", "limit": 10}
-                result = await extractor.search_conversations("engine", limit=10)
-            else:
-                raise AssertionError(method)
-    page.assert_clean()
-    return recorder.trace(
-        {"method": method, "arguments": arguments},
-        _complete_mapping_result(result, section_names=list(result["sections"])),
-    )
-
-
-THREAD_OPTIONS = {
-    "triggers": 1,
-    "name": "Open the options list in your conversation with Ada Lovelace",
-}
-
-
-CONVERSATIONS_RESPONSE_URL = (
-    "https://www.linkedin.com/voyager/api/voyagerMessagingGraphQL/graphql"
-    "?queryId=messengerConversations.policy&variables=(conversationIds:List(2-abc))"
-)
-
-
-def _conversation_payload(*categories: str) -> bytes:
-    """The conversations query's answer for thread ``2-abc`` in ``categories``."""
-    conversation = {
-        "_type": "com.linkedin.messenger.Conversation",
-        "backendUrn": "urn:li:messagingThread:2-abc",
-        "categories": list(categories),
-    }
-    return json.dumps(
-        {"data": {"messengerConversationsByIds": [conversation]}}
-    ).encode()
-
-
-async def _archive_conversation_scenario(*, already: bool) -> dict[str, Any]:
-    """Archive a thread, or find it archived and leave its menu untouched."""
-    outcome = "already_archived" if already else "archived"
-    recorder = TraceRecorder(
-        f"archive_conversation__{outcome}",
-        _COMMON_ALLOWED | {"response.body.start", "response.body.finish"},
-    )
-    clock = FakeClock(recorder)
-    page = _page(recorder)
-    thread = "https://www.linkedin.com/messaging/thread/2-abc/"
-    folders = [("ARCHIVE",)] if already else [("INBOX", "PRIMARY_INBOX"), ("ARCHIVE",)]
-    page.goto_landings.extend([thread] * len(folders))
-    page.script(
-        "goto",
-        *(
-            lambda folder=folder: page.emit(
-                "response",
-                ScriptedResponse(
-                    recorder,
-                    CONVERSATIONS_RESPONSE_URL,
-                    _conversation_payload(*folder),
-                ),
-            )
-            for folder in folders
-        ),
-    )
-    page.script("evaluate:thread_options", THREAD_OPTIONS)
-    if not already:
-        page.declare_locator("main button[data-mcp-thread-options]", "thread_options")
-        page.declare_locator("[data-mcp-thread-archive]", "thread_archive_item")
-        page.script("evaluate:thread_menu_survey", {"seen": 0})
-        page.script("thread_options.click", None)
-        page.script("evaluate:thread_menu_items", {"archive": 1})
-        page.script("thread_archive_item.click", None)
-    extractor = _extractor(page)
-    arguments = {"thread_id": "2-abc"}
-    async with boundaries(recorder, clock):
-        with recorder.context("archive_conversation"):
-            result = await extractor.archive_conversation(**arguments)
-    page.assert_clean()
-    return recorder.trace(
-        {"method": "archive_conversation", "arguments": arguments}, result
-    )
-
-
-ROW_CLICK_STOPPED_OUTCOME = {
-    "rows": [
-        {"ariaLabel": "Select conversation with Ada Lovelace", "threadId": "2-ada"}
-    ],
-    "stoppedAt": {"ariaLabel": "Select conversation with Bob Stall", "position": 1},
-    "firstIndexGap": None,
-    "startThreadId": None,
-}
-
-
-async def _conversation_row_resolution_scenario() -> dict[str, Any]:
-    """`get_inbox` whose compose rows attach and whose second click stalls.
-
-    The scripted page records the submitted row program without running it;
-    the browser-DOM suite is what executes it.
-    """
-    name = "get_inbox__row_click_stopped"
-    recorder = TraceRecorder(name, _COMMON_ALLOWED)
-    clock = FakeClock(recorder)
-    page = _page(recorder)
-    page.script("evaluate:scroll_main_region", True, True)
-    page.script("evaluate:root_content", _root("Conversation content"))
-    page.script("wait_for_selector:conversation_rows", None)
-    page.script("evaluate:conversation_thread_refs", ROW_CLICK_STOPPED_OUTCOME)
-    extractor = _extractor(page)
-    async with boundaries(recorder, clock):
-        with recorder.context("get_inbox", "conversation"):
-            result = await extractor.get_inbox(limit=10)
-    page.assert_clean()
-    return recorder.trace(
-        {"method": "get_inbox", "arguments": {"limit": 10}},
-        _complete_mapping_result(result, section_names=list(result["sections"])),
     )
 
 
@@ -1260,29 +670,17 @@ async def _facade_contract_trace() -> dict[str, Any]:
 
 
 TOOL_FACADE_METHODS = {
-    "connect_with_person",
-    "dismiss_job",
-    "extract_feed",
     "extract_page",
     "get_company_employees",
-    "get_conversation",
-    "get_easy_apply_form",
-    "get_inbox",
     "get_job_apply_url",
     "get_my_profile",
     "get_saved_jobs",
-    "get_sidebar_profiles",
     "read_company",
     "read_job",
     "read_person",
     "search_companies",
-    "search_conversations",
-    "archive_conversation",
     "search_jobs",
     "search_people",
-    "search_posts",
-    "send_message",
-    "reply_to_conversation",
 }
 COMPATIBILITY_METHODS = {"get_page_text", "click_button_by_text"}
 
@@ -1313,45 +711,7 @@ async def build_policy_traces() -> dict[str, dict[str, Any]]:
         ),
         "job-search-metadata-upgrade.json": await _job_search_upgrade_scenario(),
         "saved-jobs.json": await _saved_jobs_scenario(),
-        "dismiss-job.json": await _dismiss_job_scenario(),
-        "feed-stale.json": await _feed_stale_scenario(),
-        "feed-response-success.json": await _feed_response_scenario(body_failure=False),
-        "feed-response-failure.json": await _feed_response_scenario(body_failure=True),
-        "message-target-unavailable.json": await _message_target_scenario(
-            "unavailable"
-        ),
-        "message-target-unresolved.json": await _message_target_scenario("unresolved"),
-        "message-dry-run.json": await _messaging_dry_run_scenario(),
-        "message-composer-occupied.json": await _occupied_message_scenario(
-            restored_during_write=False
-        ),
-        "message-composer-restored.json": await _occupied_message_scenario(
-            restored_during_write=True
-        ),
-        "message-pre-submit-cleanup.json": await _messaging_submission_scenario(
-            "pre_submit_cleanup"
-        ),
-        "message-submit-rejected.json": await _messaging_submission_scenario(
-            "submission_rejected"
-        ),
-        "message-submit-interrupted.json": await _messaging_submission_scenario(
-            "submission_interrupted"
-        ),
-        "message-unconfirmed.json": await _messaging_submission_scenario("unconfirmed"),
-        "message-sent.json": await _messaging_submission_scenario("sent"),
-        "message-multiline-sent.json": await _messaging_submission_scenario(
-            "sent", "First\r\n \r\nSecond\n"
-        ),
-        "message-cancelled.json": await _messaging_cancellation_scenario(),
-        "message-blank.json": await _invalid_message_scenario("   ", "blank"),
-        "message-c0.json": await _invalid_message_scenario("before\tafter", "c0"),
-        "message-del.json": await _invalid_message_scenario("text\x7f", "del"),
-        "reply-dry-run.json": await _reply_scenario("dry_run"),
-        "reply-sent.json": await _reply_scenario("sent"),
-        "reply-other-thread.json": await _reply_scenario("other_thread"),
-        "connect.json": await _connect_scenario(),
         "get-my-profile.json": await _get_my_profile_scenario(),
-        "sidebar-profiles.json": await _sidebar_scenario(),
         "company-employees.json": await _single_capture_facade_scenario(
             "get_company_employees"
         ),
@@ -1359,25 +719,9 @@ async def build_policy_traces() -> dict[str, dict[str, Any]]:
         "read-job-error.json": await _single_capture_error_scenario(),
         "read-job-description-missing.json": await _description_missing_scenario(),
         "job-apply-url.json": await _job_apply_scenario(),
-        "easy-apply-form.json": await _easy_apply_form_scenario(),
         "search-people.json": await _single_capture_facade_scenario("search_people"),
         "search-companies.json": await _single_capture_facade_scenario(
             "search_companies"
-        ),
-        "search-posts.json": await _single_capture_facade_scenario("search_posts"),
-        "inbox.json": await _conversation_scenario("get_inbox"),
-        "conversation.json": await _conversation_scenario("get_conversation"),
-        "search-conversations.json": await _conversation_scenario(
-            "search_conversations"
-        ),
-        "conversation-row-resolution.json": (
-            await _conversation_row_resolution_scenario()
-        ),
-        "archive-conversation.json": await _archive_conversation_scenario(
-            already=False
-        ),
-        "archive-conversation-already.json": await _archive_conversation_scenario(
-            already=True
         ),
     }
     return traces

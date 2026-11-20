@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-from linkedin_mcp_server.profile_lease import (
+from linkedin_scraper_mcp.profile_lease import (
     ProfileLease,
     ProfileLeaseUnavailableError,
     get_profile_lease,
@@ -150,7 +150,7 @@ class TestSingleProcess:
         file, so a count-based check passes and two processes end up locking
         two inodes for one path. Comparing identity is what catches it.
         """
-        from linkedin_mcp_server import profile_lease
+        from linkedin_scraper_mcp import profile_lease
 
         path = tmp_path / "profile.lock"
         real = profile_lease.try_lock
@@ -181,7 +181,7 @@ class TestSingleProcess:
         reporting busy refuses a lock that is free. Measured before the fix:
         None came back while the live path could be locked immediately.
         """
-        from linkedin_mcp_server import profile_lease
+        from linkedin_scraper_mcp import profile_lease
 
         path = tmp_path / "profile.lock"
         holder = profile_lease.open_lock_file(path)
@@ -611,7 +611,7 @@ class TestRegistry:
             import os, sys, time
             sys.path.insert(0, {str(Path(__file__).resolve().parents[1])!r})
             from pathlib import Path
-            from linkedin_mcp_server.profile_lease import get_profile_lease
+            from linkedin_scraper_mcp.profile_lease import get_profile_lease
 
             lease = get_profile_lease(Path({str(tmp_path)!r}) / "profile")
             assert lease.try_acquire()
@@ -715,7 +715,7 @@ class TestRegistry:
         reference, a leaked lease would silently wedge every later test that
         touches the same auth root.
         """
-        from linkedin_mcp_server.profile_lease import reset_leases_for_testing
+        from linkedin_scraper_mcp.profile_lease import reset_leases_for_testing
 
         lease = get_profile_lease(tmp_path / "profile")
         assert lease.try_acquire()
@@ -747,7 +747,7 @@ class TestDegradedSignals:
         Unlinking is the easier half of that: it is also what a rename does,
         which the test below covers and a link count cannot see.
         """
-        from linkedin_mcp_server import profile_lease as module
+        from linkedin_scraper_mcp import profile_lease as module
 
         lease = ProfileLease(tmp_path)
         lock_path = tmp_path / "profile.lock"
@@ -781,7 +781,7 @@ class TestDegradedSignals:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Retrying forever would hang a tool call; refuse instead."""
-        from linkedin_mcp_server import profile_lease as module
+        from linkedin_scraper_mcp import profile_lease as module
 
         real_open = module.open_lock_file
 
@@ -816,7 +816,7 @@ class TestDegradedSignals:
         matrix job cannot catch a regression here, because a healthy run never
         produces anything but 33, so the classification is pinned directly.
         """
-        from linkedin_mcp_server.profile_lease import _windows_failure_is_contention
+        from linkedin_scraper_mcp.profile_lease import _windows_failure_is_contention
 
         assert _windows_failure_is_contention(error_code) is is_contention
 
@@ -848,7 +848,7 @@ class TestDegradedSignals:
         """
         import fcntl
 
-        from linkedin_mcp_server.profile_lease import (
+        from linkedin_scraper_mcp.profile_lease import (
             ProfileLeaseUnavailableError,
             open_lock_file,
             try_lock,
@@ -876,7 +876,7 @@ class TestDegradedSignals:
         so a descriptor escaping here accumulates one per poll for the life of
         the process.
         """
-        from linkedin_mcp_server import profile_lease as module
+        from linkedin_scraper_mcp import profile_lease as module
 
         opened: list[int] = []
         real_open = module.open_lock_file
@@ -905,7 +905,7 @@ class TestDegradedSignals:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """The cleanup must not raise on top of the failure that triggered it."""
-        from linkedin_mcp_server import profile_lease as module
+        from linkedin_scraper_mcp import profile_lease as module
 
         def close_then_refuse(fd: int, *, exclusive: bool) -> bool:
             os.close(fd)  # as if something else had already reclaimed it
@@ -924,7 +924,7 @@ class TestDegradedSignals:
         Reporting a waiter here would make the owner close a working browser on
         the strength of a signal it could not actually read.
         """
-        from linkedin_mcp_server import profile_lease as module
+        from linkedin_scraper_mcp import profile_lease as module
 
         lease = ProfileLease(tmp_path)
 
@@ -938,7 +938,7 @@ class TestDegradedSignals:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Not being able to announce costs a prompt handoff, not the call."""
-        from linkedin_mcp_server import profile_lease as module
+        from linkedin_scraper_mcp import profile_lease as module
 
         lease = ProfileLease(tmp_path)
 
@@ -957,7 +957,7 @@ class TestDegradedSignals:
         Silently continuing would put us back where we started: two processes on
         one profile, one silently losing its cookie.
         """
-        from linkedin_mcp_server import profile_lease as module
+        from linkedin_scraper_mcp import profile_lease as module
 
         fd = os.open(tmp_path / "probe", os.O_RDWR | os.O_CREAT, 0o600)
         try:

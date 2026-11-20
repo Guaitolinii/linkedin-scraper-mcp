@@ -30,7 +30,7 @@ source_classification = GENERATOR._source_classification
 
 def _copy_package(tmp_path: Path) -> Path:
     target = tmp_path / "linkedin"
-    shutil.copytree(ROOT / "linkedin_mcp_server" / "linkedin", target)
+    shutil.copytree(ROOT / "linkedin_scraper_mcp" / "linkedin", target)
     return target
 
 
@@ -45,8 +45,8 @@ def _prepend(path: Path, source: str) -> None:
 
 
 def test_generated_architecture_is_current_deterministic_and_checkout_neutral():
-    first = render(ROOT / "linkedin_mcp_server" / "linkedin")
-    second = render(ROOT / "linkedin_mcp_server" / "linkedin")
+    first = render(ROOT / "linkedin_scraper_mcp" / "linkedin")
+    second = render(ROOT / "linkedin_scraper_mcp" / "linkedin")
 
     assert first == second
     assert first == (ROOT / "docs" / "linkedin-architecture.md").read_text(
@@ -59,25 +59,23 @@ def test_generated_architecture_is_current_deterministic_and_checkout_neutral():
 def test_import_from_normalization_keeps_modules_and_symbols_distinct(tmp_path: Path):
     package_dir = _copy_package(tmp_path)
     _prepend(
-        package_dir / "connection.py",
+        package_dir / "link_metadata.py",
         "from . import capture\n"
         "from .capture import SectionCapture\n"
         "from ..linkedin import navigation\n"
-        "from linkedin_mcp_server import process_protocol\n",
+        "from linkedin_scraper_mcp import process_protocol\n",
     )
 
-    connection = next(
+    stand_in = next(
         module
         for module in inspect_modules(package_dir)
-        if module.name == "linkedin_mcp_server.linkedin.connection"
+        if module.name == "linkedin_scraper_mcp.linkedin.link_metadata"
     )
 
-    assert "linkedin_mcp_server.linkedin.capture" in connection.imports
-    assert "linkedin_mcp_server.linkedin.navigation" in connection.imports
-    assert "linkedin_mcp_server.process_protocol" in connection.imports
-    assert (
-        "linkedin_mcp_server.linkedin.capture.SectionCapture" not in connection.imports
-    )
+    assert "linkedin_scraper_mcp.linkedin.capture" in stand_in.imports
+    assert "linkedin_scraper_mcp.linkedin.navigation" in stand_in.imports
+    assert "linkedin_scraper_mcp.process_protocol" in stand_in.imports
+    assert "linkedin_scraper_mcp.linkedin.capture.SectionCapture" not in stand_in.imports
 
 
 def test_namespace_package_imports_resolve_to_known_leaf_modules(tmp_path: Path):
@@ -85,40 +83,33 @@ def test_namespace_package_imports_resolve_to_known_leaf_modules(tmp_path: Path)
     nested = package_dir / "nested"
     nested.mkdir()
     (nested / "worker.py").write_text("VALUE = 1\n", encoding="utf-8")
-    _prepend(package_dir / "connection.py", "from .nested import worker\n")
+    _prepend(package_dir / "link_metadata.py", "from .nested import worker\n")
 
-    connection = next(
+    stand_in = next(
         module
         for module in inspect_modules(package_dir)
-        if module.name == "linkedin_mcp_server.linkedin.connection"
+        if module.name == "linkedin_scraper_mcp.linkedin.link_metadata"
     )
 
-    assert "linkedin_mcp_server.linkedin.nested.worker" in connection.imports
-    assert "linkedin_mcp_server.linkedin.nested" not in connection.imports
+    assert "linkedin_scraper_mcp.linkedin.nested.worker" in stand_in.imports
+    assert "linkedin_scraper_mcp.linkedin.nested" not in stand_in.imports
 
 
 def test_public_assignments_are_owners_without_incidental_bindings():
     modules = {
         module.name: module
-        for module in inspect_modules(ROOT / "linkedin_mcp_server" / "linkedin")
+        for module in inspect_modules(ROOT / "linkedin_scraper_mcp" / "linkedin")
     }
 
-    assert "COMPANY_SECTIONS" in modules["linkedin_mcp_server.linkedin.fields"].owners
-    assert "PERSON_SECTIONS" in modules["linkedin_mcp_server.linkedin.fields"].owners
+    assert "COMPANY_SECTIONS" in modules["linkedin_scraper_mcp.linkedin.fields"].owners
+    assert "PERSON_SECTIONS" in modules["linkedin_scraper_mcp.linkedin.fields"].owners
     assert (
-        "ConnectionState" in modules["linkedin_mcp_server.linkedin.connection"].owners
+        "ReferenceKind" in modules["linkedin_scraper_mcp.linkedin.link_metadata"].owners
     )
-    assert (
-        "ReferenceKind" in modules["linkedin_mcp_server.linkedin.link_metadata"].owners
-    )
-    assert "WaitUntil" in modules["linkedin_mcp_server.linkedin.navigation"].owners
-    assert (
-        "ReadMainProfile"
-        in modules["linkedin_mcp_server.linkedin.connection_actions"].owners
-    )
+    assert "WaitUntil" in modules["linkedin_scraper_mcp.linkedin.navigation"].owners
     assert (
         "ReadMessageTarget"
-        in modules["linkedin_mcp_server.linkedin.profile_page"].owners
+        in modules["linkedin_scraper_mcp.linkedin.profile_page"].owners
     )
     assert all("logger" not in module.owners for module in modules.values())
 
@@ -136,7 +127,7 @@ def test_explicit_and_assignment_type_aliases_are_public_owners(tmp_path: Path):
     aliases = next(
         module
         for module in inspect_modules(package_dir)
-        if module.name == "linkedin_mcp_server.linkedin.aliases"
+        if module.name == "linkedin_scraper_mcp.linkedin.aliases"
     )
 
     assert aliases.owners == ("AssignmentAlias", "ExplicitAlias")
@@ -618,14 +609,14 @@ def test_nested_package_modules_are_inspected_with_stable_paths(tmp_path: Path):
     )
 
     modules = {module.name: module for module in inspect_modules(package_dir)}
-    package = modules["linkedin_mcp_server.linkedin.nested"]
-    worker = modules["linkedin_mcp_server.linkedin.nested.worker"]
+    package = modules["linkedin_scraper_mcp.linkedin.nested"]
+    worker = modules["linkedin_scraper_mcp.linkedin.nested.worker"]
 
-    assert package.path == "linkedin_mcp_server/linkedin/nested/__init__.py"
+    assert package.path == "linkedin_scraper_mcp/linkedin/nested/__init__.py"
     assert package.owners == ("NestedOwner", "PUBLIC_VALUE")
     assert package.source_classification == "page-owning"
-    assert worker.path == "linkedin_mcp_server/linkedin/nested/worker.py"
-    assert worker.imports == ("linkedin_mcp_server.linkedin.fields",)
+    assert worker.path == "linkedin_scraper_mcp/linkedin/nested/worker.py"
+    assert worker.imports == ("linkedin_scraper_mcp.linkedin.fields",)
 
 
 def test_nested_package_violations_cannot_bypass_checks(tmp_path: Path):
@@ -645,15 +636,15 @@ def test_nested_package_violations_cannot_bypass_checks(tmp_path: Path):
     violations = dependency_violations(inspect_modules(package_dir))
 
     assert (
-        "reverse facade import: `linkedin_mcp_server.linkedin.nested` -> "
-        "`linkedin_mcp_server.linkedin.extractor`"
+        "reverse facade import: `linkedin_scraper_mcp.linkedin.nested` -> "
+        "`linkedin_scraper_mcp.linkedin.extractor`"
     ) in violations
     assert (
-        "forbidden layer import: `linkedin_mcp_server.linkedin.nested` -> "
-        "`linkedin_mcp_server.core.browser`"
+        "forbidden layer import: `linkedin_scraper_mcp.linkedin.nested` -> "
+        "`linkedin_scraper_mcp.core.browser`"
     ) in violations
     assert any(
-        violation.startswith("import cycle: `linkedin_mcp_server.linkedin.nested`")
+        violation.startswith("import cycle: `linkedin_scraper_mcp.linkedin.nested`")
         for violation in violations
     )
 
@@ -662,16 +653,18 @@ def test_namespace_package_cycle_fails_even_after_regeneration(tmp_path: Path):
     package_dir = _copy_package(tmp_path)
     nested = package_dir / "nested"
     nested.mkdir()
-    (nested / "worker.py").write_text("from .. import connection\n", encoding="utf-8")
-    _prepend(package_dir / "connection.py", "from .nested import worker\n")
+    (nested / "worker.py").write_text(
+        "from .. import link_metadata\n", encoding="utf-8"
+    )
+    _prepend(package_dir / "link_metadata.py", "from .nested import worker\n")
     output = tmp_path / "linkedin-architecture.md"
     output.write_text(render(package_dir), encoding="utf-8")
 
     assert not check(output, package_dir)
     assert any(
-        "`linkedin_mcp_server.linkedin.connection` -> "
-        "`linkedin_mcp_server.linkedin.nested.worker` -> "
-        "`linkedin_mcp_server.linkedin.connection`" in violation
+        "`linkedin_scraper_mcp.linkedin.link_metadata` -> "
+        "`linkedin_scraper_mcp.linkedin.nested.worker` -> "
+        "`linkedin_scraper_mcp.linkedin.link_metadata`" in violation
         for violation in dependency_violations(inspect_modules(package_dir))
     )
 
@@ -682,9 +675,9 @@ def test_namespace_package_cycle_fails_even_after_regeneration(tmp_path: Path):
         pytest.param(
             lambda package_dir: _replace(
                 package_dir / "content.py",
-                "from linkedin_mcp_server.linkedin.session import PageSession\n",
-                "from linkedin_mcp_server.linkedin.navigation import PageNavigator\n"
-                "from linkedin_mcp_server.linkedin.session import PageSession\n",
+                "from linkedin_scraper_mcp.linkedin.session import PageSession\n",
+                "from linkedin_scraper_mcp.linkedin.navigation import PageNavigator\n"
+                "from linkedin_scraper_mcp.linkedin.session import PageSession\n",
             ),
             id="import-edge",
         ),
@@ -705,16 +698,16 @@ def test_namespace_package_cycle_fails_even_after_regeneration(tmp_path: Path):
             id="facade-state",
         ),
         pytest.param(
-            lambda package_dir: (package_dir / "connection.py").write_text(
-                (package_dir / "connection.py").read_text(encoding="utf-8")
+            lambda package_dir: (package_dir / "link_metadata.py").write_text(
+                (package_dir / "link_metadata.py").read_text(encoding="utf-8")
                 + "\n\ndef public_helper():\n    return None\n",
                 encoding="utf-8",
             ),
             id="ownership",
         ),
         pytest.param(
-            lambda package_dir: (package_dir / "connection.py").write_text(
-                (package_dir / "connection.py").read_text(encoding="utf-8")
+            lambda package_dir: (package_dir / "link_metadata.py").write_text(
+                (package_dir / "link_metadata.py").read_text(encoding="utf-8")
                 + "\n\ndef _inspect_page(browser_page: 'Page'):\n"
                 "    return browser_page.evaluate('1')\n",
                 encoding="utf-8",
@@ -722,8 +715,8 @@ def test_namespace_package_cycle_fails_even_after_regeneration(tmp_path: Path):
             id="source-classification-page-type",
         ),
         pytest.param(
-            lambda package_dir: (package_dir / "connection.py").write_text(
-                (package_dir / "connection.py").read_text(encoding="utf-8")
+            lambda package_dir: (package_dir / "link_metadata.py").write_text(
+                (package_dir / "link_metadata.py").read_text(encoding="utf-8")
                 + "\n\ndef _inspect_page(browser_page: 'Page'):\n"
                 "    active_page = browser_page\n"
                 "    return active_page.evaluate('1')\n",
@@ -746,45 +739,45 @@ def test_source_mutations_make_the_generated_check_fail(tmp_path: Path, mutate):
 def test_dependency_direction_violations_are_reported_deterministically():
     modules = (
         ModuleInfo(
-            "linkedin_mcp_server.linkedin.alpha",
-            "linkedin_mcp_server/linkedin/alpha.py",
+            "linkedin_scraper_mcp.linkedin.alpha",
+            "linkedin_scraper_mcp/linkedin/alpha.py",
             (
-                "linkedin_mcp_server.daemon.owner",
-                "linkedin_mcp_server.linkedin.beta",
-                "linkedin_mcp_server.linkedin.extractor",
+                "linkedin_scraper_mcp.daemon.owner",
+                "linkedin_scraper_mcp.linkedin.beta",
+                "linkedin_scraper_mcp.linkedin.extractor",
             ),
             (),
             "browser-free",
         ),
         ModuleInfo(
-            "linkedin_mcp_server.linkedin.beta",
-            "linkedin_mcp_server/linkedin/beta.py",
-            ("linkedin_mcp_server.linkedin.alpha",),
+            "linkedin_scraper_mcp.linkedin.beta",
+            "linkedin_scraper_mcp/linkedin/beta.py",
+            ("linkedin_scraper_mcp.linkedin.alpha",),
             (),
             "browser-free",
         ),
     )
 
     assert dependency_violations(modules) == (
-        "forbidden layer import: `linkedin_mcp_server.linkedin.alpha` -> "
-        "`linkedin_mcp_server.daemon.owner`",
-        "import cycle: `linkedin_mcp_server.linkedin.alpha` -> "
-        "`linkedin_mcp_server.linkedin.beta` -> "
-        "`linkedin_mcp_server.linkedin.alpha`",
-        "reverse facade import: `linkedin_mcp_server.linkedin.alpha` -> "
-        "`linkedin_mcp_server.linkedin.extractor`",
+        "forbidden layer import: `linkedin_scraper_mcp.linkedin.alpha` -> "
+        "`linkedin_scraper_mcp.daemon.owner`",
+        "import cycle: `linkedin_scraper_mcp.linkedin.alpha` -> "
+        "`linkedin_scraper_mcp.linkedin.beta` -> "
+        "`linkedin_scraper_mcp.linkedin.alpha`",
+        "reverse facade import: `linkedin_scraper_mcp.linkedin.alpha` -> "
+        "`linkedin_scraper_mcp.linkedin.extractor`",
     )
 
 
 def test_intended_core_leaf_imports_are_allowed():
     module = ModuleInfo(
-        "linkedin_mcp_server.linkedin.alpha",
-        "linkedin_mcp_server/linkedin/alpha.py",
+        "linkedin_scraper_mcp.linkedin.alpha",
+        "linkedin_scraper_mcp/linkedin/alpha.py",
         (
-            "linkedin_mcp_server.core.auth",
-            "linkedin_mcp_server.core.exceptions",
-            "linkedin_mcp_server.core.proxy_errors",
-            "linkedin_mcp_server.core.utils",
+            "linkedin_scraper_mcp.core.auth",
+            "linkedin_scraper_mcp.core.exceptions",
+            "linkedin_scraper_mcp.core.proxy_errors",
+            "linkedin_scraper_mcp.core.utils",
         ),
         (),
         "browser-free",
@@ -797,8 +790,8 @@ def test_intended_core_leaf_imports_are_allowed():
     "path,source",
     [
         pytest.param(
-            "connection.py",
-            "from linkedin_mcp_server import process_protocol\n",
+            "link_metadata.py",
+            "from linkedin_scraper_mcp import process_protocol\n",
             id="forbidden-package-alias",
         ),
         pytest.param(
@@ -822,23 +815,23 @@ def test_intended_core_leaf_imports_are_allowed():
             id="relative-self-cycle",
         ),
         pytest.param(
-            "connection.py",
-            "import linkedin_mcp_server.core\n",
+            "link_metadata.py",
+            "import linkedin_scraper_mcp.core\n",
             id="forbidden-core-aggregate",
         ),
         pytest.param(
-            "connection.py",
-            "from linkedin_mcp_server import core\n",
+            "link_metadata.py",
+            "from linkedin_scraper_mcp import core\n",
             id="forbidden-core-aggregate-package-submodule",
         ),
         pytest.param(
-            "connection.py",
-            "import linkedin_mcp_server.core.browser\n",
+            "link_metadata.py",
+            "import linkedin_scraper_mcp.core.browser\n",
             id="forbidden-core-browser",
         ),
         pytest.param(
-            "connection.py",
-            "from linkedin_mcp_server.core import browser\n",
+            "link_metadata.py",
+            "from linkedin_scraper_mcp.core import browser\n",
             id="forbidden-core-browser-package-submodule",
         ),
     ],
@@ -856,10 +849,10 @@ def test_normalized_violations_fail_after_regeneration(
 
 def test_check_fails_even_when_a_violation_is_regenerated(tmp_path: Path):
     package_dir = _copy_package(tmp_path)
-    connection = package_dir / "connection.py"
-    connection.write_text(
-        "from linkedin_mcp_server.linkedin.extractor import LinkedInExtractor\n"
-        + connection.read_text(encoding="utf-8"),
+    stand_in = package_dir / "link_metadata.py"
+    stand_in.write_text(
+        "from linkedin_scraper_mcp.linkedin.extractor import LinkedInExtractor\n"
+        + stand_in.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
     output = tmp_path / "linkedin-architecture.md"

@@ -16,12 +16,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastmcp.exceptions import ToolError
 
-from linkedin_mcp_server.exceptions import BrowserBusyError
-from linkedin_mcp_server.profile_lease import get_profile_lease
-from linkedin_mcp_server.sequential_tool_middleware import (
+from linkedin_scraper_mcp.exceptions import BrowserBusyError
+from linkedin_scraper_mcp.profile_lease import get_profile_lease
+from linkedin_scraper_mcp.sequential_tool_middleware import (
     SequentialToolExecutionMiddleware,
 )
-from linkedin_mcp_server.session_state import clear_auth_state, rotate_source_profile
+from linkedin_scraper_mcp.session_state import clear_auth_state, rotate_source_profile
 
 _WORKER = Path(__file__).parent / "helpers" / "profile_lease_worker.py"
 
@@ -80,14 +80,14 @@ class TestBusyIsNotAnAuthFailure:
     """
 
     def test_busy_error_is_not_an_authentication_error(self) -> None:
-        from linkedin_mcp_server.core.exceptions import AuthenticationError
-        from linkedin_mcp_server.exceptions import LinkedInMCPError
+        from linkedin_scraper_mcp.core.exceptions import AuthenticationError
+        from linkedin_scraper_mcp.exceptions import LinkedInMCPError
 
         assert issubclass(BrowserBusyError, LinkedInMCPError)
         assert not issubclass(BrowserBusyError, AuthenticationError)
 
     def test_error_handler_reports_it_without_issue_diagnostics(self) -> None:
-        from linkedin_mcp_server.error_handler import raise_tool_error
+        from linkedin_scraper_mcp.error_handler import raise_tool_error
 
         with pytest.raises(ToolError) as excinfo:
             raise_tool_error(BrowserBusyError(), "get_person_profile")
@@ -108,11 +108,11 @@ class TestBusyIsNotAnAuthFailure:
             lease = get_profile_lease(tmp_path / "profile")
             with (
                 patch(
-                    "linkedin_mcp_server.sequential_tool_middleware.get_profile_lease",
+                    "linkedin_scraper_mcp.sequential_tool_middleware.get_profile_lease",
                     return_value=lease,
                 ),
                 patch(
-                    "linkedin_mcp_server.bootstrap.invalidate_auth_and_trigger_relogin",
+                    "linkedin_scraper_mcp.bootstrap.invalidate_auth_and_trigger_relogin",
                     new_callable=AsyncMock,
                 ) as relogin,
             ):
@@ -241,7 +241,7 @@ class TestMutationHoldsTheProfile:
 
         import shutil as shutil_module
 
-        from linkedin_mcp_server import session_state
+        from linkedin_scraper_mcp import session_state
 
         observed: list[bool] = []
         real_move = shutil_module.move
@@ -249,7 +249,7 @@ class TestMutationHoldsTheProfile:
         def spy(src: str, dst: str):  # type: ignore[no-untyped-def]
             # Ask a *separate* lease object, so this reflects what another
             # process would see rather than our own reference count.
-            from linkedin_mcp_server.profile_lease import ProfileLease
+            from linkedin_scraper_mcp.profile_lease import ProfileLease
 
             probe = ProfileLease(tmp_path)
             free = probe.try_acquire()
@@ -281,7 +281,7 @@ class TestIdleOwnerHandsOver:
     ) -> None:
         import asyncio
 
-        from linkedin_mcp_server.drivers import browser as browser_module
+        from linkedin_scraper_mcp.drivers import browser as browser_module
 
         monkeypatch.setattr(browser_module, "_HANDOFF_POLL_INTERVAL_SECONDS", 0.05)
 
@@ -340,7 +340,7 @@ class TestPollerDoesNotInterruptWork:
     async def test_poller_leaves_an_in_flight_call_alone(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from linkedin_mcp_server.drivers import browser as browser_module
+        from linkedin_scraper_mcp.drivers import browser as browser_module
 
         lease = get_profile_lease(tmp_path / "profile")
         assert lease.try_acquire()
@@ -373,7 +373,7 @@ class TestPollerDoesNotInterruptWork:
                 # handoff goes through.
                 browser_module.note_activity()
                 monkeypatch.setenv("BROWSER_MIN_HOLD", "0")
-                from linkedin_mcp_server.config import reset_config
+                from linkedin_scraper_mcp.config import reset_config
 
                 reset_config()
                 assert await browser_module.release_profile_if_idle_or_requested()
@@ -395,8 +395,8 @@ class TestPollerDoesNotInterruptWork:
         """
         import asyncio
 
-        from linkedin_mcp_server.config import reset_config
-        from linkedin_mcp_server.drivers import browser as browser_module
+        from linkedin_scraper_mcp.config import reset_config
+        from linkedin_scraper_mcp.drivers import browser as browser_module
 
         monkeypatch.setenv("BROWSER_MIN_HOLD", "0")
         reset_config()
@@ -481,8 +481,8 @@ class TestPollerDoesNotInterruptWork:
         """
         import asyncio
 
-        from linkedin_mcp_server.config import reset_config
-        from linkedin_mcp_server.drivers import browser as browser_module
+        from linkedin_scraper_mcp.config import reset_config
+        from linkedin_scraper_mcp.drivers import browser as browser_module
 
         monkeypatch.setenv("BROWSER_MIN_HOLD", "0")
         reset_config()
@@ -582,7 +582,7 @@ class TestMinimumHoldWindow:
     async def test_recent_owner_keeps_the_browser(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from linkedin_mcp_server.drivers import browser as browser_module
+        from linkedin_scraper_mcp.drivers import browser as browser_module
 
         monkeypatch.setenv("BROWSER_MIN_HOLD", "300")
 
@@ -651,8 +651,8 @@ class TestTheHandoffAsksTheLeaseTheBrowserHolds:
     async def test_the_waiter_is_the_retained_leases_waiter(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from linkedin_mcp_server.config import reset_config
-        from linkedin_mcp_server.drivers import browser as browser_module
+        from linkedin_scraper_mcp.config import reset_config
+        from linkedin_scraper_mcp.drivers import browser as browser_module
 
         monkeypatch.setenv("BROWSER_MIN_HOLD", "0")
         reset_config()
@@ -688,8 +688,8 @@ class TestTheHandoffAsksTheLeaseTheBrowserHolds:
     async def test_the_hold_window_runs_from_the_retained_acquisition(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from linkedin_mcp_server.config import reset_config
-        from linkedin_mcp_server.drivers import browser as browser_module
+        from linkedin_scraper_mcp.config import reset_config
+        from linkedin_scraper_mcp.drivers import browser as browser_module
 
         monkeypatch.setenv("BROWSER_MIN_HOLD", "60")
         reset_config()
@@ -737,7 +737,7 @@ class TestFailedLoginStillRestores:
     async def test_restore_runs_after_a_failed_login(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from linkedin_mcp_server import setup as setup_module
+        from linkedin_scraper_mcp import setup as setup_module
 
         profile = tmp_path / "profile"
         profile.mkdir(parents=True)
@@ -766,7 +766,7 @@ class TestConfirmedClose:
     """
 
     async def test_unconfirmed_close_keeps_the_lease(self, tmp_path: Path) -> None:
-        from linkedin_mcp_server.drivers import browser as browser_module
+        from linkedin_scraper_mcp.drivers import browser as browser_module
 
         lease = get_profile_lease(tmp_path / "profile")
         assert lease.try_acquire()
@@ -799,8 +799,8 @@ class TestConfirmedClose:
         """
         import asyncio
 
-        from linkedin_mcp_server.core.browser import BrowserManager
-        from linkedin_mcp_server.drivers import browser as browser_module
+        from linkedin_scraper_mcp.core.browser import BrowserManager
+        from linkedin_scraper_mcp.drivers import browser as browser_module
 
         lease = get_profile_lease(tmp_path / "profile")
         assert lease.try_acquire()
@@ -815,7 +815,7 @@ class TestConfirmedClose:
         manager._context = MagicMock(close=AsyncMock(side_effect=never_returns))
         manager._playwright = MagicMock(stop=AsyncMock())
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.browser.drain_browser_process_marker",
+            "linkedin_scraper_mcp.core.browser.drain_browser_process_marker",
             # Chromium is still there to be found
             lambda _marker, **_containment: False,
         )
@@ -839,7 +839,7 @@ class TestConfirmedClose:
         lease.release()
 
     async def test_confirmed_close_releases_the_lease(self, tmp_path: Path) -> None:
-        from linkedin_mcp_server.drivers import browser as browser_module
+        from linkedin_scraper_mcp.drivers import browser as browser_module
 
         lease = get_profile_lease(tmp_path / "profile")
         assert lease.try_acquire()
@@ -871,7 +871,7 @@ class TestALoginWaitsForTheProfile:
     async def test_it_waits_for_a_real_holder_to_let_go(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server.setup import interactive_login
+        from linkedin_scraper_mcp.setup import interactive_login
 
         auth_root = isolate_profile_dir.parent
         # A real second process, because the lease is a kernel lock: an in-process
@@ -885,10 +885,10 @@ class TestALoginWaitsForTheProfile:
             return True
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.setup._login_holding_the_profile",
+            "linkedin_scraper_mcp.setup._login_holding_the_profile",
             login_once_we_have_the_profile,
         )
-        monkeypatch.setattr("linkedin_mcp_server.setup.close_browser", AsyncMock())
+        monkeypatch.setattr("linkedin_scraper_mcp.setup.close_browser", AsyncMock())
 
         try:
             assert await interactive_login(isolate_profile_dir) is True
@@ -902,19 +902,19 @@ class TestALoginWaitsForTheProfile:
     ):
         # Bounded, not indefinite. Past the handover window the holder is a process
         # that is not going to release, and hanging would be worse than saying so.
-        from linkedin_mcp_server.exceptions import BrowserBusyError
-        from linkedin_mcp_server.setup import interactive_login
+        from linkedin_scraper_mcp.exceptions import BrowserBusyError
+        from linkedin_scraper_mcp.setup import interactive_login
 
         auth_root = isolate_profile_dir.parent
         holder = _hold_profile(auth_root, seconds=30)
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.setup.PROFILE_HANDOVER_WAIT_SECONDS", 0.3
+            "linkedin_scraper_mcp.setup.PROFILE_HANDOVER_WAIT_SECONDS", 0.3
         )
-        monkeypatch.setattr("linkedin_mcp_server.setup.close_browser", AsyncMock())
+        monkeypatch.setattr("linkedin_scraper_mcp.setup.close_browser", AsyncMock())
         never = MagicMock()
         monkeypatch.setattr(
-            "linkedin_mcp_server.setup._login_holding_the_profile", never
+            "linkedin_scraper_mcp.setup._login_holding_the_profile", never
         )
 
         try:
@@ -942,7 +942,7 @@ class TestALateLoginDoesNotUndoAnEarlierOne:
 
     def _write_session(self, profile_dir) -> str:
         """Put a usable session on disk and return its generation."""
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.session_state import (
             portable_cookie_path,
             write_source_state,
         )
@@ -958,9 +958,9 @@ class TestALateLoginDoesNotUndoAnEarlierOne:
         Returns a list that gains an entry each time a login would have opened,
         which is how the tests below tell "stood down" from "signed in".
         """
-        import linkedin_mcp_server.setup as setup
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.config.schema import AppConfig
+        import linkedin_scraper_mcp.setup as setup
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.config.schema import AppConfig
 
         # Installed because `_login_holding_the_profile` reads the process-global
         # config and this test needs a known value there.
@@ -983,8 +983,8 @@ class TestALateLoginDoesNotUndoAnEarlierOne:
     ):
         # The damage, reproduced, so the guarded case below is not asserting thin
         # air. This is what the old call shape did.
-        from linkedin_mcp_server.session_state import load_source_state
-        from linkedin_mcp_server.setup import interactive_login
+        from linkedin_scraper_mcp.session_state import load_source_state
+        from linkedin_scraper_mcp.setup import interactive_login
 
         self._write_session(isolate_profile_dir)
         self._login_without_a_browser(monkeypatch)
@@ -1001,8 +1001,8 @@ class TestALateLoginDoesNotUndoAnEarlierOne:
     async def test_the_generation_makes_the_later_login_stand_down(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server.session_state import load_source_state
-        from linkedin_mcp_server.setup import interactive_login
+        from linkedin_scraper_mcp.session_state import load_source_state
+        from linkedin_scraper_mcp.setup import interactive_login
 
         stale = self._write_session(isolate_profile_dir)
         self._login_without_a_browser(monkeypatch)
@@ -1023,7 +1023,7 @@ class TestALateLoginDoesNotUndoAnEarlierOne:
     ):
         # The guard must not stop the client that is right, which is every
         # ordinary case: same generation, so nobody has repaired anything.
-        from linkedin_mcp_server.setup import interactive_login
+        from linkedin_scraper_mcp.setup import interactive_login
 
         stale = self._write_session(isolate_profile_dir)
 
@@ -1038,11 +1038,11 @@ class TestALateLoginDoesNotUndoAnEarlierOne:
     ):
         # A rotated profile has no generation, which also differs from the stale
         # one. Standing down there would mean nobody ever signs in.
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.session_state import (
             load_source_state,
             rotate_source_profile,
         )
-        from linkedin_mcp_server.setup import interactive_login
+        from linkedin_scraper_mcp.setup import interactive_login
 
         stale = self._write_session(isolate_profile_dir)
 
@@ -1067,10 +1067,10 @@ class TestALateLoginDoesNotUndoAnEarlierOne:
         Measured: without it, the login stands down while nothing on disk works,
         and the user is left with no session and no way to get one.
         """
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.session_state import (
             portable_cookie_path,
         )
-        from linkedin_mcp_server.setup import interactive_login
+        from linkedin_scraper_mcp.setup import interactive_login
 
         stale = self._write_session(isolate_profile_dir)
         opened = self._login_without_a_browser(monkeypatch)
@@ -1093,8 +1093,8 @@ class TestALateLoginDoesNotUndoAnEarlierOne:
         spelled None. Measured with them conflated: the second client rotated away
         the session the first had just created, on a profile that started empty.
         """
-        from linkedin_mcp_server.session_state import load_source_state
-        from linkedin_mcp_server.setup import interactive_login
+        from linkedin_scraper_mcp.session_state import load_source_state
+        from linkedin_scraper_mcp.setup import interactive_login
 
         opened = self._login_without_a_browser(monkeypatch)
         assert load_source_state(isolate_profile_dir) is None
@@ -1115,7 +1115,7 @@ class TestALateLoginDoesNotUndoAnEarlierOne:
     ):
         # `--login` typed at a terminal has no peer to defer to and must always
         # sign in, however new the session on disk looks.
-        from linkedin_mcp_server.setup import interactive_login
+        from linkedin_scraper_mcp.setup import interactive_login
 
         self._write_session(isolate_profile_dir)
         opened = self._login_without_a_browser(monkeypatch)
@@ -1131,9 +1131,9 @@ class TestALateLoginDoesNotUndoAnEarlierOne:
         # The check runs with the profile held, so a failure inside it has to
         # release. Left outside the try, an unreadable profile directory kept the
         # lease until the process exited, locking out every other client.
-        import linkedin_mcp_server.setup as setup
-        from linkedin_mcp_server.profile_lease import get_profile_lease
-        from linkedin_mcp_server.setup import interactive_login
+        import linkedin_scraper_mcp.setup as setup
+        from linkedin_scraper_mcp.profile_lease import get_profile_lease
+        from linkedin_scraper_mcp.setup import interactive_login
 
         self._login_without_a_browser(monkeypatch)
         monkeypatch.setattr(
@@ -1158,7 +1158,7 @@ class TestALateImportDoesNotUndoALogin:
     """
 
     def _write_session(self, profile_dir) -> str:
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.session_state import (
             portable_cookie_path,
             write_source_state,
         )
@@ -1170,9 +1170,9 @@ class TestALateImportDoesNotUndoALogin:
 
     def _import_without_a_browser(self, monkeypatch) -> list[bool]:
         """Stub discovery and validation; the real rotation still runs."""
-        import linkedin_mcp_server.browser_import.orchestrate as orchestrate
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.config.schema import AppConfig
+        import linkedin_scraper_mcp.browser_import.orchestrate as orchestrate
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.config.schema import AppConfig
 
         set_config(AppConfig())
         committed: list[bool] = []
@@ -1184,7 +1184,7 @@ class TestALateImportDoesNotUndoALogin:
         monkeypatch.setattr(orchestrate, "_import_first_accepted", imported)
         # Imported inside the function, so patched at the source module.
         monkeypatch.setattr(
-            "linkedin_mcp_server.drivers.browser.close_browser", AsyncMock()
+            "linkedin_scraper_mcp.drivers.browser.close_browser", AsyncMock()
         )
         monkeypatch.setattr(
             orchestrate,
@@ -1194,10 +1194,10 @@ class TestALateImportDoesNotUndoALogin:
         return committed
 
     async def test_a_late_import_stands_down(self, isolate_profile_dir, monkeypatch):
-        from linkedin_mcp_server.browser_import.orchestrate import (
+        from linkedin_scraper_mcp.browser_import.orchestrate import (
             import_session_from_browser,
         )
-        from linkedin_mcp_server.session_state import load_source_state
+        from linkedin_scraper_mcp.session_state import load_source_state
 
         stale = self._write_session(isolate_profile_dir)
         committed = self._import_without_a_browser(monkeypatch)
@@ -1221,7 +1221,7 @@ class TestALateImportDoesNotUndoALogin:
         self, isolate_profile_dir, monkeypatch
     ):
         # `--import-from-browser` typed at a terminal has no peer to defer to.
-        from linkedin_mcp_server.browser_import.orchestrate import (
+        from linkedin_scraper_mcp.browser_import.orchestrate import (
             import_session_from_browser,
         )
 
@@ -1251,9 +1251,9 @@ class TestEveryLaunchPathStartsAGuardian:
     async def test_the_login_starts_one_holding_its_own_lease(
         self, isolate_profile_dir, monkeypatch
     ):
-        import linkedin_mcp_server.setup as setup_module
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.config.schema import AppConfig
+        import linkedin_scraper_mcp.setup as setup_module
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.config.schema import AppConfig
 
         # The launch options this test stubs past still read process-global
         # config, so install known defaults rather than inherit another test's.
@@ -1298,7 +1298,7 @@ class TestEveryLaunchPathStartsAGuardian:
     async def test_the_import_starts_one_holding_its_own_lease(
         self, isolate_profile_dir, monkeypatch
     ):
-        import linkedin_mcp_server.browser_import.orchestrate as orchestrate
+        import linkedin_scraper_mcp.browser_import.orchestrate as orchestrate
 
         lease = get_profile_lease(isolate_profile_dir)
         assert lease.try_acquire()
@@ -1345,12 +1345,12 @@ class TestAMomentaryHolderDoesNotCancelTheRepair:
     ):
         from unittest.mock import AsyncMock
 
-        import linkedin_mcp_server.bootstrap as bootstrap
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.config.schema import AppConfig
-        from linkedin_mcp_server.exceptions import AuthenticationStartedError
-        from linkedin_mcp_server.profile_lease import get_profile_lease
-        from linkedin_mcp_server.session_state import (
+        import linkedin_scraper_mcp.bootstrap as bootstrap
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.config.schema import AppConfig
+        from linkedin_scraper_mcp.exceptions import AuthenticationStartedError
+        from linkedin_scraper_mcp.profile_lease import get_profile_lease
+        from linkedin_scraper_mcp.session_state import (
             portable_cookie_path,
             write_source_state,
         )
@@ -1395,13 +1395,13 @@ class TestAMomentaryHolderDoesNotCancelTheRepair:
         generation to compare against, so the guard read the dead session as
         somebody else's repair and stood down.
         """
-        import linkedin_mcp_server.bootstrap as bootstrap
-        import linkedin_mcp_server.setup as setup
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.config.schema import AppConfig
-        from linkedin_mcp_server.exceptions import AuthenticationStartedError
-        from linkedin_mcp_server.profile_lease import get_profile_lease
-        from linkedin_mcp_server.session_state import (
+        import linkedin_scraper_mcp.bootstrap as bootstrap
+        import linkedin_scraper_mcp.setup as setup
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.config.schema import AppConfig
+        from linkedin_scraper_mcp.exceptions import AuthenticationStartedError
+        from linkedin_scraper_mcp.profile_lease import get_profile_lease
+        from linkedin_scraper_mcp.session_state import (
             load_source_state,
             portable_cookie_path,
             write_source_state,
@@ -1456,10 +1456,10 @@ class TestAMomentaryHolderDoesNotCancelTheRepair:
         guard" were spelled, this rotation would run unguarded and retire a
         session a peer had established in the meantime.
         """
-        import linkedin_mcp_server.bootstrap as bootstrap
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.config.schema import AppConfig
-        from linkedin_mcp_server.session_state import (
+        import linkedin_scraper_mcp.bootstrap as bootstrap
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.config.schema import AppConfig
+        from linkedin_scraper_mcp.session_state import (
             PeerSessionInPlaceError,
             load_source_state,
             portable_cookie_path,
@@ -1499,14 +1499,14 @@ class TestAMomentaryHolderDoesNotCancelTheRepair:
         Measured with the two apart: a peer's fresh session in the explicit
         profile was rotated away, because the configured one happened to be empty.
         """
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.config.schema import AppConfig
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.config.schema import AppConfig
+        from linkedin_scraper_mcp.session_state import (
             load_source_state,
             portable_cookie_path,
             write_source_state,
         )
-        from linkedin_mcp_server.setup import a_peer_already_signed_in
+        from linkedin_scraper_mcp.setup import a_peer_already_signed_in
 
         # The configured profile is empty, so its readiness is False.
         config = AppConfig()
@@ -1543,7 +1543,7 @@ class TestTheComparisonHappensUnderTheLock:
     """
 
     def _write_session(self, profile_dir) -> str:
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.session_state import (
             portable_cookie_path,
             write_source_state,
         )
@@ -1556,8 +1556,8 @@ class TestTheComparisonHappensUnderTheLock:
     def test_a_peer_landing_at_the_rotation_keeps_its_session(
         self, isolate_profile_dir, monkeypatch
     ):
-        import linkedin_mcp_server.session_state as session_state
-        from linkedin_mcp_server.session_state import (
+        import linkedin_scraper_mcp.session_state as session_state
+        from linkedin_scraper_mcp.session_state import (
             PeerSessionInPlaceError,
             load_source_state,
             rotate_source_profile,
@@ -1592,7 +1592,7 @@ class TestTheComparisonHappensUnderTheLock:
     def test_it_still_retires_the_session_it_was_told_about(self, isolate_profile_dir):
         # The guard must not stop the ordinary case, which is every rotation
         # where nobody else has done anything.
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.session_state import (
             load_source_state,
             rotate_source_profile,
         )
@@ -1607,7 +1607,7 @@ class TestTheComparisonHappensUnderTheLock:
     def test_an_unguarded_rotation_is_unchanged(self, isolate_profile_dir):
         # `--login` and `--logout` rotate without a generation, and must keep
         # retiring whatever is there.
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.session_state import (
             load_source_state,
             rotate_source_profile,
         )
@@ -1629,10 +1629,10 @@ class TestTheComparisonHappensUnderTheLock:
         """
         from unittest.mock import AsyncMock
 
-        import linkedin_mcp_server.bootstrap as bootstrap
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.config.schema import AppConfig
-        from linkedin_mcp_server.exceptions import (
+        import linkedin_scraper_mcp.bootstrap as bootstrap
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.config.schema import AppConfig
+        from linkedin_scraper_mcp.exceptions import (
             AuthenticationInProgressError,
             AuthenticationStartedError,
         )
@@ -1686,11 +1686,11 @@ class TestTheComparisonHappensUnderTheLock:
         """
         from unittest.mock import AsyncMock
 
-        import linkedin_mcp_server.bootstrap as bootstrap
-        import linkedin_mcp_server.setup as setup
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.config.schema import AppConfig
-        from linkedin_mcp_server.session_state import (
+        import linkedin_scraper_mcp.bootstrap as bootstrap
+        import linkedin_scraper_mcp.setup as setup
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.config.schema import AppConfig
+        from linkedin_scraper_mcp.session_state import (
             PeerSessionInPlaceError,
             load_source_state,
         )

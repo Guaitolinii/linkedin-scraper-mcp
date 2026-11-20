@@ -15,33 +15,31 @@ installed; run locally after ``uv run patchright install chromium --no-shell``.
 from __future__ import annotations
 
 from typing import Any, cast
-from unittest.mock import AsyncMock
 
 import pytest
 from patchright.async_api import Page, async_playwright
 
-from linkedin_mcp_server.core.auth import (
+from linkedin_scraper_mcp.core.auth import (
     detect_auth_barrier,
     detect_auth_barrier_quick,
     resolve_remember_me_prompt,
 )
-from linkedin_mcp_server.core.destination import (
+from linkedin_scraper_mcp.core.destination import (
     LINKEDIN_HOST_PATTERN,
     LINKEDIN_LANDING_JS,
     is_linkedin_landing,
 )
-from linkedin_mcp_server.core.exceptions import OffLinkedInLandingError
-from linkedin_mcp_server.linkedin import job_pages
-from linkedin_mcp_server.linkedin.capture import SectionCapture
-from linkedin_mcp_server.linkedin.content import PageContentReader
-from linkedin_mcp_server.linkedin.conversations import ConversationReader
-from linkedin_mcp_server.linkedin.job_pages import JobPageReader
-from linkedin_mcp_server.linkedin.message_sender import MessageSender
-from linkedin_mcp_server.linkedin.navigation import PageNavigator
-from linkedin_mcp_server.linkedin.person import PersonReader
-from linkedin_mcp_server.linkedin.profile_page import ProfilePageReader
-from linkedin_mcp_server.linkedin.session import PageSession
-from linkedin_mcp_server.linkedin.text import JOB_APPLY_EN_US
+from linkedin_scraper_mcp.core.exceptions import OffLinkedInLandingError
+from linkedin_scraper_mcp.linkedin import job_pages
+from linkedin_scraper_mcp.linkedin.capture import SectionCapture
+from linkedin_scraper_mcp.linkedin.content import PageContentReader
+from linkedin_scraper_mcp.linkedin.job_pages import JobPageReader
+from linkedin_scraper_mcp.linkedin.navigation import PageNavigator
+from linkedin_scraper_mcp.linkedin.person import PersonReader
+from linkedin_scraper_mcp.linkedin.profile_page import ProfilePageReader
+from linkedin_scraper_mcp.linkedin.profile_urn import ProfileUrnReader
+from linkedin_scraper_mcp.linkedin.session import PageSession
+from linkedin_scraper_mcp.linkedin.text import JOB_APPLY_EN_US
 
 #: CI uses ``--dist loadgroup``. Keep every test that launches Chromium on one
 #: worker so browser startups cannot compete with the DOM cases' wall-clock
@@ -146,14 +144,11 @@ async def read_profile(page) -> dict:
     """The profile reader wired the way the facade does, over a real browser."""
     session = PageSession(page)
     navigator = PageNavigator(session)
-    message_sender = MessageSender(session, navigator)
     reader = PersonReader(
         session,
         navigator,
         SectionCapture(session, navigator, PageContentReader(session)),
-        ProfilePageReader(
-            session, lambda: message_sender._read_profile_message_target()
-        ),
+        ProfilePageReader(session, ProfileUrnReader(session).read),
     )
     return await reader.read_person("testuser", {"main_profile"}, max_scrolls=1)
 
@@ -398,39 +393,7 @@ async def test_the_page_scripts_apply_the_same_host_rule(dom_page):
     }
 
 
-def conversation_rows() -> str:
-    """Two rows a conversation scan would click; each records the click."""
-    return "".join(
-        f'<li><label aria-label="Select conversation with {name}">'
-        f'<div class="msg-conversation-listitem__link" '
-        f"onclick=\"document.body.dataset.pressed = 'true'\">{name}</div>"
-        "</label></li>"
-        for name in ("Ada Lovelace", "Grace Hopper")
-    )
-
-
-class TestAPortalRowIsNeverClicked:
-    async def test_the_scan_refuses_a_portal_before_clicking_a_row(self, dom_page):
-        """The compose page redirected before the scan; the rows are a portal's."""
-        await serve(
-            dom_page,
-            linkedin={},
-            portal_html=document(f"<ul>{conversation_rows()}</ul>"),
-        )
-        await dom_page.goto(PORTAL_URL)
-        session = PageSession(dom_page)
-        reader = ConversationReader(
-            session,
-            PageNavigator(session),
-            PageContentReader(session),
-            ProfilePageReader(session, AsyncMock()),
-        )
-
-        with pytest.raises(OffLinkedInLandingError, match="https://portal.invalid"):
-            await reader._extract_conversation_thread_refs(5, "inbox")
-
-        assert not await pressed(dom_page)
-
+class TestAPageScriptRunsOnLinkedIn:
     async def test_a_page_script_runs_on_linkedin(self, dom_page):
         await serve(dom_page, linkedin={PROFILE_URL: profile()}, portal_html=portal())
         await dom_page.goto(PROFILE_URL)

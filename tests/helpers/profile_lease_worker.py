@@ -35,7 +35,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from linkedin_mcp_server.profile_lease import ProfileLease  # noqa: E402
+from linkedin_scraper_mcp.profile_lease import ProfileLease  # noqa: E402
 
 
 def _lease(auth_root: str) -> ProfileLease:

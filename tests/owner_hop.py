@@ -201,9 +201,9 @@ def reach_owners_in_process(
     The heartbeat preflight goes to the same place. An in-process owner answers
     it the way the owner's own route answers a call it has not registered yet.
     """
-    from linkedin_mcp_server.daemon import forwarder
-    from linkedin_mcp_server.daemon.discovery import Attachment
-    from linkedin_mcp_server.daemon.proxy import FrontendCallHeartbeatMiddleware
+    from linkedin_scraper_mcp.daemon import forwarder
+    from linkedin_scraper_mcp.daemon.discovery import Attachment
+    from linkedin_scraper_mcp.daemon.proxy import FrontendCallHeartbeatMiddleware
 
     hosts = _Hosts()
 

@@ -15,9 +15,9 @@ import tempfile
 from pathlib import Path
 from typing import Any, cast
 
-from linkedin_mcp_server.common_utils import slugify_fragment
-from linkedin_mcp_server.core.auth import detect_auth_barrier, is_logged_in
-from linkedin_mcp_server.core.browser import BrowserManager
+from linkedin_scraper_mcp.common_utils import slugify_fragment
+from linkedin_scraper_mcp.core.auth import detect_auth_barrier, is_logged_in
+from linkedin_scraper_mcp.core.browser import BrowserManager
 
 
 DEFAULT_TARGET_URL = "https://www.linkedin.com/in/williamhgates/"
@@ -49,7 +49,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--cookie-path",
         type=Path,
-        default=Path.home() / ".linkedin-mcp" / "cookies.json",
+        default=Path.home() / ".linkedin-scraper-mcp" / "cookies.json",
         help="Path to portable LinkedIn cookie JSON",
     )
     parser.add_argument(

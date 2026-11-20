@@ -27,13 +27,13 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from linkedin_mcp_server import cli_main, debug_trace
-from linkedin_mcp_server.config import set_config
-from linkedin_mcp_server.config.schema import AppConfig
-from linkedin_mcp_server.daemon import descriptor, discovery, election, proxy
-from linkedin_mcp_server.daemon.discovery import OwnerState
-from linkedin_mcp_server.exceptions import BrowserBusyError
-from linkedin_mcp_server.session_state import (
+from linkedin_scraper_mcp import cli_main, debug_trace
+from linkedin_scraper_mcp.config import set_config
+from linkedin_scraper_mcp.config.schema import AppConfig
+from linkedin_scraper_mcp.daemon import descriptor, discovery, election, proxy
+from linkedin_scraper_mcp.daemon.discovery import OwnerState
+from linkedin_scraper_mcp.exceptions import BrowserBusyError
+from linkedin_scraper_mcp.session_state import (
     QUARANTINE_PREFIX,
     portable_cookie_path,
     write_source_state,
@@ -45,7 +45,7 @@ assert _SPEC is not None and _SPEC.loader is not None
 pilot = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(pilot)
 
-_VERSION = importlib.metadata.version("mcp-server-linkedin")
+_VERSION = importlib.metadata.version("linkedin-scraper-mcp")
 _FORWARD = SimpleNamespace(
     worth_connecting=True, attachment_lookup=SimpleNamespace(attachment=object())
 )
@@ -67,9 +67,9 @@ def _log_line(logger: str, message: str) -> str:
     )
 
 
-_READ = _log_line("linkedin_mcp_server.tools.feed", "Reading feed (num_posts=1)")
+_READ = _log_line("linkedin_scraper_mcp.tools.feed", "Reading feed (num_posts=1)")
 _STATUS_ERR = "\n".join(
-    _log_line("linkedin_mcp_server.cli_main", line)
+    _log_line("linkedin_scraper_mcp.cli_main", line)
     for line in (
         f"LinkedIn MCP Server v{_VERSION}",
         f"LinkedIn MCP Server v{_VERSION} - Session Info mode",
@@ -321,7 +321,7 @@ def test_a_session_takes_its_mode_from_every_frontend(
             run = profile.parent / "trace-runs" / f"run-{frontend}"
             run.mkdir(parents=True)
             starting = _log_line(
-                "linkedin_mcp_server.server", "LinkedIn MCP Server starting..."
+                "linkedin_scraper_mcp.server", "LinkedIn MCP Server starting..."
             )
             (run / "server.log").write_text(f"{starting}\n{_READ}\n")
             if frontend == "owner":
@@ -402,10 +402,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from linkedin_mcp_server import cli_main
-from linkedin_mcp_server.config import set_config
-from linkedin_mcp_server.config.schema import AppConfig
-from linkedin_mcp_server.session_state import portable_cookie_path, write_source_state
+from linkedin_scraper_mcp import cli_main
+from linkedin_scraper_mcp.config import set_config
+from linkedin_scraper_mcp.config.schema import AppConfig
+from linkedin_scraper_mcp.session_state import portable_cookie_path, write_source_state
 
 profile = Path(sys.argv[sys.argv.index("--user-data-dir") + 1])
 profile.mkdir(parents=True)
@@ -628,7 +628,7 @@ def test_the_owner_s_expiry_line_does_not_close_an_incident(
     _store(profile)
     log = _publish_owner(profile, _dead_pid(), [])
     expiry = _log_line(
-        "linkedin_mcp_server.daemon.liveness",
+        "linkedin_scraper_mcp.daemon.liveness",
         "Nobody has waited for call c-1 in 60s; stopping it",
     )
 
@@ -653,7 +653,7 @@ def test_an_owner_log_without_a_tool_call_does_not_qualify(
     _store(profile)
     log = _publish_owner(profile, _dead_pid(), [])
     idle = _log_line(
-        "linkedin_mcp_server.daemon.owner",
+        "linkedin_scraper_mcp.daemon.owner",
         "Nothing has needed the browser in 600s; exiting",
     )
 
@@ -1177,11 +1177,11 @@ def test_tally_passes_only_on_met_quotas_without_incidents_or_doubt(
     ("candidate", "sha"),
     [
         (
-            f"uvx --isolated --cache-dir C --from git+https://github.com/o/r@{_SHA.upper()} mcp-server-linkedin",
+            f"uvx --isolated --cache-dir C --from git+https://github.com/o/r@{_SHA.upper()} linkedin-scraper-mcp",
             _SHA,
         ),
-        ("uvx --from /Users/me/checkout mcp-server-linkedin", None),
-        (f"uvx --from git+https://github.com/o/r@{_SHA}0 mcp-server-linkedin", None),
+        ("uvx --from /Users/me/checkout linkedin-scraper-mcp", None),
+        (f"uvx --from git+https://github.com/o/r@{_SHA}0 linkedin-scraper-mcp", None),
     ],
 )
 def test_a_candidate_is_known_by_its_full_commit(

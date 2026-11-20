@@ -1,11 +1,11 @@
 [project]
-name = "mcp-server-linkedin"
-version = "4.30.0"
-description = "MCP server that gives AI assistants like Claude access to LinkedIn profiles, companies, and job postings through the user's own browser session."
+name = "linkedin-scraper-mcp"
+version = "0.1.0"
+description = "Read-only MCP server that lets AI assistants research LinkedIn profiles, companies and jobs through your own browser session. Modified from linkedin-mcp-server (Apache-2.0)."
 readme = "README.md"
 requires-python = ">=3.12.4,<3.15"
 authors = [
-    { name = "Daniel Sticker", email = "daniel@sticker.name" }
+    { name = "linkedin-scraper-mcp authors" }
 ]
 license = "Apache-2.0"
 # Declared rather than left to setuptools' default globs, which happen to cover
@@ -14,7 +14,7 @@ license = "Apache-2.0"
 # whole point and not an incidental of the build backend.
 #
 # Measured with `uv build` at 4.23.0: the wheel carries
-# mcp_server_linkedin-4.23.0.dist-info/licenses/NOTICE with a matching
+# linkedin_scraper_mcp-4.23.0.dist-info/licenses/NOTICE with a matching
 # `License-File: NOTICE` in METADATA, and the sdist carries NOTICE at its root.
 # Worth re-running when the build backend or its version changes.
 license-files = ["LICENSE", "NOTICE"]
@@ -61,25 +61,21 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/stickerdaniel/linkedin-mcp-server"
-Documentation = "https://github.com/stickerdaniel/linkedin-mcp-server#readme"
-Repository = "https://github.com/stickerdaniel/linkedin-mcp-server"
-Issues = "https://github.com/stickerdaniel/linkedin-mcp-server/issues"
-Changelog = "https://github.com/stickerdaniel/linkedin-mcp-server/releases"
+OriginalProject = "https://github.com/stickerdaniel/linkedin-mcp-server"
 
 [project.scripts]
-mcp-server-linkedin = "linkedin_mcp_server.__main__:main"
+linkedin-scraper-mcp = "linkedin_scraper_mcp.__main__:main"
 
 [build-system]
 requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["linkedin_mcp_server*"]
+include = ["linkedin_scraper_mcp*"]
 exclude = ["assets*", "docs*", "tests*"]
 
 [tool.setuptools.package-data]
-linkedin_mcp_server = ["py.typed"]
+linkedin_scraper_mcp = ["py.typed"]
 
 [tool.ruff.lint]
 # Preserve Ruff's pre-0.16 default rule set instead of adopting new rules implicitly.
@@ -98,16 +94,13 @@ markers = [
     "browser_dom: evaluates extractor JS against a real chromium DOM; skipped when no browser is installed",
     "browser_contract: measures browser API behavior against real Chromium; skipped when no browser is installed",
     "slow: spawns real server processes; each case starts the full server graph",
-    "image_build: shells out to a docker daemon; skipped where there is none",
     "browser_identity: the identity gate; fails rather than skips in CI",
-    "differential_browser: native differential row; launches real Chromium against the synthetic origin and runs only on a disposable CI runner that trusts the run's test CA",
-    "differential_row(row, experiment, column): a differential harness case, counted per row, experiment and platform in counts.json whether it runs, skips or fails",
 ]
 
 [tool.coverage.run]
-source = ["linkedin_mcp_server"]
+source = ["linkedin_scraper_mcp"]
 branch = true
-omit = ["linkedin_mcp_server/__main__.py"]
+omit = ["linkedin_scraper_mcp/__main__.py"]
 
 [tool.coverage.report]
 fail_under = 45
@@ -124,32 +117,6 @@ dev = [
     "pytest-xdist>=3.8.0",
     "pyyaml>=6.0.3",
     "ruff==0.17.4",
-    "towncrier==26.9.0",
     "ty>=0.0.1a12",
     "virtualenv>=21.14.9",
 ]
-
-[tool.towncrier]
-directory = "changelog.d"
-filename = "docs/CHANGELOG.md"
-start_string = "<!-- towncrier release notes start -->\n"
-title_format = "## {version} ({project_date})"
-issue_format = "[#{issue}](https://github.com/stickerdaniel/linkedin-mcp-server/pull/{issue})"
-# An empty list, not an absent key: only then does `towncrier build` refuse a
-# fragment of an unknown type instead of leaving it out in silence.
-ignore = []
-
-[[tool.towncrier.type]]
-directory = "breaking"
-name = "Breaking Changes"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "feat"
-name = "Features"
-showcontent = true
-
-[[tool.towncrier.type]]
-directory = "fix"
-name = "Bug Fixes"
-showcontent = true

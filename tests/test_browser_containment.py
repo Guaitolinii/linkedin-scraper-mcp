@@ -41,10 +41,10 @@ from typing import Any, Protocol
 import pytest
 from patchright.async_api import async_playwright
 
-from linkedin_mcp_server.browser_launch import build_launch_options
-from linkedin_mcp_server.config.schema import BrowserConfig
-from linkedin_mcp_server.core.browser import BrowserManager
-from linkedin_mcp_server.process_tree import _MarkerScan, _scan_marked_posix_processes
+from linkedin_scraper_mcp.browser_launch import build_launch_options
+from linkedin_scraper_mcp.config.schema import BrowserConfig
+from linkedin_scraper_mcp.core.browser import BrowserManager
+from linkedin_scraper_mcp.process_tree import _MarkerScan, _scan_marked_posix_processes
 
 #: How many inconclusive marker scans one side of the gate may see before it
 #: fails. Outside Linux a scan is a ``ps`` that can time out on a loaded runner
@@ -529,12 +529,12 @@ async def test_a_browser_that_stopped_is_drained_and_started_again(
     import psutil
     from fastmcp.exceptions import ToolError
 
-    from linkedin_mcp_server import dependencies
-    from linkedin_mcp_server.dependencies import get_ready_extractor
-    from linkedin_mcp_server.drivers import browser as drv
-    from linkedin_mcp_server.exceptions import BrowserUnavailableError
-    from linkedin_mcp_server.profile_lease import get_profile_lease
-    from linkedin_mcp_server.sequential_tool_middleware import (
+    from linkedin_scraper_mcp import dependencies
+    from linkedin_scraper_mcp.dependencies import get_ready_extractor
+    from linkedin_scraper_mcp.drivers import browser as drv
+    from linkedin_scraper_mcp.exceptions import BrowserUnavailableError
+    from linkedin_scraper_mcp.profile_lease import get_profile_lease
+    from linkedin_scraper_mcp.sequential_tool_middleware import (
         SequentialToolExecutionMiddleware,
     )
 

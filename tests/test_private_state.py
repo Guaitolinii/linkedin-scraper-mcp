@@ -21,8 +21,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from linkedin_mcp_server import private_state
-from linkedin_mcp_server.private_state import (
+from linkedin_scraper_mcp import private_state
+from linkedin_scraper_mcp.private_state import (
     PrivateStateError,
     harden_created_file,
     harden_directory,
@@ -67,7 +67,7 @@ class TestHardeningOnPosix:
     @posix_only
     def test_hardening_works_outside_a_linkedin_mcp_tree(self, tmp_path: Path):
         # USER_DATA_DIR can point anywhere, and the older tree-hardening helper
-        # deliberately does nothing outside a .linkedin-mcp directory. A token
+        # deliberately does nothing outside a .linkedin-scraper-mcp directory. A token
         # stored under a custom root has to be protected just the same.
         target = tmp_path / "somewhere-else" / "daemon"
         target.parent.mkdir(mode=0o755)
@@ -229,7 +229,7 @@ class TestExtendedAcls:
             capture_output=True,
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.private_state._drop_extended_acl", lambda path: None
+            "linkedin_scraper_mcp.private_state._drop_extended_acl", lambda path: None
         )
 
         with pytest.raises(PrivateStateError, match="access control list"):
@@ -288,7 +288,7 @@ class TestExtendedAcls:
         import threading
         import time
 
-        from linkedin_mcp_server import private_state
+        from linkedin_scraper_mcp import private_state
 
         monkeypatch.setattr(private_state, "_libc_resolved", False)
         monkeypatch.setattr(private_state, "_libc_cache", None)
@@ -349,7 +349,7 @@ class TestExtendedAcls:
         import sys
         import threading
 
-        from linkedin_mcp_server import private_state
+        from linkedin_scraper_mcp import private_state
 
         monkeypatch.setattr(private_state, "_libc_resolved", False)
         monkeypatch.setattr(private_state, "_libc_cache", None)
@@ -476,7 +476,7 @@ class TestRefusals:
     def test_a_windows_reparse_directory_is_refused_before_acl_hardening(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         target = tmp_path / "per-auth"
         target.mkdir()
@@ -501,7 +501,7 @@ class TestRefusals:
     def test_windows_directory_replacement_during_acl_hardening_is_refused(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         target = tmp_path / "per-auth"
         target.mkdir()
@@ -531,7 +531,7 @@ class TestRefusals:
     def test_existing_windows_directory_is_verified_without_acl_replacement(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         target = tmp_path / "daemon"
         target.mkdir()
@@ -555,7 +555,7 @@ class TestRefusals:
     def test_existing_windows_file_is_verified_without_acl_replacement(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         target = tmp_path / "token"
         target.touch()
@@ -579,7 +579,7 @@ class TestRefusals:
     def test_new_windows_file_replaces_its_inherited_acl(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         target = tmp_path / "token"
         target.touch()
@@ -610,7 +610,7 @@ class TestRefusals:
     def test_new_windows_file_replacement_during_acl_hardening_is_refused(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         target = tmp_path / "token"
         target.touch()
@@ -663,7 +663,7 @@ class TestRefusals:
     def test_concurrent_windows_child_publication_verifies_the_winner(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         target = tmp_path / "per-auth"
         verified: list[Path] = []
@@ -829,7 +829,7 @@ class TestWindowsAcl:
 
     @windows_only
     def test_a_directory_grants_only_this_account(self, tmp_path: Path):
-        from linkedin_mcp_server.windows_acl import (
+        from linkedin_scraper_mcp.windows_acl import (
             CONTAINER_INHERITANCE,
             current_user_sid,
             describe_dacl,
@@ -855,7 +855,7 @@ class TestWindowsAcl:
 
     @windows_only
     def test_a_directory_can_be_private_from_creation(self, tmp_path: Path):
-        from linkedin_mcp_server.windows_acl import (
+        from linkedin_scraper_mcp.windows_acl import (
             CONTAINER_INHERITANCE,
             create_owner_only_directory,
             close_directory_pin,
@@ -892,7 +892,7 @@ class TestWindowsAcl:
         is not a fixture at all above ``tmp_path``: it is this machine, and it is
         the test that fails first if the ancestry rule is too strict to ship.
         """
-        from linkedin_mcp_server.windows_acl import (
+        from linkedin_scraper_mcp.windows_acl import (
             close_directory_pin,
             create_owner_only_directory,
             describe_dacl,
@@ -919,8 +919,8 @@ class TestWindowsAcl:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, home_is_shared: bool
     ):
         """Reproduce #908 with real Windows ACLs, without changing the host's AppData."""
-        from linkedin_mcp_server import bootstrap, windows_acl
-        from linkedin_mcp_server.config.schema import AppConfig
+        from linkedin_scraper_mcp import bootstrap, windows_acl
+        from linkedin_scraper_mcp.config.schema import AppConfig
 
         home = tmp_path / "profile"
         appdata = home / "AppData"
@@ -973,7 +973,7 @@ class TestWindowsAcl:
         rather than any account, and each container's owner is judged one step
         before its permissions are.
         """
-        from linkedin_mcp_server.windows_acl import (
+        from linkedin_scraper_mcp.windows_acl import (
             close_directory_pin,
             create_owner_only_directory,
             describe_dacl,
@@ -1023,7 +1023,7 @@ class TestWindowsAcl:
         every check that looks only at the parent passes while an untrusted
         account can still delete what is created inside it.
         """
-        from linkedin_mcp_server.windows_acl import (
+        from linkedin_scraper_mcp.windows_acl import (
             create_owner_only_directory,
             describe_dacl,
         )
@@ -1057,7 +1057,7 @@ class TestWindowsAcl:
         parent lands in that parent, which is what makes ancestry a question
         about the parent at all rather than about somewhere else.
         """
-        from linkedin_mcp_server.windows_acl import (
+        from linkedin_scraper_mcp.windows_acl import (
             create_owner_only_directory,
             describe_dacl,
         )
@@ -1089,7 +1089,7 @@ class TestWindowsAcl:
         ``/setowner`` to a foreign account needs a privilege a test account does
         not have, and what is under test is the verdict, not ``icacls``.
         """
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         parent = tmp_path / "ancestor" / "temp"
         parent.mkdir(parents=True)
@@ -1106,7 +1106,7 @@ class TestWindowsAcl:
     @windows_only
     def test_a_reparse_point_in_the_chain_is_refused(self, tmp_path: Path):
         """A pin holds the link; the permissions were read from its target."""
-        from linkedin_mcp_server.windows_acl import pin_directory_chain
+        from linkedin_scraper_mcp.windows_acl import pin_directory_chain
 
         real = tmp_path / "real"
         real.mkdir()
@@ -1127,7 +1127,7 @@ class TestWindowsAcl:
         Without this the verification describes one directory and
         ``CreateDirectoryW`` lands in whatever answers to the name afterwards.
         """
-        from linkedin_mcp_server.windows_acl import (
+        from linkedin_scraper_mcp.windows_acl import (
             _release_directory_pins,
             pin_directory_chain,
         )
@@ -1146,7 +1146,7 @@ class TestWindowsAcl:
 
     @windows_only
     def test_an_owned_child_directory_uses_the_same_acl_contract(self, tmp_path: Path):
-        from linkedin_mcp_server.windows_acl import describe_dacl
+        from linkedin_scraper_mcp.windows_acl import describe_dacl
 
         parent = tmp_path / "state"
         harden_directory(parent)
@@ -1160,7 +1160,7 @@ class TestWindowsAcl:
 
     @windows_only
     def test_an_owned_child_directory_refuses_an_ntfs_junction(self, tmp_path: Path):
-        from linkedin_mcp_server.windows_acl import describe_dacl
+        from linkedin_scraper_mcp.windows_acl import describe_dacl
 
         parent = tmp_path / "state"
         harden_directory(parent)
@@ -1194,7 +1194,7 @@ class TestWindowsAcl:
 
     @windows_only
     def test_a_file_grants_only_this_account_and_inherits_nothing(self, tmp_path: Path):
-        from linkedin_mcp_server.windows_acl import describe_dacl
+        from linkedin_scraper_mcp.windows_acl import describe_dacl
 
         parent = tmp_path / "state"
         harden_directory(parent)
@@ -1211,7 +1211,7 @@ class TestWindowsAcl:
     def test_an_existing_permissive_directory_is_refused_without_repair(
         self, tmp_path: Path
     ):
-        from linkedin_mcp_server.windows_acl import describe_dacl
+        from linkedin_scraper_mcp.windows_acl import describe_dacl
 
         target = tmp_path / "legacy-state"
         target.mkdir()
@@ -1238,7 +1238,7 @@ class TestWindowsAcl:
     def test_an_existing_permissive_file_is_refused_without_repair(
         self, tmp_path: Path
     ):
-        from linkedin_mcp_server.windows_acl import describe_dacl
+        from linkedin_scraper_mcp.windows_acl import describe_dacl
 
         target = tmp_path / "legacy-token"
         target.touch()
@@ -1266,7 +1266,7 @@ class TestWindowsAcl:
         # The reason the DACL is replaced and marked protected rather than
         # merged: a parent granting Everyone would otherwise pass that straight
         # down to the token file.
-        from linkedin_mcp_server.windows_acl import describe_dacl
+        from linkedin_scraper_mcp.windows_acl import describe_dacl
 
         parent = tmp_path / "wide"
         parent.mkdir()
@@ -1289,7 +1289,7 @@ class TestWindowsAcl:
 
     @windows_only
     def test_a_private_parent_prevents_child_replacement(self, tmp_path: Path):
-        from linkedin_mcp_server.windows_acl import (
+        from linkedin_scraper_mcp.windows_acl import (
             verify_children_cannot_be_replaced,
         )
 
@@ -1300,7 +1300,7 @@ class TestWindowsAcl:
 
     @windows_only
     def test_a_parent_granting_delete_child_is_refused(self, tmp_path: Path):
-        from linkedin_mcp_server.windows_acl import (
+        from linkedin_scraper_mcp.windows_acl import (
             verify_children_cannot_be_replaced,
         )
 
@@ -1319,7 +1319,7 @@ class TestWindowsAcl:
     def test_hardening_preserves_current_ownership(self, tmp_path: Path):
         # The entry is created by this account and remains owned by it. Hardening
         # refuses foreign content instead of laundering its ownership.
-        from linkedin_mcp_server.windows_acl import (
+        from linkedin_scraper_mcp.windows_acl import (
             current_user_sid,
             read_owner,
             _sid_to_string,
@@ -1340,7 +1340,7 @@ class TestWindowsAcl:
     def test_a_foreign_initial_owner_is_refused_before_acl_replacement(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         target = tmp_path / "daemon"
         target.mkdir()
@@ -1352,7 +1352,7 @@ class TestWindowsAcl:
 
     @windows_only
     def test_a_pinned_directory_cannot_be_replaced(self, tmp_path: Path):
-        from linkedin_mcp_server.windows_acl import (
+        from linkedin_scraper_mcp.windows_acl import (
             close_directory_pin,
             pin_directory,
         )
@@ -1384,7 +1384,7 @@ class TestWindowsAcl:
         unverified one, and it is the reason the whole chain is held rather
         than the leaf.
         """
-        from linkedin_mcp_server.windows_acl import (
+        from linkedin_scraper_mcp.windows_acl import (
             _release_directory_pins,
             pin_directory_chain,
         )
@@ -1410,7 +1410,7 @@ class TestWindowsAcl:
         # an unrelated error. These are the documented sizes on 64-bit.
         import ctypes
 
-        from linkedin_mcp_server import windows_acl as acl
+        from linkedin_scraper_mcp import windows_acl as acl
 
         assert ctypes.sizeof(acl._ACL) == 8
         assert ctypes.sizeof(acl._ACE_HEADER) == 4
@@ -1424,7 +1424,7 @@ class TestWindowsAclOffWindows:
     def test_directory_pin_opens_the_entry_without_following_reparse_points(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         captured: list[int] = []
 
@@ -1467,7 +1467,7 @@ class TestWindowsAclOffWindows:
         whole claim: the policy can only ever put this one group there, and a
         stand-in string would pass a check that admits nothing else.
         """
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         user_sid = object()
         default_owner_sid = object()
@@ -1543,7 +1543,7 @@ class TestWindowsAclOffWindows:
         it as this account's own state is precisely the boundary crossing the
         owner check exists to refuse.
         """
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         user_sid = object()
         default_owner_sid = object()
@@ -1589,7 +1589,7 @@ class TestWindowsAclOffWindows:
         monkeypatch: pytest.MonkeyPatch,
         right_name: str,
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         monkeypatch.setattr(
             windows_acl, "current_user_sid", lambda: (object(), object())
@@ -1626,7 +1626,7 @@ class TestWindowsAclOffWindows:
         it. ``S-1-3-4`` grants to the owner of the directory being read, which
         the same call accepted a line earlier, so it can widen nothing.
         """
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         monkeypatch.setattr(
             windows_acl, "current_user_sid", lambda: (object(), object())
@@ -1673,7 +1673,7 @@ class TestWindowsAclOffWindows:
         inheritance: str,
         right_name: str,
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         monkeypatch.setattr(
             windows_acl, "current_user_sid", lambda: (object(), object())
@@ -1707,7 +1707,7 @@ class TestWindowsAclOffWindows:
     def test_inheriting_home_permissions_are_refused(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         monkeypatch.setattr(
             windows_acl, "current_user_sid", lambda: (object(), object())
@@ -1728,7 +1728,7 @@ class TestWindowsAclOffWindows:
     def test_inherit_only_creator_owner_is_not_a_foreign_principal(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         monkeypatch.setattr(
             windows_acl, "current_user_sid", lambda: (object(), object())
@@ -1762,7 +1762,7 @@ class TestWindowsAclOffWindows:
     def test_file_inheritance_does_not_treat_read_ea_as_delete_child(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         monkeypatch.setattr(
             windows_acl, "current_user_sid", lambda: (object(), object())
@@ -1795,7 +1795,7 @@ class TestWindowsAclOffWindows:
     def test_inheriting_temporary_parent_is_refused(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         monkeypatch.setattr(
             windows_acl, "current_user_sid", lambda: (object(), object())
@@ -1818,7 +1818,7 @@ class TestWindowsAclOffWindows:
         )
 
     def test_security_descriptor_matches_the_native_pointer_width(self):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         expected = 40 if ctypes.sizeof(ctypes.c_void_p) == 8 else 20
         assert ctypes.sizeof(windows_acl._SECURITY_DESCRIPTOR) == expected
@@ -1826,7 +1826,7 @@ class TestWindowsAclOffWindows:
     def test_private_directory_uses_its_final_acl_at_creation(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         acl = windows_acl._PACL(456)
         created: list[Path] = []
@@ -1937,7 +1937,7 @@ class TestWindowsAclOffWindows:
         still free to move describes whatever is standing there when the check
         runs rather than what ``CreateDirectoryW`` lands in.
         """
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         events: list[tuple[str, Path]] = []
 
@@ -1975,7 +1975,7 @@ class TestWindowsAclOffWindows:
         self, monkeypatch: pytest.MonkeyPatch
     ):
         """``Path.parents`` of a relative path stops at ``.``, not at a root."""
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         monkeypatch.setattr(windows_acl, "_load", lambda: (object(), object()))
         monkeypatch.setattr(
@@ -1991,7 +1991,7 @@ class TestWindowsAclOffWindows:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
         """These are handles on ``C:\\`` and ``C:\\Users``. Leaking them is not free."""
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         opened: list[object] = []
         closed: list[object] = []
@@ -2019,7 +2019,7 @@ class TestWindowsAclOffWindows:
     def test_every_pin_is_released_even_when_one_refuses(
         self, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         handles = [ctypes.c_void_p(index) for index in (11, 22, 33)]
         closed: list[object] = []
@@ -2063,7 +2063,7 @@ class TestWindowsAclOffWindows:
         right to create a folder in it, and creating a folder beside ``Users``
         is not replacing ``Users``.
         """
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         # The masks above are literals so the table reads as Windows writes it;
         # this keeps them honest against the module's own constants.
@@ -2100,7 +2100,7 @@ class TestWindowsAclOffWindows:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
         """An owner rewrites the DACL whenever it likes, with no ACE saying so."""
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         monkeypatch.setattr(windows_acl, "_load", lambda: (object(), object()))
         monkeypatch.setattr(windows_acl, "_trusted_sids", lambda: {"S-1-5-18"})
@@ -2129,7 +2129,7 @@ class TestWindowsAclOffWindows:
         is protected against it. Judging it here rather than where it applies
         would refuse an ordinary machine over an entry that reaches nothing.
         """
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         monkeypatch.setattr(windows_acl, "_load", lambda: (object(), object()))
         monkeypatch.setattr(windows_acl, "read_owner", lambda _path: "S-1-5-18")
@@ -2165,7 +2165,7 @@ class TestWindowsAclOffWindows:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
         """Nothing can be said about a mask this cannot read, so nothing is."""
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         monkeypatch.setattr(windows_acl, "_load", lambda: (object(), object()))
         monkeypatch.setattr(windows_acl, "read_owner", lambda _path: "S-1-5-18")
@@ -2191,7 +2191,7 @@ class TestWindowsAclOffWindows:
 
     def test_the_trusted_owners_are_identities_no_login_can_assume(self):
         """A trusted owner is a hole exactly the size of who can become it."""
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         assert windows_acl._TRUSTED_SYSTEM_SIDS == {
             "S-1-5-18",
@@ -2205,7 +2205,7 @@ class TestWindowsAclOffWindows:
     def test_foreign_initial_owner_is_refused_before_acl_construction(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         target = tmp_path / "foreign"
         target.touch()
@@ -2250,7 +2250,7 @@ class TestWindowsAclOffWindows:
         # Importable everywhere so the module can be reasoned about and typed on
         # any platform, but every entry point refuses off Windows rather than
         # failing somewhere inside a DLL that is not there.
-        from linkedin_mcp_server.windows_acl import current_user_sid
+        from linkedin_scraper_mcp.windows_acl import current_user_sid
 
         with pytest.raises(PrivateStateError, match="off Windows"):
             current_user_sid()

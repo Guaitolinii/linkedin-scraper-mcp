@@ -2,11 +2,11 @@
 
 from collections import namedtuple
 
-from linkedin_mcp_server.linkedin import (
+from linkedin_scraper_mcp.linkedin import (
     COMPANY_SECTIONS as EXPORTED_COMPANY_SECTIONS,
 )
-from linkedin_mcp_server.linkedin import PERSON_SECTIONS as EXPORTED_PERSON_SECTIONS
-from linkedin_mcp_server.linkedin.fields import (
+from linkedin_scraper_mcp.linkedin import PERSON_SECTIONS as EXPORTED_PERSON_SECTIONS
+from linkedin_scraper_mcp.linkedin.fields import (
     COMPANY_SECTIONS,
     PERSON_SECTIONS,
     parse_company_sections,

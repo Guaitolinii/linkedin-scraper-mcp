@@ -3,7 +3,7 @@
 Run with the candidate's own interpreter, as ``docs/daemon-pilot.md`` shows:
 
     python daemon_pilot.py before --pilot-dir D --host NAME --others-stopped \\
-        --candidate "uvx --isolated --cache-dir C --from git+...@SHA mcp-server-linkedin"
+        --candidate "uvx --isolated --cache-dir C --from git+...@SHA linkedin-scraper-mcp"
     # start the host, read LinkedIn through it, quit the host
     python daemon_pilot.py after --pilot-dir D --session ID [--attest login@TIME]
     python daemon_pilot.py tally --sha SHA D [D2 ...]
@@ -38,8 +38,8 @@ from collections.abc import Collection, Iterable, Sequence
 from pathlib import Path
 from typing import IO, Any, Literal, NamedTuple
 
-from linkedin_mcp_server.daemon.descriptor import daemon_state_root, profile_identity
-from linkedin_mcp_server.process_tree import (
+from linkedin_scraper_mcp.daemon.descriptor import daemon_state_root, profile_identity
+from linkedin_scraper_mcp.process_tree import (
     ProcessTreeError,
     WindowsJob,
     release_nonce,
@@ -47,7 +47,7 @@ from linkedin_mcp_server.process_tree import (
     terminate_process_group,
     windows_gate_command,
 )
-from linkedin_mcp_server.session_state import (
+from linkedin_scraper_mcp.session_state import (
     QUARANTINE_PREFIX,
     auth_root_dir,
     canonical,
@@ -106,7 +106,7 @@ _FALLBACK_PREFIXES = (
 _FALLBACK_SUFFIX = "this server drives its own browser instead of sharing one"
 
 #: Tool entry lines the owner logs for a call that changes something on LinkedIn.
-#: Every other INFO line under ``linkedin_mcp_server.tools`` is a read.
+#: Every other INFO line under ``linkedin_scraper_mcp.tools`` is a read.
 _WRITING_TOOL_LINES = ("Connecting with person: ", "Sending message to ")
 
 _PREFLIGHT_NOTE = (
@@ -363,7 +363,7 @@ def _end_tree(child: subprocess.Popen[bytes], job: WindowsJob | None) -> bool:
 def _warn_unended() -> None:
     print(
         "The status command was stopped and part of it may still be running; "
-        "check for a leftover mcp-server-linkedin process.",
+        "check for a leftover linkedin-scraper-mcp process.",
         file=sys.stderr,
     )
 
@@ -670,7 +670,7 @@ def tool_calls(records: Iterable[dict[str, Any]]) -> dict[str, int]:
         logger = record.get("logger")
         if record.get("level") != "INFO" or not isinstance(logger, str):
             continue
-        if not logger.startswith("linkedin_mcp_server.tools."):
+        if not logger.startswith("linkedin_scraper_mcp.tools."):
             continue
         writing = record["message"].startswith(_WRITING_TOOL_LINES)
         counts["writing" if writing else "reading"] += 1
@@ -989,7 +989,7 @@ def before(args: argparse.Namespace) -> int:
     runs = trace_runs(auth_root)
     log = owner_log_position(profile)
 
-    package = _version("mcp-server-linkedin")
+    package = _version("linkedin-scraper-mcp")
     reasons = []
     if status["verdict"] != "valid":
         reasons.append(f"the before-status is {status['verdict']}")
@@ -1455,8 +1455,8 @@ def _parser() -> argparse.ArgumentParser:
     )
     start.add_argument(
         "--user-data-dir",
-        default=os.environ.get("USER_DATA_DIR") or "~/.linkedin-mcp/profile",
-        help="the profile the host uses (default: USER_DATA_DIR or ~/.linkedin-mcp/profile)",
+        default=os.environ.get("USER_DATA_DIR") or "~/.linkedin-scraper-mcp/profile",
+        help="the profile the host uses (default: USER_DATA_DIR or ~/.linkedin-scraper-mcp/profile)",
     )
     start.set_defaults(run=before)
 

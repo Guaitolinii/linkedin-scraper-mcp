@@ -24,17 +24,17 @@ from fastmcp.server.middleware import Middleware
 from fastmcp.tools import ToolResult
 from owner_hop import Forward, Interceptor, method_of
 
-from linkedin_mcp_server.daemon import auth_repair as daemon_auth
-from linkedin_mcp_server.daemon.auth_repair import (
+from linkedin_scraper_mcp.daemon import auth_repair as daemon_auth
+from linkedin_scraper_mcp.daemon.auth_repair import (
     MARKER_KEY,
     MARKER_VERSION,
     OwnerAuthSignalMiddleware,
 )
-from linkedin_mcp_server.daemon.forwarder import OwnerForwarder
-from linkedin_mcp_server.daemon.proxy import FrontendCallMiddleware
-from linkedin_mcp_server.core.exceptions import AccountRestrictedError
-from linkedin_mcp_server.error_handler import ERROR_META_KEY, raise_tool_error
-from linkedin_mcp_server.exceptions import (
+from linkedin_scraper_mcp.daemon.forwarder import OwnerForwarder
+from linkedin_scraper_mcp.daemon.proxy import FrontendCallMiddleware
+from linkedin_scraper_mcp.core.exceptions import AccountRestrictedError
+from linkedin_scraper_mcp.error_handler import ERROR_META_KEY, raise_tool_error
+from linkedin_scraper_mcp.exceptions import (
     AuthenticationStartedError,
     AuthMissingOnOwnerError,
     AuthStaleOnOwnerError,
@@ -121,7 +121,7 @@ class TestTheMarkerSurvivesTheHop:
         )
 
         with patch(
-            "linkedin_mcp_server.daemon.auth_repair._browser_still_holds_the_profile",
+            "linkedin_scraper_mcp.daemon.auth_repair._browser_still_holds_the_profile",
             return_value=False,
         ):
             async with Client(owner) as client:
@@ -147,7 +147,7 @@ class TestTheMarkerSurvivesTheHop:
         )
 
         with patch(
-            "linkedin_mcp_server.daemon.auth_repair._browser_still_holds_the_profile",
+            "linkedin_scraper_mcp.daemon.auth_repair._browser_still_holds_the_profile",
             return_value=False,
         ):
             # No repair middleware: this asserts what crosses the hop, which a
@@ -167,7 +167,7 @@ class TestTheMarkerSurvivesTheHop:
         owner, calls = _owner_that_fails_with(AuthMissingOnOwnerError("no session"))
 
         with patch(
-            "linkedin_mcp_server.daemon.auth_repair._browser_still_holds_the_profile",
+            "linkedin_scraper_mcp.daemon.auth_repair._browser_still_holds_the_profile",
             return_value=False,
         ):
             async with Client(owner) as client:
@@ -203,7 +203,7 @@ class TestTheMarkerSurvivesTheHop:
         owner.add_middleware(OwnerAuthSignalMiddleware())
 
         with patch(
-            "linkedin_mcp_server.daemon.auth_repair._browser_still_holds_the_profile",
+            "linkedin_scraper_mcp.daemon.auth_repair._browser_still_holds_the_profile",
             return_value=False,
         ):
             async with Client(owner) as client:
@@ -222,21 +222,21 @@ class TestTheFrontendActsOnTheMarker:
         Installed explicitly so the replay deadline cannot depend on config
         left behind by another test.
         """
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.config.schema import AppConfig
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.config.schema import AppConfig
 
         set_config(AppConfig())
 
     def _repair(self):
         """Watch the login without running one."""
         return patch(
-            "linkedin_mcp_server.daemon.auth_repair._repair_auth_locally",
+            "linkedin_scraper_mcp.daemon.auth_repair._repair_auth_locally",
             new_callable=AsyncMock,
         )
 
     def _profile_is_free(self):
         return patch(
-            "linkedin_mcp_server.daemon.auth_repair._browser_still_holds_the_profile",
+            "linkedin_scraper_mcp.daemon.auth_repair._browser_still_holds_the_profile",
             return_value=False,
         )
 
@@ -291,11 +291,11 @@ class TestTheFrontendActsOnTheMarker:
         with (
             self._profile_is_free(),
             patch(
-                "linkedin_mcp_server.daemon.auth_repair._repair_auth_locally",
+                "linkedin_scraper_mcp.daemon.auth_repair._repair_auth_locally",
                 AsyncMock(side_effect=repair_error),
             ),
             patch(
-                "linkedin_mcp_server.daemon.auth_repair._wait_for_the_sign_in",
+                "linkedin_scraper_mcp.daemon.auth_repair._wait_for_the_sign_in",
                 AsyncMock(side_effect=AccountRestrictedError()),
             ),
         ):
@@ -334,7 +334,7 @@ class TestTheFrontendActsOnTheMarker:
 
         with (
             patch(
-                "linkedin_mcp_server.daemon.auth_repair._browser_still_holds_the_profile",
+                "linkedin_scraper_mcp.daemon.auth_repair._browser_still_holds_the_profile",
                 return_value=True,
             ),
             self._repair() as repair,
@@ -424,7 +424,7 @@ class TestTheFrontendActsOnTheMarker:
         with (
             self._profile_is_free(),
             patch(
-                "linkedin_mcp_server.daemon.auth_repair._repair_auth_locally",
+                "linkedin_scraper_mcp.daemon.auth_repair._repair_auth_locally",
                 new_callable=AsyncMock,
                 side_effect=RuntimeError("the user closed the window"),
             ),
@@ -492,7 +492,7 @@ class TestTheFrontendActsOnTheMarker:
         failure refused the replay and sent the user back for a retry that was
         not needed, while a usable session was already on disk.
         """
-        from linkedin_mcp_server.session_state import PeerSessionInPlaceError
+        from linkedin_scraper_mcp.session_state import PeerSessionInPlaceError
 
         owner, calls = _owner_that_fails_with(
             AuthMissingOnOwnerError("no session", nothing_ran_yet=True)
@@ -501,7 +501,7 @@ class TestTheFrontendActsOnTheMarker:
         with (
             self._profile_is_free(),
             patch(
-                "linkedin_mcp_server.daemon.auth_repair._repair_auth_locally",
+                "linkedin_scraper_mcp.daemon.auth_repair._repair_auth_locally",
                 new_callable=AsyncMock,
                 side_effect=PeerSessionInPlaceError("another client signed in"),
             ),
@@ -532,7 +532,7 @@ class TestTheRepairRunsForReal:
 
     def _profile_is_free(self):
         return patch(
-            "linkedin_mcp_server.daemon.auth_repair._browser_still_holds_the_profile",
+            "linkedin_scraper_mcp.daemon.auth_repair._browser_still_holds_the_profile",
             return_value=False,
         )
 
@@ -552,7 +552,7 @@ class TestTheRepairRunsForReal:
                 done.append(True)
 
         return patch.multiple(
-            "linkedin_mcp_server.bootstrap",
+            "linkedin_scraper_mcp.bootstrap",
             _run_login_flow=AsyncMock(side_effect=login),
             _force_move_auth_state_aside=lambda *a, **k: None,
             _move_invalid_auth_state_aside=lambda *a, **k: None,
@@ -569,8 +569,8 @@ class TestTheRepairRunsForReal:
         Installed explicitly so the shortened budget cannot depend on config
         left behind by another test.
         """
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.config.schema import AppConfig
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.config.schema import AppConfig
 
         config = AppConfig()
         config.browser.login_inline_wait_seconds = 0.2
@@ -630,7 +630,7 @@ class TestTheRepairRunsForReal:
         Giving up costs only this attempt: the login keeps running, and the next
         call finds the session it writes.
         """
-        from linkedin_mcp_server.config import get_config
+        from linkedin_scraper_mcp.config import get_config
 
         owner, calls = _owner_that_fails_with(
             AuthMissingOnOwnerError("no session", nothing_ran_yet=True)
@@ -776,7 +776,7 @@ class TestTheRepairRunsForReal:
             # Repaired all the same, which is what makes the retry the message
             # asks for work. Read inside the patch, where readiness reflects the
             # stubbed login rather than the real filesystem.
-            from linkedin_mcp_server.bootstrap import _auth_ready
+            from linkedin_scraper_mcp.bootstrap import _auth_ready
 
             repaired = _auth_ready()
 
@@ -913,9 +913,9 @@ class TestALostMarkerResponse:
     @pytest.fixture
     def session(self, tmp_path: Path) -> Path:
         """A working session on disk, under this test's profile only."""
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.config.schema import AppConfig
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.config.schema import AppConfig
+        from linkedin_scraper_mcp.session_state import (
             portable_cookie_path,
             write_source_state,
         )
@@ -935,7 +935,7 @@ class TestALostMarkerResponse:
 
     @staticmethod
     def _session_files(profile: Path) -> dict[Path, bytes]:
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.session_state import (
             portable_cookie_path,
             source_state_path,
         )
@@ -953,16 +953,16 @@ class TestALostMarkerResponse:
     ):
         from test_daemon_proxy import _attachment, _backend, _elected
 
-        from linkedin_mcp_server import dependencies
-        from linkedin_mcp_server.bootstrap import (
+        from linkedin_scraper_mcp import dependencies
+        from linkedin_scraper_mcp.bootstrap import (
             RuntimePolicy,
             current_login_generation,
             initialize_bootstrap,
         )
-        from linkedin_mcp_server.core.exceptions import AuthenticationError
-        from linkedin_mcp_server.dependencies import get_ready_extractor, tool_errors
-        from linkedin_mcp_server.server import create_mcp_server
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.core.exceptions import AuthenticationError
+        from linkedin_scraper_mcp.dependencies import get_ready_extractor, tool_errors
+        from linkedin_scraper_mcp.server import create_mcp_server
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             reset_process_role_for_testing,
             set_process_role,
@@ -1008,7 +1008,7 @@ class TestALostMarkerResponse:
         hop = _LosesTheFirstMarker(owner, cut=cut)
         _OWNERS[attachment.descriptor.url] = hop
         monkeypatch.setattr(
-            "linkedin_mcp_server.daemon.election.obtain_owner",
+            "linkedin_scraper_mcp.daemon.election.obtain_owner",
             lambda *_a, **_k: _elected(attachment),
         )
         proxy = create_mcp_server(
@@ -1103,7 +1103,7 @@ class TestWhichRolesGetWhichHalf:
         return _server_for(role)
 
     def test_only_the_owner_signals(self):
-        from linkedin_mcp_server.server_role import ServerRole
+        from linkedin_scraper_mcp.server_role import ServerRole
 
         for role in ServerRole:
             has_it = any(
@@ -1113,7 +1113,7 @@ class TestWhichRolesGetWhichHalf:
             assert has_it == (role is ServerRole.OWNER), role
 
     def test_only_the_proxy_repairs(self):
-        from linkedin_mcp_server.server_role import ServerRole
+        from linkedin_scraper_mcp.server_role import ServerRole
 
         # A DIRECT server must not get it either: it already repairs its own auth
         # inline, and a second path would run a login on top of that one.
@@ -1130,10 +1130,10 @@ class TestWhichRolesGetWhichHalf:
         # from the inner position too. It is asserted because the marker reports
         # whether the profile is still held, and from inside that answer describes
         # the layer below rather than the process.
-        from linkedin_mcp_server.sequential_tool_middleware import (
+        from linkedin_scraper_mcp.sequential_tool_middleware import (
             SequentialToolExecutionMiddleware,
         )
-        from linkedin_mcp_server.server_role import ServerRole
+        from linkedin_scraper_mcp.server_role import ServerRole
 
         kinds = [type(m) for m in self._built(ServerRole.OWNER).middleware]
 

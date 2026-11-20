@@ -20,7 +20,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from starlette.testclient import TestClient
 
-from linkedin_mcp_server.server import create_mcp_server
+from linkedin_scraper_mcp.server import create_mcp_server
 
 _INITIALIZE = {
     "jsonrpc": "2.0",
@@ -65,7 +65,7 @@ def post(base_url: str, monkeypatch: pytest.MonkeyPatch):
     # The lifespan starts browser setup and a handoff poller, neither of which
     # this file is about; stubbing them keeps the request path real while the
     # server startup stays offline.
-    import linkedin_mcp_server.server as server_module
+    import linkedin_scraper_mcp.server as server_module
 
     monkeypatch.setattr(server_module, "initialize_bootstrap", MagicMock())
     monkeypatch.setattr(server_module, "get_runtime_policy", MagicMock())

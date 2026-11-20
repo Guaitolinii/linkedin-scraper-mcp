@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from linkedin_mcp_server.linkedin import session as session_module
-from linkedin_mcp_server.linkedin.session import PageSession
+from linkedin_scraper_mcp.linkedin import session as session_module
+from linkedin_scraper_mcp.linkedin.session import PageSession
 
 
 def test_page_binding_is_frozen(mock_page):

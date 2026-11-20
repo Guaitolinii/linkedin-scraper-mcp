@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock
 
-from linkedin_mcp_server.linkedin.content import PageContentReader
-from linkedin_mcp_server.linkedin.session import PageSession
+from linkedin_scraper_mcp.linkedin.content import PageContentReader
+from linkedin_scraper_mcp.linkedin.session import PageSession
 
 
 def _reader(page) -> PageContentReader:

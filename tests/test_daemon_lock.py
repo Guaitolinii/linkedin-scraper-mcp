@@ -24,16 +24,16 @@ from unittest import mock
 
 import pytest
 
-import linkedin_mcp_server.daemon.descriptor as daemon_descriptor_module
-import linkedin_mcp_server.daemon.lock as daemon_lock_module
-from linkedin_mcp_server.daemon import owner as daemon_owner
-from linkedin_mcp_server.daemon.descriptor import daemon_dir, daemon_state_root
-from linkedin_mcp_server.daemon.lock import (
+import linkedin_scraper_mcp.daemon.descriptor as daemon_descriptor_module
+import linkedin_scraper_mcp.daemon.lock as daemon_lock_module
+from linkedin_scraper_mcp.daemon import owner as daemon_owner
+from linkedin_scraper_mcp.daemon.descriptor import daemon_dir, daemon_state_root
+from linkedin_scraper_mcp.daemon.lock import (
     DaemonLock,
     DaemonLockError,
     daemon_lock_path,
 )
-from linkedin_mcp_server.private_state import PrivateStateError
+from linkedin_scraper_mcp.private_state import PrivateStateError
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -74,8 +74,8 @@ _TRY_ACQUIRE = """
     import os
     import sys
     from pathlib import Path
-    import linkedin_mcp_server.daemon.descriptor as daemon_descriptor
-    from linkedin_mcp_server.daemon.lock import DaemonLock
+    import linkedin_scraper_mcp.daemon.descriptor as daemon_descriptor
+    from linkedin_scraper_mcp.daemon.lock import DaemonLock
 
     daemon_descriptor._account_home = lambda: Path(os.environ["HOME"])
     lock = DaemonLock(Path(sys.argv[1]))
@@ -240,7 +240,7 @@ class TestScope:
 
     @pytest.mark.skipif(os.name != "nt", reason="Windows ACLs are required")
     def test_lock_file_uses_the_private_file_acl(self, tmp_path: Path):
-        from linkedin_mcp_server.windows_acl import describe_dacl
+        from linkedin_scraper_mcp.windows_acl import describe_dacl
 
         lock = DaemonLock(tmp_path / "auth")
         assert lock.try_acquire()
@@ -276,7 +276,7 @@ class TestScope:
         # Measured before the fix: the first wrapper cached a path-derived key,
         # then acquisition created the auth root and every later lookup used its
         # inode. The live lock appeared free and a second owner was elected.
-        auth_root = tmp_path / "fresh" / ".linkedin-mcp"
+        auth_root = tmp_path / "fresh" / ".linkedin-scraper-mcp"
         first = DaemonLock(auth_root)
 
         assert first.try_acquire()
@@ -293,7 +293,7 @@ class TestScope:
     def test_an_auth_root_symlink_cannot_split_the_election(self, tmp_path: Path):
         # Measured before the fix: the default auth root also held daemon state,
         # so retargeting its daemon link let another owner lock a second inode.
-        auth_root = tmp_path / ".linkedin-mcp"
+        auth_root = tmp_path / ".linkedin-scraper-mcp"
         first_target = tmp_path / "first-target"
         second_target = tmp_path / "second-target"
         auth_root.mkdir()
@@ -333,7 +333,7 @@ class TestRegistry:
         # remained through which to release it or clean it up after a fork.
         import gc
 
-        from linkedin_mcp_server.daemon.lock import _held_locks
+        from linkedin_scraper_mcp.daemon.lock import _held_locks
 
         DaemonLock(tmp_path).try_acquire()
         gc.collect()
@@ -353,7 +353,7 @@ class TestRegistry:
         # owns nothing, so keeping it would be a leak for no benefit.
         import gc
 
-        from linkedin_mcp_server.daemon.lock import _held_locks
+        from linkedin_scraper_mcp.daemon.lock import _held_locks
 
         DaemonLock(tmp_path)
         gc.collect()

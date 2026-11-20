@@ -12,10 +12,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from linkedin_mcp_server.core.browser import BrowserManager
-from linkedin_mcp_server.core.exceptions import NetworkError
-from linkedin_mcp_server.exceptions import BrowserShutdownUnconfirmedError
-from linkedin_mcp_server.process_tree import forget_browser_process_marker
+from linkedin_scraper_mcp.core.browser import BrowserManager
+from linkedin_scraper_mcp.core.exceptions import NetworkError
+from linkedin_scraper_mcp.exceptions import BrowserShutdownUnconfirmedError
+from linkedin_scraper_mcp.process_tree import forget_browser_process_marker
 
 
 def test_a_no_viewport_override_is_refused(tmp_path):
@@ -104,12 +104,12 @@ class TestGeometry:
         decision read from configuration would be wrong for exactly the launch
         that opens a window. Asserted by making the two disagree.
         """
-        from linkedin_mcp_server.config.schema import AppConfig
+        from linkedin_scraper_mcp.config.schema import AppConfig
 
         config = AppConfig()
         config.browser.headless = True
         monkeypatch.setattr(
-            "linkedin_mcp_server.config.get_config", lambda: config, raising=False
+            "linkedin_scraper_mcp.config.get_config", lambda: config, raising=False
         )
 
         headed = BrowserManager(user_data_dir=tmp_path, headless=False)
@@ -145,7 +145,7 @@ class TestGeometry:
             return _FakePlaywright()
 
         with mock.patch(
-            "linkedin_mcp_server.core.browser.async_playwright"
+            "linkedin_scraper_mcp.core.browser.async_playwright"
         ) as playwright:
             playwright.return_value.start = fake_start
             with contextlib.suppress(Exception):
@@ -180,7 +180,7 @@ class TestHowNoVisibleWindowIsAchieved:
         manager = BrowserManager(user_data_dir=tmp_path, headless=headless)
 
         with mock.patch(
-            "linkedin_mcp_server.core.browser.async_playwright"
+            "linkedin_scraper_mcp.core.browser.async_playwright"
         ) as playwright:
             playwright.return_value.start = start
             await manager.start()
@@ -190,7 +190,7 @@ class TestHowNoVisibleWindowIsAchieved:
         self, tmp_path, monkeypatch
     ):
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.browser.hidden_target_is_supported",
+            "linkedin_scraper_mcp.core.browser.hidden_target_is_supported",
             lambda: True,
         )
 
@@ -205,7 +205,7 @@ class TestHowNoVisibleWindowIsAchieved:
         with no display fails outright, and under Xvfb closing the last window
         kills Chromium and takes the hidden page with it."""
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.browser.hidden_target_is_supported",
+            "linkedin_scraper_mcp.core.browser.hidden_target_is_supported",
             lambda: False,
         )
 
@@ -220,7 +220,7 @@ class TestHowNoVisibleWindowIsAchieved:
 
     async def test_the_attach_flag_is_not_left_behind(self, tmp_path):  # noqa: D401
         """It makes Playwright promote every `other` target, so it is scoped."""
-        from linkedin_mcp_server.hidden_target import ATTACH_TO_OTHER
+        from linkedin_scraper_mcp.hidden_target import ATTACH_TO_OTHER
 
         before = os.environ.get(ATTACH_TO_OTHER)
         await self._captured_options(tmp_path, headless=True)
@@ -245,7 +245,7 @@ class TestTheWindowlessLaunchEndToEnd:
         refuse_headless: bool = False,
         stop_hangs: bool = False,
     ):
-        from linkedin_mcp_server.hidden_target import ATTACH_TO_OTHER
+        from linkedin_scraper_mcp.hidden_target import ATTACH_TO_OTHER
 
         pages: list = []
 
@@ -327,25 +327,25 @@ class TestTheWindowlessLaunchEndToEnd:
         return start, pages
 
     async def test_the_hidden_page_becomes_the_working_page(self, tmp_path):
-        from linkedin_mcp_server.hidden_target import ATTACH_TO_OTHER
+        from linkedin_scraper_mcp.hidden_target import ATTACH_TO_OTHER
 
         recorder: dict = {}
         start, pages = self._fake_playwright(recorder)
         manager = BrowserManager(user_data_dir=tmp_path / "p", headless=True)
 
         with mock.patch(
-            "linkedin_mcp_server.core.browser.hidden_target_is_supported",
+            "linkedin_scraper_mcp.core.browser.hidden_target_is_supported",
             return_value=True,
         ):
             with mock.patch(
-                "linkedin_mcp_server.core.browser.async_playwright"
+                "linkedin_scraper_mcp.core.browser.async_playwright"
             ) as playwright:
                 playwright.return_value.start = start
                 await manager.start()
 
         # The page handed to callers is the windowless one, not the startup one.
         assert manager.page.url.startswith("about:blank#")
-        from linkedin_mcp_server.process_tree import _BROWSER_PROCESS_MARKER
+        from linkedin_scraper_mcp.process_tree import _BROWSER_PROCESS_MARKER
 
         assert recorder["options"]["env"][_BROWSER_PROCESS_MARKER] == (
             manager._process_marker
@@ -370,11 +370,11 @@ class TestTheWindowlessLaunchEndToEnd:
         manager = BrowserManager(user_data_dir=tmp_path / "p", headless=True)
 
         with mock.patch(
-            "linkedin_mcp_server.core.browser.hidden_target_is_supported",
+            "linkedin_scraper_mcp.core.browser.hidden_target_is_supported",
             return_value=True,
         ):
             with mock.patch(
-                "linkedin_mcp_server.core.browser.async_playwright"
+                "linkedin_scraper_mcp.core.browser.async_playwright"
             ) as playwright:
                 playwright.return_value.start = start
                 await manager.start()
@@ -401,21 +401,21 @@ class TestTheWindowlessLaunchEndToEnd:
             raise RuntimeError("page setup failed")
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.browser.remember_detached_process_groups",
+            "linkedin_scraper_mcp.core.browser.remember_detached_process_groups",
             lambda marker: remembered.append(marker),
         )
         closed = AsyncMock(return_value=True)
         with mock.patch.object(manager, "close", closed):
             with mock.patch(
-                "linkedin_mcp_server.core.browser.hidden_target_is_supported",
+                "linkedin_scraper_mcp.core.browser.hidden_target_is_supported",
                 return_value=True,
             ):
                 with mock.patch(
-                    "linkedin_mcp_server.core.browser.open_hidden_page",
+                    "linkedin_scraper_mcp.core.browser.open_hidden_page",
                     side_effect=fail_after_launch,
                 ):
                     with mock.patch(
-                        "linkedin_mcp_server.core.browser.async_playwright"
+                        "linkedin_scraper_mcp.core.browser.async_playwright"
                     ) as playwright:
                         playwright.return_value.start = start
                         with pytest.raises(Exception, match="page setup failed"):
@@ -437,11 +437,11 @@ class TestTheWindowlessLaunchEndToEnd:
         manager = BrowserManager(user_data_dir=tmp_path / "p", headless=True)
 
         with mock.patch(
-            "linkedin_mcp_server.core.browser.hidden_target_is_supported",
+            "linkedin_scraper_mcp.core.browser.hidden_target_is_supported",
             return_value=True,
         ):
             with mock.patch(
-                "linkedin_mcp_server.core.browser.async_playwright"
+                "linkedin_scraper_mcp.core.browser.async_playwright"
             ) as playwright:
                 playwright.return_value.start = start
                 await manager.start()
@@ -464,14 +464,14 @@ class TestTheWindowlessLaunchEndToEnd:
         manager = BrowserManager(user_data_dir=tmp_path / "p", headless=True)
 
         with mock.patch(
-            "linkedin_mcp_server.core.browser._CLEANUP_TIMEOUT_SECONDS", 0.05
+            "linkedin_scraper_mcp.core.browser._CLEANUP_TIMEOUT_SECONDS", 0.05
         ):
             with mock.patch(
-                "linkedin_mcp_server.core.browser.hidden_target_is_supported",
+                "linkedin_scraper_mcp.core.browser.hidden_target_is_supported",
                 return_value=True,
             ):
                 with mock.patch(
-                    "linkedin_mcp_server.core.browser.async_playwright"
+                    "linkedin_scraper_mcp.core.browser.async_playwright"
                 ) as playwright:
                     playwright.return_value.start = start
                     with pytest.raises(Exception):
@@ -508,11 +508,11 @@ class TestTheWindowlessLaunchEndToEnd:
         manager = BrowserManager(user_data_dir=tmp_path / "p", headless=True)
 
         with mock.patch(
-            "linkedin_mcp_server.core.browser.hidden_target_is_supported",
+            "linkedin_scraper_mcp.core.browser.hidden_target_is_supported",
             return_value=True,
         ):
             with mock.patch(
-                "linkedin_mcp_server.core.browser.async_playwright"
+                "linkedin_scraper_mcp.core.browser.async_playwright"
             ) as playwright:
                 playwright.return_value.start = start
                 with pytest.raises(Exception, match="headed launch refused"):
@@ -524,7 +524,7 @@ class TestTheWindowlessLaunchEndToEnd:
         manager = BrowserManager(user_data_dir=tmp_path / "p", headless=False)
 
         with mock.patch(
-            "linkedin_mcp_server.core.browser.async_playwright"
+            "linkedin_scraper_mcp.core.browser.async_playwright"
         ) as playwright:
             playwright.return_value.start = start
             await manager.start()
@@ -545,7 +545,7 @@ class TestTheWindowlessLaunchEndToEnd:
         manager = BrowserManager(user_data_dir=tmp_path / "p", headless=False)
 
         with mock.patch(
-            "linkedin_mcp_server.core.browser.async_playwright"
+            "linkedin_scraper_mcp.core.browser.async_playwright"
         ) as playwright:
             playwright.return_value.start = start
             await manager.start()
@@ -559,11 +559,11 @@ class TestTheWindowlessLaunchEndToEnd:
         manager = BrowserManager(user_data_dir=tmp_path / "p", headless=True)
 
         with mock.patch(
-            "linkedin_mcp_server.core.browser.hidden_target_is_supported",
+            "linkedin_scraper_mcp.core.browser.hidden_target_is_supported",
             return_value=False,
         ):
             with mock.patch(
-                "linkedin_mcp_server.core.browser.async_playwright"
+                "linkedin_scraper_mcp.core.browser.async_playwright"
             ) as playwright:
                 playwright.return_value.start = start
                 await manager.start()
@@ -591,7 +591,7 @@ class TestTheHeadlessFallbackWaitsForTheFirstLaunchToGo:
             return proves
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.browser.drain_browser_process_marker", drain
+            "linkedin_scraper_mcp.core.browser.drain_browser_process_marker", drain
         )
 
     async def test_the_drain_runs_between_the_stop_and_the_second_driver(
@@ -603,11 +603,11 @@ class TestTheHeadlessFallbackWaitsForTheFirstLaunchToGo:
         manager = BrowserManager(user_data_dir=tmp_path / "p", headless=True)
 
         with mock.patch(
-            "linkedin_mcp_server.core.browser.hidden_target_is_supported",
+            "linkedin_scraper_mcp.core.browser.hidden_target_is_supported",
             return_value=True,
         ):
             with mock.patch(
-                "linkedin_mcp_server.core.browser.async_playwright"
+                "linkedin_scraper_mcp.core.browser.async_playwright"
             ) as playwright:
                 playwright.return_value.start = start
                 await manager.start()
@@ -626,11 +626,11 @@ class TestTheHeadlessFallbackWaitsForTheFirstLaunchToGo:
         manager = BrowserManager(user_data_dir=tmp_path / "p", headless=True)
 
         with mock.patch(
-            "linkedin_mcp_server.core.browser.hidden_target_is_supported",
+            "linkedin_scraper_mcp.core.browser.hidden_target_is_supported",
             return_value=True,
         ):
             with mock.patch(
-                "linkedin_mcp_server.core.browser.async_playwright"
+                "linkedin_scraper_mcp.core.browser.async_playwright"
             ) as playwright:
                 playwright.return_value.start = start
                 # Not the launch error: an unproven drain means something of
@@ -670,16 +670,16 @@ class TestTheHeadlessFallbackWaitsForTheFirstLaunchToGo:
             return next(answers)
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.browser.drain_browser_process_marker", drain
+            "linkedin_scraper_mcp.core.browser.drain_browser_process_marker", drain
         )
         manager = BrowserManager(user_data_dir=tmp_path / "p", headless=True)
 
         with mock.patch(
-            "linkedin_mcp_server.core.browser.hidden_target_is_supported",
+            "linkedin_scraper_mcp.core.browser.hidden_target_is_supported",
             return_value=True,
         ):
             with mock.patch(
-                "linkedin_mcp_server.core.browser.async_playwright"
+                "linkedin_scraper_mcp.core.browser.async_playwright"
             ) as playwright:
                 playwright.return_value.start = start
                 with pytest.raises(NetworkError, match="headed launch refused"):
@@ -703,7 +703,7 @@ class TestTheFallbackDrainAgainstRealProcesses:
     async def test_a_real_residual_process_is_gone_before_the_second_driver(
         self, tmp_path
     ):
-        from linkedin_mcp_server.hidden_target import ATTACH_TO_OTHER
+        from linkedin_scraper_mcp.hidden_target import ATTACH_TO_OTHER
 
         residual: dict = {}
         alive_at_second_start: list[bool] = []
@@ -751,11 +751,11 @@ class TestTheFallbackDrainAgainstRealProcesses:
         manager = BrowserManager(user_data_dir=tmp_path / "p", headless=True)
         try:
             with mock.patch(
-                "linkedin_mcp_server.core.browser.hidden_target_is_supported",
+                "linkedin_scraper_mcp.core.browser.hidden_target_is_supported",
                 return_value=True,
             ):
                 with mock.patch(
-                    "linkedin_mcp_server.core.browser.async_playwright"
+                    "linkedin_scraper_mcp.core.browser.async_playwright"
                 ) as playwright:
                     playwright.return_value.start = start
                     await manager.start()
@@ -996,10 +996,10 @@ class TestCloseConfirmationIsSticky:
             return drains
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.browser.drain_browser_process_marker", drain
+            "linkedin_scraper_mcp.core.browser.drain_browser_process_marker", drain
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.browser.forget_browser_process_marker",
+            "linkedin_scraper_mcp.core.browser.forget_browser_process_marker",
             forgotten.append,
         )
         return manager, drained, forgotten
@@ -1154,7 +1154,7 @@ class TestTheDrainRunsWhateverPatchrightDid:
     ):
         manager, drained, forgotten = self._wired(tmp_path, monkeypatch, drains=True)
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.browser._CLEANUP_TIMEOUT_SECONDS", 0.01
+            "linkedin_scraper_mcp.core.browser._CLEANUP_TIMEOUT_SECONDS", 0.01
         )
         manager._context = self._hanging_context()
         manager._playwright = MagicMock(stop=AsyncMock())
@@ -1213,7 +1213,7 @@ class TestStartingAgainAfterAClose:
     @staticmethod
     def _wired(tmp_path, monkeypatch, *, drains: bool = True):
         """A manager whose launches, drains and marker traffic are observable."""
-        from linkedin_mcp_server.process_tree import _BROWSER_PROCESS_MARKER
+        from linkedin_scraper_mcp.process_tree import _BROWSER_PROCESS_MARKER
 
         manager = BrowserManager(user_data_dir=tmp_path / "profile", headless=True)
         record: dict = {
@@ -1265,20 +1265,20 @@ class TestStartingAgainAfterAClose:
         # A real ``ps`` scan per launch, twice over, for an answer no assertion
         # here reads. The marker it is handed is the assertion instead.
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.browser.remember_detached_process_groups",
+            "linkedin_scraper_mcp.core.browser.remember_detached_process_groups",
             record["remembered"].append,
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.browser.drain_browser_process_marker", drain
+            "linkedin_scraper_mcp.core.browser.drain_browser_process_marker", drain
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.browser.forget_browser_process_marker",
+            "linkedin_scraper_mcp.core.browser.forget_browser_process_marker",
             record["forgotten"].append,
         )
         # Real headless, so the launch does not go looking for a hidden target
         # and the startup page is the page under test.
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.browser.hidden_target_is_supported",
+            "linkedin_scraper_mcp.core.browser.hidden_target_is_supported",
             lambda: False,
         )
         return manager, record, start_driver
@@ -1287,7 +1287,7 @@ class TestStartingAgainAfterAClose:
     @contextlib.contextmanager
     def _driving(start_driver):
         with mock.patch(
-            "linkedin_mcp_server.core.browser.async_playwright"
+            "linkedin_scraper_mcp.core.browser.async_playwright"
         ) as playwright:
             playwright.return_value.start = start_driver
             yield
@@ -1467,7 +1467,7 @@ class TestStartingAgainAfterAClose:
         launch's Job: a question about a browser that was proved gone, asked on
         behalf of one that never started.
         """
-        from linkedin_mcp_server.process_tree import ProcessTreeError
+        from linkedin_scraper_mcp.process_tree import ProcessTreeError
 
         manager, record, start_driver = self._wired(tmp_path, monkeypatch)
         job = object()
@@ -1480,7 +1480,7 @@ class TestStartingAgainAfterAClose:
             return job
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.browser.contain_browser_launch", contain
+            "linkedin_scraper_mcp.core.browser.contain_browser_launch", contain
         )
 
         with self._driving(start_driver):
@@ -1524,7 +1524,7 @@ class TestRegistrationStaysOffTheLoop:
             events.append("released" if release.wait(timeout=2.0) else "stalled")
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.browser.remember_detached_process_groups",
+            "linkedin_scraper_mcp.core.browser.remember_detached_process_groups",
             remember,
         )
         return entered, release, events
@@ -1564,7 +1564,7 @@ class TestRegistrationStaysOffTheLoop:
             return True
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.core.browser.drain_browser_process_marker", drain
+            "linkedin_scraper_mcp.core.browser.drain_browser_process_marker", drain
         )
 
         try:
@@ -1609,15 +1609,15 @@ async def test_start_orders_driver_containment_guard_and_launch(tmp_path, monkey
         return Driver()
 
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.browser.contain_browser_launch",
+        "linkedin_scraper_mcp.core.browser.contain_browser_launch",
         lambda _driver: events.append("contain") or object(),
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.browser.refuse_a_downgrade",
+        "linkedin_scraper_mcp.core.browser.refuse_a_downgrade",
         lambda _profile, _binary: events.append("guard"),
     )
     manager = BrowserManager(user_data_dir=tmp_path / "profile", headless=False)
-    with mock.patch("linkedin_mcp_server.core.browser.async_playwright") as playwright:
+    with mock.patch("linkedin_scraper_mcp.core.browser.async_playwright") as playwright:
         playwright.return_value.start = start_driver
         with pytest.raises(NetworkError):
             await manager.start()

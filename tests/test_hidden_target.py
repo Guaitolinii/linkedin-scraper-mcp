@@ -15,7 +15,7 @@ from typing import Any, cast
 
 import pytest
 
-from linkedin_mcp_server.hidden_target import (
+from linkedin_scraper_mcp.hidden_target import (
     ATTACH_TO_OTHER,
     HiddenTargetError,
     attaching_to_other_targets,
@@ -249,7 +249,7 @@ class TestItFailsClosed:
         would otherwise hang rather than say so.
         """
         monkeypatch.setattr(
-            "linkedin_mcp_server.hidden_target._ATTACH_TIMEOUT_SECONDS", 0.05
+            "linkedin_scraper_mcp.hidden_target._ATTACH_TIMEOUT_SECONDS", 0.05
         )
         pages: list = []
         session = _Session(pages, create=False)

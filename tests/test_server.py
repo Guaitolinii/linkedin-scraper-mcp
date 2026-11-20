@@ -12,19 +12,18 @@ import pytest
 from fastmcp import Client, FastMCP
 from fastmcp.server.middleware import MiddlewareContext
 
-import linkedin_mcp_server.server as server_module
-from linkedin_mcp_server import __version__
-from linkedin_mcp_server.sequential_tool_middleware import (
+import linkedin_scraper_mcp.server as server_module
+from linkedin_scraper_mcp import __version__
+from linkedin_scraper_mcp.sequential_tool_middleware import (
     SequentialToolExecutionMiddleware,
 )
-from linkedin_mcp_server.config.schema import AppConfig
-from linkedin_mcp_server.daemon.proxy import DaemonProxyBackend
-from linkedin_mcp_server.server import ServerRole, create_mcp_server
-from linkedin_mcp_server.server_role import (
+from linkedin_scraper_mcp.config.schema import AppConfig
+from linkedin_scraper_mcp.daemon.proxy import DaemonProxyBackend
+from linkedin_scraper_mcp.server import ServerRole, create_mcp_server
+from linkedin_scraper_mcp.server_role import (
     RoleAlreadyClaimedError,
     process_role,
 )
-from linkedin_mcp_server.update_check import UpdateNoticeMiddleware
 
 
 def _has_middleware(mcp: FastMCP, kind: type) -> bool:
@@ -109,9 +108,9 @@ def _no_replacement_to_find(
     start one, so it is stood in, and the account home is redirected in case
     anything still reaches for daemon state there.
     """
-    from linkedin_mcp_server.daemon import descriptor as daemon_descriptor
-    from linkedin_mcp_server.daemon.discovery import OwnerLookup, OwnerState
-    from linkedin_mcp_server.daemon.election import ElectionOutcome
+    from linkedin_scraper_mcp.daemon import descriptor as daemon_descriptor
+    from linkedin_scraper_mcp.daemon.discovery import OwnerLookup, OwnerState
+    from linkedin_scraper_mcp.daemon.election import ElectionOutcome
 
     def nobody(*_args: object, **_kwargs: object) -> ElectionOutcome:
         return ElectionOutcome(
@@ -121,7 +120,7 @@ def _no_replacement_to_find(
 
     monkeypatch.setattr(daemon_descriptor, "_account_home", lambda: tmp_path)
     monkeypatch.setattr(
-        "linkedin_mcp_server.daemon.election.obtain_owner", elect or nobody
+        "linkedin_scraper_mcp.daemon.election.obtain_owner", elect or nobody
     )
 
 
@@ -159,7 +158,7 @@ def _server_for(role: ServerRole) -> FastMCP:
     legitimate exception, so it starts each build from an unset role the way a
     newly spawned process does.
     """
-    from linkedin_mcp_server.server_role import reset_process_role_for_testing
+    from linkedin_scraper_mcp.server_role import reset_process_role_for_testing
 
     reset_process_role_for_testing()
     return create_mcp_server(role=role, **_extras_for(role))
@@ -271,8 +270,8 @@ class TestToolContract:
         """
         from owner_hop import Interceptor, reach_owners_in_process
 
-        from linkedin_mcp_server.daemon.forwarder import HOP_PROTOCOL_VERSION
-        from linkedin_mcp_server.server_role import reset_process_role_for_testing
+        from linkedin_scraper_mcp.daemon.forwarder import HOP_PROTOCOL_VERSION
+        from linkedin_scraper_mcp.server_role import reset_process_role_for_testing
 
         hop: list[tuple[str, str | None]] = []
 
@@ -312,7 +311,6 @@ class TestServerRoles:
 
         for mcp in (default, direct):
             assert _has_middleware(mcp, SequentialToolExecutionMiddleware)
-            assert _has_middleware(mcp, UpdateNoticeMiddleware)
 
     def test_every_role_that_drives_a_browser_serializes_its_calls(self):
         # The invariant the shared profile depends on: any server that can
@@ -332,29 +330,16 @@ class TestServerRoles:
         # It turns a failure into a result, so every layer it wraps still sees
         # the exception: the owner's auth marker walks its causes, and the update
         # notice is only ever appended to a result.
-        from linkedin_mcp_server.error_handler import ErrorCodeMiddleware
+        from linkedin_scraper_mcp.error_handler import ErrorCodeMiddleware
 
         for role in ServerRole:
             ours = [
                 middleware
                 for middleware in _server_for(role).middleware
-                if type(middleware).__module__.startswith("linkedin_mcp_server")
+                if type(middleware).__module__.startswith("linkedin_scraper_mcp")
             ]
 
             assert isinstance(ours[0], ErrorCodeMiddleware), role
-
-    def test_the_update_notice_goes_only_where_a_user_reads_it(self):
-        # Appended to one tool result per process, so it belongs wherever a user
-        # reads results and nowhere else. On the shared owner it would reach
-        # whichever client happened to call first and nobody after that, however
-        # many clients attach over its life. A proxy is the opposite case: it is
-        # the process the client spawned, so the notice has to survive there.
-        for role in ServerRole:
-            mcp = _server_for(role)
-
-            assert (
-                _has_middleware(mcp, UpdateNoticeMiddleware) == role.faces_a_client
-            ), role
 
     def test_every_role_that_drives_a_browser_serves_the_same_tools(self):
         # A tool present in one role and missing from another would disappear
@@ -384,9 +369,9 @@ class TestServerRoles:
         # reaches only through the tool modules. Importing back the other way
         # would close the cycle, so the enum has to be reachable on its own.
         probe = (
-            "import linkedin_mcp_server.server_role, sys;"
-            "print(any(name.startswith('linkedin_mcp_server.tools') for name in sys.modules)"
-            " or 'linkedin_mcp_server.server' in sys.modules)"
+            "import linkedin_scraper_mcp.server_role, sys;"
+            "print(any(name.startswith('linkedin_scraper_mcp.tools') for name in sys.modules)"
+            " or 'linkedin_scraper_mcp.server' in sys.modules)"
         )
         pulled_in_the_server_graph = subprocess.run(
             [sys.executable, "-c", probe],
@@ -420,7 +405,7 @@ class TestTheRoleAsProcessState:
         # test, so an in-process assertion passes even against a module default
         # mutated to OWNER: it would be testing the fixture, not the module.
         probe = (
-            "from linkedin_mcp_server.server_role import process_role, ServerRole;"
+            "from linkedin_scraper_mcp.server_role import process_role, ServerRole;"
             "print(process_role() is ServerRole.DIRECT)"
         )
         answered = subprocess.run(
@@ -480,9 +465,9 @@ class TestTheRoleAsProcessState:
         child opens its log after taking the lock, so an inert held lock lets
         that boundary record the role without touching the account's state.
         """
-        from linkedin_mcp_server.daemon import config as daemon_config
-        from linkedin_mcp_server.daemon import owner as daemon_owner
-        from linkedin_mcp_server.config.schema import AppConfig
+        from linkedin_scraper_mcp.daemon import config as daemon_config
+        from linkedin_scraper_mcp.daemon import owner as daemon_owner
+        from linkedin_scraper_mcp.config.schema import AppConfig
 
         class Checkpoint(BaseException):
             pass
@@ -512,7 +497,7 @@ class TestTheRoleAsProcessState:
     def test_the_windows_owner_verifies_membership_before_reading_config(
         self, monkeypatch
     ):
-        from linkedin_mcp_server.daemon import owner as daemon_owner
+        from linkedin_scraper_mcp.daemon import owner as daemon_owner
 
         class Checkpoint(BaseException):
             pass
@@ -540,10 +525,10 @@ class TestTheRoleAsProcessState:
         # reaches `bootstrap` through the tool modules, so importing back would
         # close the cycle.
         probe = (
-            "from linkedin_mcp_server.server_role import process_role, ServerRole;"
+            "from linkedin_scraper_mcp.server_role import process_role, ServerRole;"
             "import sys;"
             "print(process_role() is ServerRole.DIRECT"
-            " and 'linkedin_mcp_server.server' not in sys.modules)"
+            " and 'linkedin_scraper_mcp.server' not in sys.modules)"
         )
         answered = subprocess.run(
             [sys.executable, "-c", probe],
@@ -692,8 +677,8 @@ class TestProxyRole:
         # Recovery found an owner and the listing was repeated against it, which
         # is the one repeat a listing gets. That one failing as well is the same
         # news for the client: nobody is left to answer.
-        from linkedin_mcp_server.daemon.discovery import OwnerLookup, OwnerState
-        from linkedin_mcp_server.daemon.election import ElectionOutcome
+        from linkedin_scraper_mcp.daemon.discovery import OwnerLookup, OwnerState
+        from linkedin_scraper_mcp.daemon.election import ElectionOutcome
 
         replacement = _a_dead_attachment(port=2)
         repeated: list[object] = []
@@ -741,7 +726,7 @@ class TestProxyRole:
         if preflight_answers:
             import httpx2
 
-            from linkedin_mcp_server.daemon.proxy import (
+            from linkedin_scraper_mcp.daemon.proxy import (
                 FrontendCallHeartbeatMiddleware,
             )
 
@@ -804,30 +789,6 @@ class TestProxyRole:
                 await client.list_tools()
 
         assert str(failed.value) == says
-
-    async def test_the_update_notice_still_reaches_a_forwarded_result(
-        self, monkeypatch: pytest.MonkeyPatch
-    ):
-        # The notice is appended by middleware around a call whose work happens in
-        # another process, so it has to survive the hop rather than be dropped
-        # with the local tool it used to ride on.
-        import linkedin_mcp_server.update_check as update_check
-
-        monkeypatch.setattr(update_check, "prime_from_cache", lambda: None)
-        monkeypatch.setattr(update_check, "refresh_latest_version", AsyncMock())
-        monkeypatch.setattr(
-            update_check, "pending_update_notice", lambda: "Update available: 9.9.9"
-        )
-
-        proxy = _proxy_to(monkeypatch, _owner_serving("get_person_profile"))
-
-        async with Client(proxy) as client:
-            result = await client.call_tool("get_person_profile", {})
-
-        texts = [getattr(block, "text", "") for block in result.content]
-        assert any("Update available: 9.9.9" in text for text in texts)
-        # And the owner's own result is still there, not replaced by the notice.
-        assert any("by the owner" in text for text in texts)
 
     def test_a_proxy_without_an_owner_is_refused(self):
         # It would serve an empty tool list and look like a server whose tools
@@ -998,7 +959,7 @@ class TestBrowserLifespan:
     @staticmethod
     def _patched(monkeypatch, watcher):
         """Replace the lifespan's collaborators, returning the close spy."""
-        import linkedin_mcp_server.server as server_module
+        import linkedin_scraper_mcp.server as server_module
 
         monkeypatch.setattr(server_module, "initialize_bootstrap", MagicMock())
         monkeypatch.setattr(server_module, "get_runtime_policy", MagicMock())
@@ -1017,7 +978,7 @@ class TestBrowserLifespan:
         return close_browser, setup, stop_setup
 
     async def test_a_direct_server_starts_browser_setup(self, monkeypatch):
-        from linkedin_mcp_server.server import browser_lifespan
+        from linkedin_scraper_mcp.server import browser_lifespan
 
         async def watcher():
             await asyncio.sleep(3600)
@@ -1030,7 +991,7 @@ class TestBrowserLifespan:
         stop_setup.assert_awaited_once()
 
     async def test_cancelled_direct_startup_stops_shared_setup(self, monkeypatch):
-        from linkedin_mcp_server.server import browser_lifespan
+        from linkedin_scraper_mcp.server import browser_lifespan
 
         started = asyncio.Event()
 
@@ -1056,9 +1017,9 @@ class TestBrowserLifespan:
         close_browser.assert_awaited_once()
 
     async def test_an_owner_defers_browser_setup_until_first_use(self, monkeypatch):
-        import linkedin_mcp_server.server as server_module
-        from linkedin_mcp_server.server import browser_lifespan
-        from linkedin_mcp_server.server_role import ServerRole, set_process_role
+        import linkedin_scraper_mcp.server as server_module
+        from linkedin_scraper_mcp.server import browser_lifespan
+        from linkedin_scraper_mcp.server_role import ServerRole, set_process_role
 
         async def watcher():
             await asyncio.sleep(3600)
@@ -1076,7 +1037,7 @@ class TestBrowserLifespan:
         stop_setup.assert_awaited_once()
 
     async def test_setup_cleanup_finishes_before_browser_close(self, monkeypatch):
-        from linkedin_mcp_server.server import browser_lifespan
+        from linkedin_scraper_mcp.server import browser_lifespan
 
         async def watcher():
             await asyncio.sleep(3600)
@@ -1092,7 +1053,7 @@ class TestBrowserLifespan:
         assert order == ["setup", "browser"]
 
     async def test_poller_runs_for_the_life_of_the_server(self, monkeypatch):
-        from linkedin_mcp_server.server import browser_lifespan
+        from linkedin_scraper_mcp.server import browser_lifespan
 
         started = asyncio.Event()
         cancelled = asyncio.Event()
@@ -1123,7 +1084,7 @@ class TestBrowserLifespan:
         Chromium would stay on the shared profile past shutdown, which is the
         corruption the lease exists to prevent.
         """
-        from linkedin_mcp_server.server import browser_lifespan
+        from linkedin_scraper_mcp.server import browser_lifespan
 
         async def watcher():
             raise RuntimeError("poller crashed")
@@ -1144,7 +1105,7 @@ class TestBrowserLifespan:
         must keep travelling. What must not happen is that they take the profile
         with them by skipping the close.
         """
-        from linkedin_mcp_server.server import browser_lifespan
+        from linkedin_scraper_mcp.server import browser_lifespan
 
         class Fatal(BaseException):
             """Stands in for KeyboardInterrupt, which would abort the run."""
@@ -1170,7 +1131,7 @@ class TestBrowserLifespan:
         that window. Absorbing it would leave whoever asked us to stop waiting
         on a teardown that claimed to have finished normally.
         """
-        from linkedin_mcp_server.server import browser_lifespan
+        from linkedin_scraper_mcp.server import browser_lifespan
 
         async def watcher():
             try:
@@ -1211,7 +1172,7 @@ class TestBrowserLifespan:
         close_browser.assert_awaited_once()
 
     async def test_teardown_closes_the_browser_when_the_body_raises(self, monkeypatch):
-        from linkedin_mcp_server.server import browser_lifespan
+        from linkedin_scraper_mcp.server import browser_lifespan
 
         async def watcher():
             await asyncio.sleep(3600)
@@ -1264,39 +1225,3 @@ class TestServerVersion:
         mcp = create_mcp_server()
 
         assert mcp.version == __version__
-
-
-class TestWhatTheToolsPromise:
-    """``readOnlyHint`` is a claim the daemon acts on, not documentation.
-
-    A tool that declares it is replayed automatically after the frontend repairs
-    auth, with no second confirmation from anyone. So the annotation has to mean
-    what it says: anything that can change LinkedIn's state, however slightly,
-    must not carry it.
-    """
-
-    async def test_no_tool_claims_read_only_while_changing_state(self):
-        """The two messaging tools that read by clicking are the reason for this.
-
-        Resolving a conversation by username enumerates the inbox by visiting
-        rows, and LinkedIn marks a visited row as read. Both tools' own
-        docstrings say so, and both carried ``readOnlyHint`` anyway. An unread
-        message the user has not seen is state, and a replay that silently clears
-        it is not something a reader should do.
-        """
-        mcp = create_mcp_server()
-        marks_things_read = {"get_conversation", "search_conversations"}
-        claiming = set()
-        for name in marks_things_read:
-            tool = await mcp.get_tool(name)
-            # A missing tool means this test is guarding a name that no longer
-            # exists, which is worse than a wrong annotation: it would pass
-            # forever while covering nothing.
-            assert tool is not None, f"{name} is not registered any more"
-            if tool.annotations and tool.annotations.read_only_hint:
-                claiming.add(name)
-
-        assert not (marks_things_read & claiming), (
-            "these tools mark conversations as read, so they cannot be replayed "
-            f"unattended: {sorted(marks_things_read & claiming)}"
-        )

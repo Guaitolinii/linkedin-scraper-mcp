@@ -28,9 +28,9 @@ $Dir = "C:\linkedin-gate2"
 $Cache = "$Dir\cache-$Sha"
 $Evidence = "$Dir\evidence"
 $From = "git+https://github.com/stickerdaniel/linkedin-mcp-server@$Sha"
-$Candidate = "uvx --isolated --cache-dir $Cache --from $From mcp-server-linkedin"
+$Candidate = "uvx --isolated --cache-dir $Cache --from $From linkedin-scraper-mcp"
 $env:LINKEDIN_TRACE_MODE = "always"
-function Server { uvx --isolated --cache-dir $Cache --from $From mcp-server-linkedin @args }
+function Server { uvx --isolated --cache-dir $Cache --from $From linkedin-scraper-mcp @args }
 function Recorder { uvx --isolated --cache-dir $Cache --from $From python "$Dir\daemon_pilot.py" @args }
 ```
 
@@ -144,7 +144,7 @@ Desktop completely after every change.
       "args": [
         "--isolated", "--cache-dir", "C:\\linkedin-gate2\\cache-<sha>",
         "--from", "git+https://github.com/stickerdaniel/linkedin-mcp-server@<sha>",
-        "mcp-server-linkedin",
+        "linkedin-scraper-mcp",
         "--daemon", "--log-level", "INFO", "--browser-idle-timeout", "600"
       ],
       "env": { "LINKEDIN_TRACE_MODE": "always" }
@@ -160,12 +160,12 @@ The `.mcpb` bundle has no daemon setting, so it is not used here.
 ```powershell
 # Frontends: the Python process under uvx.exe under claude.exe.
 Get-CimInstance Win32_Process |
-  Where-Object { $_.CommandLine -match 'mcp-server-linkedin|linkedin_mcp_server' } |
+  Where-Object { $_.CommandLine -match 'linkedin-scraper-mcp|linkedin_scraper_mcp' } |
   Select-Object ProcessId, ParentProcessId, CreationDate, Name, CommandLine | Format-List
 
-# The owner: its command line runs -m linkedin_mcp_server.daemon.owner.
+# The owner: its command line runs -m linkedin_scraper_mcp.daemon.owner.
 $Owner = Get-CimInstance Win32_Process |
-  Where-Object { $_.CommandLine -match '-m linkedin_mcp_server\.daemon\.owner' }
+  Where-Object { $_.CommandLine -match '-m linkedin_scraper_mcp\.daemon\.owner' }
 $OwnerId = $Owner.ProcessId
 $OwnerStart = (Get-Process -Id $OwnerId).StartTime
 
@@ -295,7 +295,7 @@ The candidate's installed version must be strictly newer; a locally bumped
 build never counts.
 
 1. Run Desktop on the predecessor
-   (`--from mcp-server-linkedin==4.28.0`, its own fresh cache) with the same
+   (`--from linkedin-scraper-mcp==4.28.0`, its own fresh cache) with the same
    args, read, and quit Desktop while its owner is idle.
 2. Switch the config to the candidate and start Desktop.
 
@@ -322,7 +322,7 @@ session; it is kept as evidence.
 
 Expected: the frontend's trace run logs `The ... is on ... storage (...);
 this server drives its own browser instead of sharing one`, and
-`%USERPROFILE%\.linkedin-mcp-daemon\daemon` gains no directory. Remove
+`%USERPROFILE%\.linkedin-scraper-mcp-daemon\daemon` gains no directory. Remove
 `USER_DATA_DIR` afterwards.
 
 ### 7. Suspend

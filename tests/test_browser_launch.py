@@ -10,8 +10,8 @@ plugins, `window.chrome` and notification permissions.
 
 from __future__ import annotations
 
-from linkedin_mcp_server.browser_launch import build_launch_options
-from linkedin_mcp_server.config.schema import BrowserConfig
+from linkedin_scraper_mcp.browser_launch import build_launch_options
+from linkedin_scraper_mcp.config.schema import BrowserConfig
 
 
 def test_managed_launch_names_the_channel():
@@ -59,7 +59,7 @@ def test_no_proxy_switches_without_a_proxy(monkeypatch):
     """The WebRTC switches change an observable capability, so they are
     conditional on there being something to contain."""
     monkeypatch.setattr(
-        "linkedin_mcp_server.browser_launch.get_runtime_id",
+        "linkedin_scraper_mcp.browser_launch.get_runtime_id",
         lambda: "macos-arm64-host",
     )
 
@@ -78,7 +78,7 @@ def test_container_launch_enables_the_measured_mesa_path(monkeypatch):
     the no-context state.
     """
     monkeypatch.setattr(
-        "linkedin_mcp_server.browser_launch.get_runtime_id",
+        "linkedin_scraper_mcp.browser_launch.get_runtime_id",
         lambda: "docker-arm64-container",
     )
 
@@ -90,7 +90,7 @@ def test_container_launch_enables_the_measured_mesa_path(monkeypatch):
 def test_container_webgl_and_proxy_containment_share_one_argument_list(monkeypatch):
     """One feature must not overwrite the other's switches."""
     monkeypatch.setattr(
-        "linkedin_mcp_server.browser_launch.get_runtime_id",
+        "linkedin_scraper_mcp.browser_launch.get_runtime_id",
         lambda: "docker-amd64-container",
     )
     browser = BrowserConfig(proxy_server="http://proxy.example:8080")

@@ -3,7 +3,7 @@ import logging
 import pytest
 from fastmcp.exceptions import ToolError
 
-from linkedin_mcp_server.core.exceptions import (
+from linkedin_scraper_mcp.core.exceptions import (
     NetworkError,
     ProfileNotFoundError,
     InvalidReferenceError,
@@ -11,8 +11,8 @@ from linkedin_mcp_server.core.exceptions import (
     RateLimitError,
     PageReadError,
 )
-from linkedin_mcp_server.error_handler import CodedToolError, raise_tool_error
-from linkedin_mcp_server.exceptions import (
+from linkedin_scraper_mcp.error_handler import CodedToolError, raise_tool_error
+from linkedin_scraper_mcp.exceptions import (
     AuthenticationInProgressError,
     AuthMissingOnOwnerError,
     AuthStaleOnOwnerError,
@@ -55,7 +55,7 @@ def test_raises_tool_error_for_profile_not_found():
 
 def test_rate_limit_skips_issue_diagnostics(monkeypatch):
     monkeypatch.setattr(
-        "linkedin_mcp_server.error_handler.build_issue_diagnostics",
+        "linkedin_scraper_mcp.error_handler.build_issue_diagnostics",
         lambda *args, **kwargs: (_ for _ in ()).throw(
             AssertionError("diagnostics should not run")
         ),
@@ -68,7 +68,7 @@ def test_rate_limit_skips_issue_diagnostics(monkeypatch):
 
 def test_profile_not_found_skips_issue_diagnostics(monkeypatch):
     monkeypatch.setattr(
-        "linkedin_mcp_server.error_handler.build_issue_diagnostics",
+        "linkedin_scraper_mcp.error_handler.build_issue_diagnostics",
         lambda *args, **kwargs: (_ for _ in ()).throw(
             AssertionError("diagnostics should not run")
         ),
@@ -92,13 +92,13 @@ def test_browser_downgrade_skips_issue_diagnostics():
     catch-all fall back to a template-free message and the mutation survives.
     Measured, exactly as it was for the owner-auth branch above.
     """
-    from linkedin_mcp_server.exceptions import BrowserDowngradeError
+    from linkedin_scraper_mcp.exceptions import BrowserDowngradeError
 
     error = BrowserDowngradeError(
         profile_version="151.0.7922.34",
         browser_version="148.0.7778.96",
         browser_product="Google Chrome for Testing",
-        profile_dir="/home/pwuser/.linkedin-mcp/profile",
+        profile_dir="/home/pwuser/.linkedin-scraper-mcp/profile",
     )
 
     with pytest.raises(ToolError) as caught:
@@ -154,7 +154,7 @@ def test_raises_tool_error_for_page_read_error():
 
 
 def test_raises_tool_error_for_base_operation_error():
-    from linkedin_mcp_server.core.exceptions import LinkedInOperationError
+    from linkedin_scraper_mcp.core.exceptions import LinkedInOperationError
 
     with pytest.raises(ToolError, match="generic operation error"):
         raise_tool_error(LinkedInOperationError("generic operation error"))
@@ -166,14 +166,14 @@ def test_raises_tool_error_for_linkedin_mcp_error():
 
 
 def test_raises_tool_error_for_authentication_error():
-    from linkedin_mcp_server.core.exceptions import AuthenticationError
+    from linkedin_scraper_mcp.core.exceptions import AuthenticationError
 
     with pytest.raises(ToolError, match="Authentication failed"):
         raise_tool_error(AuthenticationError("bad creds"))
 
 
 def test_raises_tool_error_for_element_not_found():
-    from linkedin_mcp_server.core.exceptions import ElementNotFoundError
+    from linkedin_scraper_mcp.core.exceptions import ElementNotFoundError
 
     with pytest.raises(ToolError, match="Element not found"):
         raise_tool_error(ElementNotFoundError("missing"))
@@ -238,7 +238,7 @@ def test_proxy_error_reports_the_proxy_not_a_network_problem():
 def test_proxy_error_skips_issue_diagnostics(monkeypatch):
     # A proxy that is down or misconfigured is not a bug worth reporting.
     monkeypatch.setattr(
-        "linkedin_mcp_server.error_handler.build_issue_diagnostics",
+        "linkedin_scraper_mcp.error_handler.build_issue_diagnostics",
         lambda *args, **kwargs: (_ for _ in ()).throw(
             AssertionError("diagnostics should not run")
         ),
@@ -274,11 +274,11 @@ def test_invalid_reference_skips_issue_diagnostics(monkeypatch):
     # whether the branch exists or not.
     marker = "ISSUE-TEMPLATE-MARKER"
     monkeypatch.setattr(
-        "linkedin_mcp_server.error_handler.build_issue_diagnostics",
+        "linkedin_scraper_mcp.error_handler.build_issue_diagnostics",
         lambda *args, **kwargs: marker,
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.error_handler.format_tool_error_with_diagnostics",
+        "linkedin_scraper_mcp.error_handler.format_tool_error_with_diagnostics",
         lambda message, diagnostics: f"{message}\n{diagnostics}",
     )
 
@@ -297,13 +297,13 @@ def test_unknown_exception_log_is_redacted(monkeypatch, caplog):
     """
     import logging
 
-    from linkedin_mcp_server.config.schema import AppConfig
+    from linkedin_scraper_mcp.config.schema import AppConfig
 
     config = AppConfig()
     config.browser.proxy_server = "http://gate.example:7000"
     config.browser.proxy_username = "acctzone9"
     config.browser.proxy_password = "s3cr3t"
-    monkeypatch.setattr("linkedin_mcp_server.config.get_config", lambda: config)
+    monkeypatch.setattr("linkedin_scraper_mcp.config.get_config", lambda: config)
 
     with caplog.at_level(logging.DEBUG), pytest.raises(Exception) as excinfo:
         raise_tool_error(
@@ -337,7 +337,7 @@ async def test_fastmcp_boundary_logging_stays_clean(monkeypatch):
 
     from fastmcp import FastMCP
 
-    from linkedin_mcp_server.config.schema import AppConfig
+    from linkedin_scraper_mcp.config.schema import AppConfig
 
     # Built rather than written literally: Rich renders the failing source line
     # inside its traceback, so a literal here would appear in the captured
@@ -349,7 +349,7 @@ async def test_fastmcp_boundary_logging_stays_clean(monkeypatch):
     config.browser.proxy_server = "http://gate.example:7000"
     config.browser.proxy_username = user
     config.browser.proxy_password = secret
-    monkeypatch.setattr("linkedin_mcp_server.config.get_config", lambda: config)
+    monkeypatch.setattr("linkedin_scraper_mcp.config.get_config", lambda: config)
 
     mcp = FastMCP("test", mask_error_details=True)
 
@@ -480,13 +480,13 @@ class TestAnAlreadyShapedToolErrorPassesThrough:
         user = "acct" + "zone9"
         secret = "s3" + "cr3t"
 
-        from linkedin_mcp_server.config.schema import AppConfig
+        from linkedin_scraper_mcp.config.schema import AppConfig
 
         config = AppConfig()
         config.browser.proxy_server = "http://gate.example:7000"
         config.browser.proxy_username = user
         config.browser.proxy_password = secret
-        monkeypatch.setattr("linkedin_mcp_server.config.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.config.get_config", lambda: config)
 
         shaped = ToolError(f"failed via http://{user}:{secret}@gate.example:7000")
 

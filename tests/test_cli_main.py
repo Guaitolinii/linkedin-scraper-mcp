@@ -9,10 +9,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-import linkedin_mcp_server.cli_main as cli_main
-from linkedin_mcp_server.config.schema import AppConfig, ConfigurationError
-from linkedin_mcp_server.core.exceptions import AccountRestrictedError
-from linkedin_mcp_server.exceptions import (
+import linkedin_scraper_mcp.cli_main as cli_main
+from linkedin_scraper_mcp.config.schema import AppConfig, ConfigurationError
+from linkedin_scraper_mcp.core.exceptions import AccountRestrictedError
+from linkedin_scraper_mcp.exceptions import (
     BrowserDowngradeError,
     ProfileRootRefusedError,
 )
@@ -35,20 +35,20 @@ def _patch_main_dependencies(
     monkeypatch: pytest.MonkeyPatch, config: AppConfig
 ) -> None:
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.load_config", lambda _argv: config
+        "linkedin_scraper_mcp.cli_main.load_config", lambda _argv: config
     )
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.get_config", lambda: config)
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.get_config", lambda: config)
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.configure_logging", lambda **_kwargs: None
+        "linkedin_scraper_mcp.cli_main.configure_logging", lambda **_kwargs: None
     )
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.get_version", lambda: "4.0.0")
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.set_headless", lambda _x: None)
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.get_version", lambda: "4.0.0")
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.set_headless", lambda _x: None)
 
 
 @pytest.mark.parametrize(
     ("argv", "process_argv", "expected"),
     [
-        (None, ["linkedin-mcp-server", "--log-level", "INFO"], ["--log-level", "INFO"]),
+        (None, ["linkedin-scraper-mcp", "--log-level", "INFO"], ["--log-level", "INFO"]),
         (["--log-level", "DEBUG"], ["host", "--foreign"], ["--log-level", "DEBUG"]),
     ],
 )
@@ -58,8 +58,8 @@ def test_main_loads_and_installs_cli_config_first(
     process_argv: list[str],
     expected: list[str],
 ) -> None:
-    from linkedin_mcp_server.config import get_config, reset_config
-    from linkedin_mcp_server.config import set_config as install_config
+    from linkedin_scraper_mcp.config import get_config, reset_config
+    from linkedin_scraper_mcp.config import set_config as install_config
 
     config = _make_config(
         is_interactive=False, transport="stdio", transport_explicitly_set=False
@@ -109,7 +109,7 @@ def test_main_non_interactive_stdio_has_no_human_stdout(
     _patch_main_dependencies(monkeypatch, config)
     mcp = MagicMock()
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.create_mcp_server", lambda **_kwargs: mcp
+        "linkedin_scraper_mcp.cli_main.create_mcp_server", lambda **_kwargs: mcp
     )
 
     cli_main.main([])
@@ -128,11 +128,11 @@ def test_main_interactive_prompts_when_transport_not_explicit(
     _patch_main_dependencies(monkeypatch, config)
     choose_transport = MagicMock(return_value="streamable-http")
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.choose_transport_interactive", choose_transport
+        "linkedin_scraper_mcp.cli_main.choose_transport_interactive", choose_transport
     )
     mcp = MagicMock()
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.create_mcp_server", lambda **_kwargs: mcp
+        "linkedin_scraper_mcp.cli_main.create_mcp_server", lambda **_kwargs: mcp
     )
 
     cli_main.main([])
@@ -166,11 +166,11 @@ def test_choosing_http_at_the_prompt_warns_about_an_exposed_bind(
     config.server.host = "0.0.0.0"
     _patch_main_dependencies(monkeypatch, config)
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.choose_transport_interactive",
+        "linkedin_scraper_mcp.cli_main.choose_transport_interactive",
         lambda: "streamable-http",
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.create_mcp_server", lambda **_kwargs: MagicMock()
+        "linkedin_scraper_mcp.cli_main.create_mcp_server", lambda **_kwargs: MagicMock()
     )
 
     with caplog.at_level(logging.WARNING):
@@ -190,11 +190,11 @@ def test_choosing_stdio_at_the_prompt_leaves_no_listener_recorded(
     config.server.host = "0.0.0.0"
     _patch_main_dependencies(monkeypatch, config)
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.choose_transport_interactive", lambda: "stdio"
+        "linkedin_scraper_mcp.cli_main.choose_transport_interactive", lambda: "stdio"
     )
     mcp = MagicMock()
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.create_mcp_server", lambda **_kwargs: mcp
+        "linkedin_scraper_mcp.cli_main.create_mcp_server", lambda **_kwargs: mcp
     )
 
     with caplog.at_level(logging.WARNING):
@@ -214,11 +214,11 @@ def test_main_explicit_transport_skips_prompt(
     _patch_main_dependencies(monkeypatch, config)
     choose_transport = MagicMock(return_value="streamable-http")
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.choose_transport_interactive", choose_transport
+        "linkedin_scraper_mcp.cli_main.choose_transport_interactive", choose_transport
     )
     mcp = MagicMock()
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.create_mcp_server", lambda **_kwargs: mcp
+        "linkedin_scraper_mcp.cli_main.create_mcp_server", lambda **_kwargs: mcp
     )
 
     cli_main.main([])
@@ -243,7 +243,7 @@ def test_main_streamable_http_passes_host_port_path(
     _patch_main_dependencies(monkeypatch, config)
     mcp = MagicMock()
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.create_mcp_server", lambda **_kwargs: mcp
+        "linkedin_scraper_mcp.cli_main.create_mcp_server", lambda **_kwargs: mcp
     )
 
     cli_main.main([])
@@ -280,7 +280,7 @@ def test_main_streamable_http_enables_host_and_origin_validation(
     _patch_main_dependencies(monkeypatch, config)
     mcp = MagicMock()
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.create_mcp_server", lambda **_kwargs: mcp
+        "linkedin_scraper_mcp.cli_main.create_mcp_server", lambda **_kwargs: mcp
     )
 
     cli_main.main([])
@@ -305,7 +305,7 @@ def test_main_passes_configured_tool_timeout_to_factory(
         mcp = MagicMock()
         return mcp
 
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.create_mcp_server", fake_create)
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.create_mcp_server", fake_create)
 
     cli_main.main([])
 
@@ -319,14 +319,14 @@ def test_get_version_prefers_installed_metadata(
 
     def fake_version(package_name: str) -> str:
         calls.append(package_name)
-        if package_name == "mcp-server-linkedin":
+        if package_name == "linkedin-scraper-mcp":
             return "4.2.0"
         raise importlib.metadata.PackageNotFoundError(package_name)
 
     monkeypatch.setattr(importlib.metadata, "version", fake_version)
 
     assert cli_main.get_version() == "4.2.0"
-    assert calls == ["mcp-server-linkedin"]
+    assert calls == ["linkedin-scraper-mcp"]
 
 
 def test_main_non_interactive_no_auth_still_starts_server(
@@ -338,7 +338,7 @@ def test_main_non_interactive_no_auth_still_starts_server(
     _patch_main_dependencies(monkeypatch, config)
     mcp = MagicMock()
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.create_mcp_server", lambda **_kwargs: mcp
+        "linkedin_scraper_mcp.cli_main.create_mcp_server", lambda **_kwargs: mcp
     )
 
     cli_main.main([])
@@ -405,21 +405,21 @@ def test_profile_info_reports_a_refusal_plainly(
         raise error
 
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.get_profile_dir", lambda: profile_dir
+        "linkedin_scraper_mcp.cli_main.get_profile_dir", lambda: profile_dir
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.get_runtime_id", lambda: "macos-arm64-host"
+        "linkedin_scraper_mcp.cli_main.get_runtime_id", lambda: "macos-arm64-host"
     )
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.get_config", lambda: AppConfig())
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.get_config", lambda: AppConfig())
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.configure_logging", lambda **_kwargs: None
+        "linkedin_scraper_mcp.cli_main.configure_logging", lambda **_kwargs: None
     )
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.get_version", lambda: "4.0.0")
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.get_version", lambda: "4.0.0")
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.get_or_create_browser", lambda: refuse()
+        "linkedin_scraper_mcp.cli_main.get_or_create_browser", lambda: refuse()
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.close_browser", AsyncMock(return_value=None)
+        "linkedin_scraper_mcp.cli_main.close_browser", AsyncMock(return_value=None)
     )
 
     with caplog.at_level(logging.ERROR):
@@ -463,16 +463,16 @@ def test_profile_info_reports_bridge_required_for_foreign_runtime(
     )
 
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.get_profile_dir", lambda: profile_dir
+        "linkedin_scraper_mcp.cli_main.get_profile_dir", lambda: profile_dir
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.get_runtime_id", lambda: "linux-amd64-container"
+        "linkedin_scraper_mcp.cli_main.get_runtime_id", lambda: "linux-amd64-container"
     )
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.get_config", lambda: AppConfig())
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.get_config", lambda: AppConfig())
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.configure_logging", lambda **_kwargs: None
+        "linkedin_scraper_mcp.cli_main.configure_logging", lambda **_kwargs: None
     )
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.get_version", lambda: "4.0.0")
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.get_version", lambda: "4.0.0")
 
     with pytest.raises(SystemExit) as exit_info:
         cli_main.profile_info_and_exit()
@@ -538,22 +538,22 @@ def test_profile_info_reports_committed_derived_runtime(
     browser.is_authenticated = True
 
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.get_profile_dir", lambda: profile_dir
+        "linkedin_scraper_mcp.cli_main.get_profile_dir", lambda: profile_dir
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.get_runtime_id", lambda: "linux-amd64-container"
+        "linkedin_scraper_mcp.cli_main.get_runtime_id", lambda: "linux-amd64-container"
     )
     monkeypatch.setenv("LINKEDIN_EXPERIMENTAL_PERSIST_DERIVED_SESSION", "1")
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.get_config", lambda: AppConfig())
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.get_config", lambda: AppConfig())
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.configure_logging", lambda **_kwargs: None
+        "linkedin_scraper_mcp.cli_main.configure_logging", lambda **_kwargs: None
     )
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.get_version", lambda: "4.0.0")
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.get_version", lambda: "4.0.0")
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.get_or_create_browser",
+        "linkedin_scraper_mcp.cli_main.get_or_create_browser",
         AsyncMock(return_value=browser),
     )
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.close_browser", AsyncMock())
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.close_browser", AsyncMock())
 
     with pytest.raises(SystemExit) as exit_info:
         cli_main.profile_info_and_exit()
@@ -568,19 +568,19 @@ def _patch_import_handler(monkeypatch, tmp_path, *, is_interactive=False):
     config = AppConfig()
     config.is_interactive = is_interactive
     config.server.import_from_browser = "chrome"
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.get_config", lambda: config)
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.get_config", lambda: config)
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.configure_logging", lambda **_kwargs: None
+        "linkedin_scraper_mcp.cli_main.configure_logging", lambda **_kwargs: None
     )
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.get_version", lambda: "4.0.0")
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.set_headless", lambda _x: None)
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.get_version", lambda: "4.0.0")
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.set_headless", lambda _x: None)
     configured = {"called": False}
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.configure_browser_environment",
+        "linkedin_scraper_mcp.cli_main.configure_browser_environment",
         lambda: configured.__setitem__("called", True),
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.get_profile_dir", lambda: tmp_path / "profile"
+        "linkedin_scraper_mcp.cli_main.get_profile_dir", lambda: tmp_path / "profile"
     )
     return config, configured
 
@@ -588,7 +588,7 @@ def _patch_import_handler(monkeypatch, tmp_path, *, is_interactive=False):
 def test_import_from_browser_success_exits_zero(monkeypatch, capsys, tmp_path):
     _config, configured = _patch_import_handler(monkeypatch, tmp_path)
     monkeypatch.setattr(
-        "linkedin_mcp_server.browser_import.orchestrate.import_session_from_browser",
+        "linkedin_scraper_mcp.browser_import.orchestrate.import_session_from_browser",
         AsyncMock(return_value=True),
     )
 
@@ -603,7 +603,7 @@ def test_import_from_browser_success_exits_zero(monkeypatch, capsys, tmp_path):
 def test_import_from_browser_failure_exits_one(monkeypatch, capsys, tmp_path):
     _patch_import_handler(monkeypatch, tmp_path)
     monkeypatch.setattr(
-        "linkedin_mcp_server.browser_import.orchestrate.import_session_from_browser",
+        "linkedin_scraper_mcp.browser_import.orchestrate.import_session_from_browser",
         AsyncMock(return_value=False),
     )
 
@@ -615,11 +615,11 @@ def test_import_from_browser_failure_exits_one(monkeypatch, capsys, tmp_path):
 
 
 def test_import_from_browser_no_session_guidance(monkeypatch, capsys, tmp_path):
-    from linkedin_mcp_server.exceptions import NoLinkedInSessionFoundError
+    from linkedin_scraper_mcp.exceptions import NoLinkedInSessionFoundError
 
     _patch_import_handler(monkeypatch, tmp_path)
     monkeypatch.setattr(
-        "linkedin_mcp_server.browser_import.orchestrate.import_session_from_browser",
+        "linkedin_scraper_mcp.browser_import.orchestrate.import_session_from_browser",
         AsyncMock(side_effect=NoLinkedInSessionFoundError("none found")),
     )
 
@@ -633,11 +633,11 @@ def test_import_from_browser_no_session_guidance(monkeypatch, capsys, tmp_path):
 
 
 def test_import_from_browser_app_bound_message(monkeypatch, capsys, tmp_path):
-    from linkedin_mcp_server.exceptions import CookieDecryptionError
+    from linkedin_scraper_mcp.exceptions import CookieDecryptionError
 
     _patch_import_handler(monkeypatch, tmp_path)
     monkeypatch.setattr(
-        "linkedin_mcp_server.browser_import.orchestrate.import_session_from_browser",
+        "linkedin_scraper_mcp.browser_import.orchestrate.import_session_from_browser",
         AsyncMock(side_effect=CookieDecryptionError("app-bound in Brave")),
     )
 
@@ -653,7 +653,7 @@ def test_import_from_browser_reports_a_restricted_account(
 ):
     _patch_import_handler(monkeypatch, tmp_path)
     monkeypatch.setattr(
-        "linkedin_mcp_server.browser_import.orchestrate.import_session_from_browser",
+        "linkedin_scraper_mcp.browser_import.orchestrate.import_session_from_browser",
         AsyncMock(side_effect=AccountRestrictedError()),
     )
 
@@ -678,7 +678,7 @@ def test_login_reports_a_restricted_account_and_exits_nonzero(
     async def restricted(*_args, **_kwargs):
         raise AccountRestrictedError()
 
-    monkeypatch.setattr("linkedin_mcp_server.setup.interactive_login", restricted)
+    monkeypatch.setattr("linkedin_scraper_mcp.setup.interactive_login", restricted)
 
     with pytest.raises(SystemExit) as exit_info:
         cli_main.get_profile_and_exit()
@@ -700,7 +700,7 @@ def test_main_dispatches_import_before_login(monkeypatch, tmp_path):
     config.server.login = True  # also set; import must win and exit first
     _patch_main_dependencies(monkeypatch, config)
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.configure_browser_environment", lambda: None
+        "linkedin_scraper_mcp.cli_main.configure_browser_environment", lambda: None
     )
 
     calls: list[str] = []
@@ -711,7 +711,7 @@ def test_main_dispatches_import_before_login(monkeypatch, tmp_path):
         calls.append("ensure")
 
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.ensure_browser_installed", fake_ensure
+        "linkedin_scraper_mcp.cli_main.ensure_browser_installed", fake_ensure
     )
 
     def fake_import():
@@ -723,9 +723,9 @@ def test_main_dispatches_import_before_login(monkeypatch, tmp_path):
         raise SystemExit(0)
 
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.import_from_browser_and_exit", fake_import
+        "linkedin_scraper_mcp.cli_main.import_from_browser_and_exit", fake_import
     )
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.get_profile_and_exit", fake_login)
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.get_profile_and_exit", fake_login)
 
     with pytest.raises(SystemExit) as exit_info:
         cli_main.main([])
@@ -751,12 +751,12 @@ class TestTheProfileRootIsClaimedBeforeAnythingTouchesIt:
         config.server.logout = True
         _patch_main_dependencies(monkeypatch, config)
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.configure_browser_environment", lambda: None
+            "linkedin_scraper_mcp.cli_main.configure_browser_environment", lambda: None
         )
 
         calls: list[str] = []
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.ensure_profile_claim",
+            "linkedin_scraper_mcp.cli_main.ensure_profile_claim",
             lambda path, claim_anyway=False: calls.append("claim") or path,
         )
 
@@ -765,7 +765,7 @@ class TestTheProfileRootIsClaimedBeforeAnythingTouchesIt:
             raise SystemExit(0)
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.clear_profile_and_exit", fake_logout
+            "linkedin_scraper_mcp.cli_main.clear_profile_and_exit", fake_logout
         )
 
         with pytest.raises(SystemExit):
@@ -781,15 +781,15 @@ class TestTheProfileRootIsClaimedBeforeAnythingTouchesIt:
         config.server.logout = True
         _patch_main_dependencies(monkeypatch, config)
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.configure_browser_environment", lambda: None
+            "linkedin_scraper_mcp.cli_main.configure_browser_environment", lambda: None
         )
 
         def refuse(path, claim_anyway=False):
             raise ProfileRootRefusedError("that directory is not ours")
 
-        monkeypatch.setattr("linkedin_mcp_server.cli_main.ensure_profile_claim", refuse)
+        monkeypatch.setattr("linkedin_scraper_mcp.cli_main.ensure_profile_claim", refuse)
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.clear_profile_and_exit",
+            "linkedin_scraper_mcp.cli_main.clear_profile_and_exit",
             lambda: pytest.fail("logout must not run after a refusal"),
         )
 
@@ -812,7 +812,7 @@ class TestTheProfileRootIsClaimedBeforeAnythingTouchesIt:
         made a genuinely empty custom root read as occupied and refused every
         first run, telling the user to point at an empty directory.
         """
-        from linkedin_mcp_server.profile_claim import claim_path
+        from linkedin_scraper_mcp.profile_claim import claim_path
 
         target = tmp_path / "custom" / "profile"
         target.parent.mkdir(parents=True)
@@ -824,18 +824,18 @@ class TestTheProfileRootIsClaimedBeforeAnythingTouchesIt:
         # Deliberately not `_patch_main_dependencies`: it stubs
         # `configure_logging`, which is the very thing that runs first.
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.load_config", lambda _argv: config
+            "linkedin_scraper_mcp.cli_main.load_config", lambda _argv: config
         )
-        monkeypatch.setattr("linkedin_mcp_server.cli_main.get_config", lambda: config)
-        monkeypatch.setattr("linkedin_mcp_server.cli_main.get_version", lambda: "4.0.0")
+        monkeypatch.setattr("linkedin_scraper_mcp.cli_main.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.cli_main.get_version", lambda: "4.0.0")
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.set_headless", lambda _x: None
-        )
-        monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.configure_browser_environment", lambda: None
+            "linkedin_scraper_mcp.cli_main.set_headless", lambda _x: None
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.clear_profile_and_exit",
+            "linkedin_scraper_mcp.cli_main.configure_browser_environment", lambda: None
+        )
+        monkeypatch.setattr(
+            "linkedin_scraper_mcp.cli_main.clear_profile_and_exit",
             lambda: (_ for _ in ()).throw(SystemExit(0)),
         )
 
@@ -854,16 +854,16 @@ class TestTheProfileRootIsClaimedBeforeAnythingTouchesIt:
         config.server.logout = True
         _patch_main_dependencies(monkeypatch, config)
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.configure_browser_environment", lambda: None
+            "linkedin_scraper_mcp.cli_main.configure_browser_environment", lambda: None
         )
 
         seen: list[bool] = []
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.ensure_profile_claim",
+            "linkedin_scraper_mcp.cli_main.ensure_profile_claim",
             lambda path, claim_anyway=False: seen.append(claim_anyway) or path,
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.clear_profile_and_exit",
+            "linkedin_scraper_mcp.cli_main.clear_profile_and_exit",
             lambda: (_ for _ in ()).throw(SystemExit(0)),
         )
 
@@ -880,13 +880,13 @@ def test_clear_profile_and_exit_clears_all_auth_state(
 ) -> None:
     config = AppConfig()
     config.browser.user_data_dir = str(tmp_path / "profile")
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.get_config", lambda: config)
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.get_config", lambda: config)
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.configure_logging", lambda **_kwargs: None
+        "linkedin_scraper_mcp.cli_main.configure_logging", lambda **_kwargs: None
     )
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.get_version", lambda: "4.0.0")
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.get_version", lambda: "4.0.0")
     monkeypatch.setattr(
-        "linkedin_mcp_server.cli_main.get_profile_dir", lambda: tmp_path / "profile"
+        "linkedin_scraper_mcp.cli_main.get_profile_dir", lambda: tmp_path / "profile"
     )
     monkeypatch.setattr("builtins.input", lambda _prompt="": "y")
 
@@ -900,7 +900,7 @@ def test_clear_profile_and_exit_clears_all_auth_state(
         cleared["profile"] = profile
         return True
 
-    monkeypatch.setattr("linkedin_mcp_server.cli_main.clear_auth_state", fake_clear)
+    monkeypatch.setattr("linkedin_scraper_mcp.cli_main.clear_auth_state", fake_clear)
 
     with pytest.raises(SystemExit) as exit_info:
         cli_main.clear_profile_and_exit()
@@ -928,18 +928,18 @@ class TestForwardingToASharedOwner:
         asked: list = []
 
         def classify(path):
-            from linkedin_mcp_server.storage_class import Classification, StorageClass
+            from linkedin_scraper_mcp.storage_class import Classification, StorageClass
 
             asked.append(path)
             return Classification(StorageClass.LOCAL, "local test filesystem")
 
-        monkeypatch.setattr("linkedin_mcp_server.storage_class.classify", classify)
+        monkeypatch.setattr("linkedin_scraper_mcp.storage_class.classify", classify)
         return asked
 
     @staticmethod
     def _outcome(attachment):
-        from linkedin_mcp_server.daemon.discovery import OwnerLookup, OwnerState
-        from linkedin_mcp_server.daemon.election import ElectionOutcome
+        from linkedin_scraper_mcp.daemon.discovery import OwnerLookup, OwnerState
+        from linkedin_scraper_mcp.daemon.election import ElectionOutcome
 
         state = OwnerState.ATTACHABLE if attachment else OwnerState.ABSENT
         return ElectionOutcome(OwnerLookup(state=state, attachment=attachment))
@@ -959,7 +959,7 @@ class TestForwardingToASharedOwner:
         # The default. Electing an owner here would cost every user a detached
         # process for a feature they did not ask for.
         asked = MagicMock()
-        monkeypatch.setattr("linkedin_mcp_server.daemon.election.obtain_owner", asked)
+        monkeypatch.setattr("linkedin_scraper_mcp.daemon.election.obtain_owner", asked)
 
         assert cli_main._obtain_shared_owner(self._config(daemon_enabled=False)) is None
         asked.assert_not_called()
@@ -970,7 +970,7 @@ class TestForwardingToASharedOwner:
         # An explicit HTTP bind is already one server for many clients, so there
         # is nothing left for a daemon to deduplicate.
         asked = MagicMock()
-        monkeypatch.setattr("linkedin_mcp_server.daemon.election.obtain_owner", asked)
+        monkeypatch.setattr("linkedin_scraper_mcp.daemon.election.obtain_owner", asked)
         config = self._config(daemon_enabled=True, transport="streamable-http")
 
         assert cli_main._obtain_shared_owner(config) is None
@@ -983,8 +983,8 @@ class TestForwardingToASharedOwner:
         # it had before. Nothing about the profile or an owner may be looked up.
         asked = MagicMock()
         looked_up = MagicMock()
-        monkeypatch.setattr("linkedin_mcp_server.daemon.election.obtain_owner", asked)
-        monkeypatch.setattr("linkedin_mcp_server.cli_main.get_profile_dir", looked_up)
+        monkeypatch.setattr("linkedin_scraper_mcp.daemon.election.obtain_owner", asked)
+        monkeypatch.setattr("linkedin_scraper_mcp.cli_main.get_profile_dir", looked_up)
         config = self._config(daemon_enabled=True)
         config.browser.chrome_path = "/opt/custom/chrome"
 
@@ -1002,32 +1002,32 @@ class TestForwardingToASharedOwner:
     ):
         # Recorded rather than raised: `_obtain_shared_owner` swallows what the
         # election raises, so a raising sentinel would be caught and missed.
-        from linkedin_mcp_server.storage_class import Classification, StorageClass
+        from linkedin_scraper_mcp.storage_class import Classification, StorageClass
 
         effects = {
             name: MagicMock(name=name)
             for name in ("obtain_owner", "prepare", "lock", "read", "backend")
         }
         monkeypatch.setattr(
-            "linkedin_mcp_server.daemon.election.obtain_owner",
+            "linkedin_scraper_mcp.daemon.election.obtain_owner",
             effects["obtain_owner"],
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.daemon.descriptor.prepare_daemon_state",
+            "linkedin_scraper_mcp.daemon.descriptor.prepare_daemon_state",
             effects["prepare"],
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.daemon.descriptor.read", effects["read"]
+            "linkedin_scraper_mcp.daemon.descriptor.read", effects["read"]
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.daemon.lock.DaemonLock.__init__", effects["lock"]
+            "linkedin_scraper_mcp.daemon.lock.DaemonLock.__init__", effects["lock"]
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.daemon.proxy.DaemonProxyBackend.__init__",
+            "linkedin_scraper_mcp.daemon.proxy.DaemonProxyBackend.__init__",
             effects["backend"],
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.storage_class.classify",
+            "linkedin_scraper_mcp.storage_class.classify",
             lambda _path: Classification(StorageClass(refused), "test storage"),
         )
         config = self._config(daemon_enabled=True)
@@ -1046,13 +1046,13 @@ class TestForwardingToASharedOwner:
     ):
         # The positive control for the refusal above, and the check that the
         # root classified is the root the election is handed.
-        from linkedin_mcp_server.session_state import canonical
+        from linkedin_scraper_mcp.session_state import canonical
 
         profile = tmp_path / "profile"
         elected = MagicMock(return_value=self._outcome(None))
-        monkeypatch.setattr("linkedin_mcp_server.daemon.election.obtain_owner", elected)
+        monkeypatch.setattr("linkedin_scraper_mcp.daemon.election.obtain_owner", elected)
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.get_profile_dir", lambda: profile
+            "linkedin_scraper_mcp.cli_main.get_profile_dir", lambda: profile
         )
         config = self._config(daemon_enabled=True)
         config.browser.user_data_dir = str(profile)
@@ -1075,18 +1075,18 @@ class TestForwardingToASharedOwner:
         # is the one attachment the proxy backend refuses to be built around.
         attachment.control_only = False
         monkeypatch.setattr(
-            "linkedin_mcp_server.daemon.election.obtain_owner",
+            "linkedin_scraper_mcp.daemon.election.obtain_owner",
             lambda *_args, **_kwargs: self._outcome(attachment),
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.get_profile_dir", lambda: tmp_path / "profile"
+            "linkedin_scraper_mcp.cli_main.get_profile_dir", lambda: tmp_path / "profile"
         )
 
         found = cli_main._obtain_shared_owner(self._config(daemon_enabled=True))
 
         # Through the backend the proxy layer is built from, which is what now
         # carries it. The claim is unchanged: the election's answer survives.
-        from linkedin_mcp_server.daemon.proxy import DaemonProxyBackend
+        from linkedin_scraper_mcp.daemon.proxy import DaemonProxyBackend
 
         assert isinstance(found, DaemonProxyBackend)
         assert found.attachment is attachment
@@ -1099,11 +1099,11 @@ class TestForwardingToASharedOwner:
         # exists to remove. A client that refused to start would fail where
         # nobody reads the reason, so the warning is what has to carry it.
         monkeypatch.setattr(
-            "linkedin_mcp_server.daemon.election.obtain_owner",
+            "linkedin_scraper_mcp.daemon.election.obtain_owner",
             lambda *_args, **_kwargs: self._outcome(None),
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.get_profile_dir", lambda: tmp_path / "profile"
+            "linkedin_scraper_mcp.cli_main.get_profile_dir", lambda: tmp_path / "profile"
         )
 
         with caplog.at_level(logging.WARNING):
@@ -1119,9 +1119,9 @@ class TestForwardingToASharedOwner:
         def explode(*_args, **_kwargs):
             raise RuntimeError("the lock is on a filesystem without locking")
 
-        monkeypatch.setattr("linkedin_mcp_server.daemon.election.obtain_owner", explode)
+        monkeypatch.setattr("linkedin_scraper_mcp.daemon.election.obtain_owner", explode)
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.get_profile_dir", lambda: tmp_path / "profile"
+            "linkedin_scraper_mcp.cli_main.get_profile_dir", lambda: tmp_path / "profile"
         )
 
         assert cli_main._obtain_shared_owner(self._config(daemon_enabled=True)) is None
@@ -1129,7 +1129,7 @@ class TestForwardingToASharedOwner:
     def test_an_owner_makes_this_process_a_proxy(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path
     ):
-        from linkedin_mcp_server.server_role import ServerRole
+        from linkedin_scraper_mcp.server_role import ServerRole
 
         config = self._config(daemon_enabled=True)
         _patch_main_dependencies(monkeypatch, config)
@@ -1141,15 +1141,15 @@ class TestForwardingToASharedOwner:
         # runs. Stubbing `_obtain_shared_owner` would let it go on discarding the
         # outcome — the bug this PR fixes — while this test still passed.
         monkeypatch.setattr(
-            "linkedin_mcp_server.daemon.election.obtain_owner",
+            "linkedin_scraper_mcp.daemon.election.obtain_owner",
             lambda *_args, **_kwargs: self._outcome(attachment),
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.get_profile_dir", lambda: tmp_path / "profile"
+            "linkedin_scraper_mcp.cli_main.get_profile_dir", lambda: tmp_path / "profile"
         )
         built = {}
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.create_mcp_server",
+            "linkedin_scraper_mcp.cli_main.create_mcp_server",
             lambda **kwargs: built.update(kwargs) or MagicMock(),
         )
 
@@ -1166,11 +1166,11 @@ class TestForwardingToASharedOwner:
         config = self._config(daemon_enabled=False)
         _patch_main_dependencies(monkeypatch, config)
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main._obtain_shared_owner", lambda _config: None
+            "linkedin_scraper_mcp.cli_main._obtain_shared_owner", lambda _config: None
         )
         built = {}
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.create_mcp_server",
+            "linkedin_scraper_mcp.cli_main.create_mcp_server",
             lambda **kwargs: built.update(kwargs) or MagicMock(),
         )
 
@@ -1202,13 +1202,13 @@ class TestForwardingToASharedOwner:
             called.append(True)
             raise RuntimeError("no owner")
 
-        monkeypatch.setattr("linkedin_mcp_server.daemon.election.obtain_owner", record)
+        monkeypatch.setattr("linkedin_scraper_mcp.daemon.election.obtain_owner", record)
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.choose_transport_interactive",
+            "linkedin_scraper_mcp.cli_main.choose_transport_interactive",
             lambda: "streamable-http",
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.create_mcp_server",
+            "linkedin_scraper_mcp.cli_main.create_mcp_server",
             lambda **_kwargs: MagicMock(),
         )
 
@@ -1230,7 +1230,7 @@ class TestConfigurationErrorAtStartup:
         def boom(_argv: object) -> AppConfig:
             raise ConfigurationError(message)
 
-        monkeypatch.setattr("linkedin_mcp_server.cli_main.load_config", boom)
+        monkeypatch.setattr("linkedin_scraper_mcp.cli_main.load_config", boom)
 
     def test_it_exits_with_the_message_and_no_traceback(
         self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
@@ -1257,7 +1257,7 @@ class TestConfigurationErrorAtStartup:
         )
         _patch_main_dependencies(monkeypatch, config)
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.choose_transport_interactive",
+            "linkedin_scraper_mcp.cli_main.choose_transport_interactive",
             lambda: "streamable-http",
         )
 
@@ -1303,10 +1303,10 @@ class _Owner:
     ):
         import httpx2
 
-        from linkedin_mcp_server.daemon import descriptor as daemon_descriptor
-        from linkedin_mcp_server.daemon import liveness as daemon_liveness
-        from linkedin_mcp_server.daemon.owner import create_owner_server
-        from linkedin_mcp_server.session_state import auth_root_dir, get_runtime_id
+        from linkedin_scraper_mcp.daemon import descriptor as daemon_descriptor
+        from linkedin_scraper_mcp.daemon import liveness as daemon_liveness
+        from linkedin_scraper_mcp.daemon.owner import create_owner_server
+        from linkedin_scraper_mcp.session_state import auth_root_dir, get_runtime_id
 
         self.events: list[tuple] = []
         self.requests: list[tuple[str, str, bytes]] = []
@@ -1363,7 +1363,7 @@ class _Owner:
 
         if bridged:
             monkeypatch.setattr(
-                "linkedin_mcp_server.daemon.owner.direct_http_client",
+                "linkedin_scraper_mcp.daemon.owner.direct_http_client",
                 lambda *, timeout: httpx2.Client(
                     transport=Bridge(), trust_env=False, timeout=timeout
                 ),
@@ -1407,8 +1407,8 @@ class _Owner:
         """
         import time
 
-        from linkedin_mcp_server.daemon.core import owner as lifecycle
-        from linkedin_mcp_server.daemon.liveness import new_call_id
+        from linkedin_scraper_mcp.daemon.core import owner as lifecycle
+        from linkedin_scraper_mcp.daemon.liveness import new_call_id
 
         call_id = new_call_id()
         state, _effects = lifecycle.on_event(
@@ -1419,7 +1419,7 @@ class _Owner:
         self.liveness._state = state
 
     def sent_only_the_idle_only_request(self) -> bool:
-        from linkedin_mcp_server.daemon.owner import STAND_DOWN_PATH
+        from linkedin_scraper_mcp.daemon.owner import STAND_DOWN_PATH
 
         return [(m, path, json.loads(body)) for m, path, body in self.requests] == [
             (
@@ -1431,7 +1431,7 @@ class _Owner:
 
 
 def _protocol() -> int:
-    from linkedin_mcp_server.daemon.descriptor import PROTOCOL_VERSION
+    from linkedin_scraper_mcp.daemon.descriptor import PROTOCOL_VERSION
 
     return PROTOCOL_VERSION
 
@@ -1447,9 +1447,9 @@ class TestRetiringASharedBrowser:
 
     @pytest.fixture(autouse=True)
     def _machine(self, monkeypatch, tmp_path, isolate_profile_dir):
-        from linkedin_mcp_server.daemon import descriptor as daemon_descriptor
-        from linkedin_mcp_server.private_state import harden_directory
-        from linkedin_mcp_server.storage_class import Classification, StorageClass
+        from linkedin_scraper_mcp.daemon import descriptor as daemon_descriptor
+        from linkedin_scraper_mcp.private_state import harden_directory
+        from linkedin_scraper_mcp.storage_class import Classification, StorageClass
 
         # Every daemon file under a home of this test's own, never the real one.
         # Hardened rather than created: on Windows the daemon refuses a home
@@ -1458,7 +1458,7 @@ class TestRetiringASharedBrowser:
         harden_directory(self.home)
         monkeypatch.setattr(daemon_descriptor, "_account_home", lambda: self.home)
         monkeypatch.setattr(
-            "linkedin_mcp_server.storage_class.classify",
+            "linkedin_scraper_mcp.storage_class.classify",
             lambda path: Classification(StorageClass.LOCAL, "local test filesystem"),
         )
         self.profile = isolate_profile_dir
@@ -1477,14 +1477,14 @@ class TestRetiringASharedBrowser:
     # -- helpers ----------------------------------------------------------- #
 
     def _seed_session(self) -> None:
-        from linkedin_mcp_server.session_state import source_state_path
+        from linkedin_scraper_mcp.session_state import source_state_path
 
         (self.profile / "Default").mkdir(parents=True, exist_ok=True)
         (self.profile / "Default" / "Cookies").write_text("placeholder")
         source_state_path(self.profile).write_text("{}")
 
     def _session_intact(self) -> bool:
-        from linkedin_mcp_server.session_state import source_state_path
+        from linkedin_scraper_mcp.session_state import source_state_path
 
         return (self.profile / "Default" / "Cookies").exists() and source_state_path(
             self.profile
@@ -1539,7 +1539,7 @@ class TestRetiringASharedBrowser:
         self.config.server.import_from_browser = "chrome"
         run = run or AsyncMock(return_value=True)
         self.monkeypatch.setattr(
-            "linkedin_mcp_server.browser_import.orchestrate.import_session_from_browser",
+            "linkedin_scraper_mcp.browser_import.orchestrate.import_session_from_browser",
             run,
         )
         return self._exit_code(cli_main.import_from_browser_and_exit), run
@@ -1549,7 +1549,7 @@ class TestRetiringASharedBrowser:
         if command == "logout":
             cleared = MagicMock(return_value=True)
             self.monkeypatch.setattr(
-                "linkedin_mcp_server.session_state.clear_auth_state", cleared
+                "linkedin_scraper_mcp.session_state.clear_auth_state", cleared
             )
             return self._logout(), cleared.called
         if command == "login":
@@ -1571,7 +1571,7 @@ class TestRetiringASharedBrowser:
         owner = self._owner()
         looked = MagicMock(side_effect=AssertionError("looked for an owner"))
         self.monkeypatch.setattr(
-            "linkedin_mcp_server.daemon.discovery.look_up_owner", looked
+            "linkedin_scraper_mcp.daemon.discovery.look_up_owner", looked
         )
         entries_before = sorted(p.name for p in self.home.rglob("*"))
         prompts = self._answers("y")
@@ -1594,8 +1594,8 @@ class TestRetiringASharedBrowser:
         owner = None
         if recorded != "nothing":
             owner = self._owner()
-            from linkedin_mcp_server.daemon import descriptor as daemon_descriptor
-            from linkedin_mcp_server.session_state import auth_root_dir
+            from linkedin_scraper_mcp.daemon import descriptor as daemon_descriptor
+            from linkedin_scraper_mcp.session_state import auth_root_dir
 
             path = daemon_descriptor.descriptor_path(auth_root_dir(self.profile))
             raw = json.loads(path.read_text())
@@ -1619,8 +1619,8 @@ class TestRetiringASharedBrowser:
     def test_an_unreadable_record_is_said_once_and_the_lease_decides(
         self, damage, capsys
     ):
-        from linkedin_mcp_server.daemon import descriptor as daemon_descriptor
-        from linkedin_mcp_server.session_state import auth_root_dir
+        from linkedin_scraper_mcp.daemon import descriptor as daemon_descriptor
+        from linkedin_scraper_mcp.session_state import auth_root_dir
 
         self._seed_session()
         owner = self._owner()
@@ -1631,7 +1631,7 @@ class TestRetiringASharedBrowser:
             daemon_descriptor.token_path(auth_root, owner.instance).write_text("x")
         else:
             self.monkeypatch.setattr(
-                "linkedin_mcp_server.daemon.discovery.look_up_owner",
+                "linkedin_scraper_mcp.daemon.discovery.look_up_owner",
                 MagicMock(side_effect=OSError("state storage went away")),
             )
         prompts = self._answers("y")
@@ -1645,8 +1645,8 @@ class TestRetiringASharedBrowser:
         assert not self._session_intact()
 
     def test_an_owner_of_another_protocol_is_never_asked(self, capsys):
-        from linkedin_mcp_server.daemon import descriptor as daemon_descriptor
-        from linkedin_mcp_server.session_state import auth_root_dir
+        from linkedin_scraper_mcp.daemon import descriptor as daemon_descriptor
+        from linkedin_scraper_mcp.session_state import auth_root_dir
 
         self._seed_session()
         owner = self._owner()
@@ -1779,7 +1779,7 @@ class TestRetiringASharedBrowser:
     # -- steps 3 to 5 against the real route ------------------------------- #
 
     def test_an_idle_owner_retires_and_the_profile_is_cleared_once_held(self):
-        from linkedin_mcp_server.profile_lease import ProfileLease, get_profile_lease
+        from linkedin_scraper_mcp.profile_lease import ProfileLease, get_profile_lease
 
         self._seed_session()
         owner = self._owner()
@@ -1855,7 +1855,7 @@ class TestRetiringASharedBrowser:
         creation.assert_called_once()
 
     def test_import_waits_for_the_profile_after_an_idle_owner_retires(self):
-        from linkedin_mcp_server.config.schema import PROFILE_HANDOVER_WAIT_SECONDS
+        from linkedin_scraper_mcp.config.schema import PROFILE_HANDOVER_WAIT_SECONDS
 
         owner = self._owner()
         self._answers("y")
@@ -2020,8 +2020,8 @@ class TestRetiringASharedBrowser:
         with socket.socket() as probe:
             probe.bind(("127.0.0.1", 0))
             closed = probe.getsockname()[1]
-        from linkedin_mcp_server.daemon import descriptor as daemon_descriptor
-        from linkedin_mcp_server.session_state import auth_root_dir
+        from linkedin_scraper_mcp.daemon import descriptor as daemon_descriptor
+        from linkedin_scraper_mcp.session_state import auth_root_dir
 
         path = daemon_descriptor.descriptor_path(auth_root_dir(self.profile))
         raw = json.loads(path.read_text())
@@ -2064,7 +2064,7 @@ class TestRetiringASharedBrowser:
     # -- step 5: the profile ------------------------------------------------ #
 
     def _hold_the_profile(self):
-        from linkedin_mcp_server.profile_lease import (
+        from linkedin_scraper_mcp.profile_lease import (
             _release_locked_fd,
             acquire_locked_fd,
             get_profile_lease,
@@ -2086,7 +2086,7 @@ class TestRetiringASharedBrowser:
     def test_a_profile_that_does_not_come_free_is_left_untouched(self, capsys):
         # A successor may win the lease between the reply and the wait, and
         # then admit a real call. Timing out safely is an allowed outcome.
-        from linkedin_mcp_server.profile_lease import get_profile_lease
+        from linkedin_scraper_mcp.profile_lease import get_profile_lease
 
         self._seed_session()
         owner = self._owner()
@@ -2130,7 +2130,7 @@ class TestRetiringASharedBrowser:
         """
         import shutil
 
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.session_state import (
             portable_cookie_path,
             write_source_state,
         )
@@ -2142,7 +2142,7 @@ class TestRetiringASharedBrowser:
         return write_source_state(self.profile).login_generation
 
     def _signed_in_as(self, generation: str) -> bool:
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.session_state import (
             load_source_state,
             portable_cookie_path,
         )
@@ -2197,7 +2197,7 @@ class TestRetiringASharedBrowser:
         # what identifies it, and that stat fails.
         from pathlib import Path
 
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.session_state import (
             portable_cookie_path,
             source_state_path,
         )
@@ -2257,8 +2257,8 @@ class TestRetiringASharedBrowser:
         # session. That is the handover itself, not another client.
         import threading
 
-        from linkedin_mcp_server.common_utils import secure_write_text
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.common_utils import secure_write_text
+        from linkedin_scraper_mcp.session_state import (
             portable_cookie_path,
             write_source_state,
         )
@@ -2290,7 +2290,7 @@ class TestRetiringASharedBrowser:
         self._answers("y", "y")
         if command == "logout":
             self.monkeypatch.setattr(
-                "linkedin_mcp_server.session_state.clear_auth_state",
+                "linkedin_scraper_mcp.session_state.clear_auth_state",
                 MagicMock(side_effect=KeyboardInterrupt),
             )
             code = self._logout()
@@ -2365,7 +2365,7 @@ class TestRetiringASharedBrowser:
         self._seed_session()
         owner = self._owner()
         self.monkeypatch.setattr(
-            "linkedin_mcp_server.daemon.discovery.look_up_owner",
+            "linkedin_scraper_mcp.daemon.discovery.look_up_owner",
             MagicMock(side_effect=KeyboardInterrupt),
         )
         prompts = self._answers("y")
@@ -2378,13 +2378,13 @@ class TestRetiringASharedBrowser:
         assert self._session_intact()
 
     def test_an_import_whose_profile_stays_busy_is_refused_plainly(self, capsys):
-        from linkedin_mcp_server.exceptions import BrowserBusyError
+        from linkedin_scraper_mcp.exceptions import BrowserBusyError
 
         self._owner()
         self._answers("y")
         self.config.server.import_from_browser = "chrome"
         self.monkeypatch.setattr(
-            "linkedin_mcp_server.browser_import.orchestrate.import_session_from_browser",
+            "linkedin_scraper_mcp.browser_import.orchestrate.import_session_from_browser",
             AsyncMock(side_effect=BrowserBusyError("Another LinkedIn MCP client")),
         )
 
@@ -2407,20 +2407,20 @@ class TestStatusUnderAHeldProfile:
 
     @pytest.fixture(autouse=True)
     def _machine(self, monkeypatch, tmp_path, isolate_profile_dir):
-        from linkedin_mcp_server.daemon import descriptor as daemon_descriptor
-        from linkedin_mcp_server.exceptions import BrowserBusyError
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.daemon import descriptor as daemon_descriptor
+        from linkedin_scraper_mcp.exceptions import BrowserBusyError
+        from linkedin_scraper_mcp.session_state import (
             get_runtime_id,
             portable_cookie_path,
             source_state_path,
         )
-        from linkedin_mcp_server.storage_class import Classification, StorageClass
+        from linkedin_scraper_mcp.storage_class import Classification, StorageClass
 
         self.home = tmp_path / "home"
         self.home.mkdir()
         monkeypatch.setattr(daemon_descriptor, "_account_home", lambda: self.home)
         monkeypatch.setattr(
-            "linkedin_mcp_server.storage_class.classify",
+            "linkedin_scraper_mcp.storage_class.classify",
             lambda path: Classification(StorageClass.LOCAL, "local test filesystem"),
         )
         self.profile = isolate_profile_dir
@@ -2486,7 +2486,7 @@ class TestStatusUnderAHeldProfile:
         _Owner(self.monkeypatch, self.home, self.profile)
         looked = MagicMock(side_effect=AssertionError("looked for an owner"))
         self.monkeypatch.setattr(
-            "linkedin_mcp_server.daemon.discovery.look_up_owner", looked
+            "linkedin_scraper_mcp.daemon.discovery.look_up_owner", looked
         )
 
         out = self._status(capsys, caplog)
@@ -2496,7 +2496,7 @@ class TestStatusUnderAHeldProfile:
 
     def test_an_unreadable_record_names_nothing(self, capsys, caplog):
         self.monkeypatch.setattr(
-            "linkedin_mcp_server.daemon.discovery.look_up_owner",
+            "linkedin_scraper_mcp.daemon.discovery.look_up_owner",
             MagicMock(side_effect=OSError("state storage went away")),
         )
 

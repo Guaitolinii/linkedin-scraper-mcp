@@ -15,8 +15,8 @@ from typing import Any
 import pytest
 import windows_guardian_probe as probe
 
-from linkedin_mcp_server import process_tree
-from linkedin_mcp_server.profile_lease import ProfileLease
+from linkedin_scraper_mcp import process_tree
+from linkedin_scraper_mcp.profile_lease import ProfileLease
 from windows_guardian_probe import (
     acquire_actor_region,
     active_guardian_loss_wait_handles,

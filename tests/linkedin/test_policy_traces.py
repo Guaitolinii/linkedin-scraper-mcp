@@ -15,13 +15,12 @@ import sys
 
 import pytest
 
-from linkedin_mcp_server.core.exceptions import AuthenticationError
-from linkedin_mcp_server.linkedin.company import CompanyReader
-from linkedin_mcp_server.linkedin.conversations import ConversationReader
-from linkedin_mcp_server.linkedin.fields import COMPANY_SECTIONS, PERSON_SECTIONS
-from linkedin_mcp_server.linkedin.navigation import PageNavigator
-from linkedin_mcp_server.linkedin.person import PersonReader
-from linkedin_mcp_server.linkedin.session import PageSession
+from linkedin_scraper_mcp.core.exceptions import AuthenticationError
+from linkedin_scraper_mcp.linkedin.company import CompanyReader
+from linkedin_scraper_mcp.linkedin.fields import COMPANY_SECTIONS, PERSON_SECTIONS
+from linkedin_scraper_mcp.linkedin.navigation import PageNavigator
+from linkedin_scraper_mcp.linkedin.person import PersonReader
+from linkedin_scraper_mcp.linkedin.session import PageSession
 
 from . import policy_scenarios
 from .policy_scenarios import (
@@ -87,7 +86,7 @@ async def test_stabilization_trace_ignores_physical_logger_identity():
     recorder = TraceRecorder("stabilize-logger", {"boundary.stabilize"})
     clock = FakeClock(recorder)
 
-    relocated_logger = logging.getLogger("linkedin_mcp_server.linkedin.navigation")
+    relocated_logger = logging.getLogger("linkedin_scraper_mcp.linkedin.navigation")
 
     async with boundaries(recorder, clock):
         await policy_scenarios.navigation_module.stabilize_navigation(
@@ -120,14 +119,14 @@ async def test_full_auth_boundary_propagates_a_detected_barrier():
 
 async def test_trace_comparison_reports_a_unified_diff():
     generated = await build_policy_traces()
-    generated["connect.json"]["result"]["status"] = "mutated"
+    generated["search-people.json"]["result"]["url"] = "mutated"
 
     difference = policy_trace_diff(generated)
 
-    assert f"--- {TRACE_ROOT / 'connect.json'}" in difference
-    assert "+++ generated/connect.json" in difference
-    assert '-    "status":' in difference
-    assert '+    "status": "mutated"' in difference
+    assert f"--- {TRACE_ROOT / 'search-people.json'}" in difference
+    assert "+++ generated/search-people.json" in difference
+    assert '-    "url":' in difference
+    assert '+    "url": "mutated"' in difference
 
 
 def test_canonical_fixtures_are_portable_deterministic_json():
@@ -159,18 +158,28 @@ async def test_tool_schema_trace_keeps_people_boundary_coercion_and_inventory():
         "tool_schemas"
     ]
 
-    assert len(schemas) == 25
+    assert set(schemas) == {
+        "close_session",
+        "get_company_employees",
+        "get_company_posts",
+        "get_company_profile",
+        "get_job_apply_url",
+        "get_job_details",
+        "get_my_profile",
+        "get_person_profile",
+        "get_saved_jobs",
+        "get_session_status",
+        "search_companies",
+        "search_jobs",
+        "search_people",
+    }
     network = schemas["search_people"]["input"]["properties"]["network"]
     assert network["anyOf"] == [
         {"items": {"type": "string"}, "type": "array"},
         {"type": "null"},
     ]
     assert 'comma-separated string ("F,S") is also' in network["description"]
-    assert schemas["send_message"]["input"]["required"] == [
-        "linkedin_username",
-        "message",
-        "confirm_send",
-    ]
+    assert schemas["search_people"]["input"]["required"] == ["keywords"]
 
 
 async def test_facade_results_keep_raw_values_and_optional_key_shape():
@@ -260,124 +269,6 @@ async def test_facade_trace_detects_optional_key_drift():
     assert '+    "section_errors": {}' in policy_trace_diff(mutated)
 
 
-_ROW_TRACE = "conversation-row-resolution.json"
-
-
-def _row_evaluation(trace: dict[str, Any]) -> dict[str, Any]:
-    return next(
-        event
-        for event in trace["events"]
-        if event.get("operation") == "conversation_thread_refs"
-    )
-
-
-async def test_row_click_trace_reads_text_before_scanning_compose():
-    """Text from bare `/messaging/`, then the click scan on the compose page.
-
-    The scripted page records the submitted row program without running it,
-    so this pins which program was sent and in what order, not what it does;
-    the browser-DOM suite executes it.
-    """
-    trace = (await build_policy_traces())[_ROW_TRACE]
-    events = trace["events"]
-    navigations = [
-        index for index, event in enumerate(events) if event["kind"] == "navigate"
-    ]
-    positions = _operation_positions(trace)
-    row_evaluation = _row_evaluation(trace)
-
-    assert [events[index]["requested_url"] for index in navigations] == [
-        "https://www.linkedin.com/messaging/",
-        "https://www.linkedin.com/messaging/compose/",
-    ]
-    assert (
-        positions["root_content"][0]
-        < navigations[1]
-        < positions["conversation_rows"][0]
-        < positions["conversation_thread_refs"][0]
-    )
-    assert row_evaluation["kind"] == "evaluate"
-    assert row_evaluation["program_digest"]
-    assert row_evaluation["arg"] == {"limit": 10, "nameFilter": None}
-    assert trace["result"]["url"] == "https://www.linkedin.com/messaging/"
-    assert trace["result"]["sections"] == {"inbox": "Conversation content"}
-    assert trace["result"]["references"] == {
-        "inbox": [
-            {
-                "kind": "conversation",
-                "url": "/messaging/thread/2-ada/",
-                "text": "Ada Lovelace",
-                "context": "inbox",
-            }
-        ]
-    }
-    assert trace["result"]["section_errors"] == {
-        "inbox": {
-            "error_type": "thread_attribution_stopped",
-            "error_message": (
-                'Click-derived conversation references stop before "Bob Stall": '
-                "clicking that row did not open a different thread path within "
-                "the poll budget. No later rows were clicked by this scan. Use "
-                "get_conversation(thread_id=...) with a known thread id to "
-                "bypass row attribution."
-            ),
-        }
-    }
-
-
-async def test_row_click_trace_detects_a_dropped_stop_diagnostic():
-    original = ConversationReader.get_inbox
-    removed: list[dict[str, Any]] = []
-
-    @wraps(original)
-    async def drop_errors(self: Any, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        result = await original(self, *args, **kwargs)
-        errors = result.pop("section_errors", None)
-        if errors:
-            removed.append(errors)
-        return result
-
-    with patch.object(ConversationReader, "get_inbox", drop_errors):
-        mutated = await build_policy_traces()
-
-    assert removed
-    difference = policy_trace_diff({_ROW_TRACE: mutated[_ROW_TRACE]})
-    assert f"--- {TRACE_ROOT / _ROW_TRACE}" in difference
-    assert '-    "section_errors": {' in difference
-
-
-async def test_row_click_trace_detects_a_changed_row_program():
-    """The digest follows the submitted program, not only its marker.
-
-    Twelve polls become eleven while the selector marker stays, so the
-    operation name alone would not notice. The behavioural twin is the
-    exact-budget case in the browser-DOM suite.
-    """
-    original = ScriptedPage.evaluate
-    replaced: list[str] = []
-
-    @wraps(original)
-    async def shorten_budget(
-        self: ScriptedPage, expression: str, *args: Any, **kwargs: Any
-    ) -> Any:
-        if "main li label[aria-label]" in expression and "waits < 12" in expression:
-            expression = expression.replace("waits < 12", "waits < 11")
-            replaced.append(expression)
-        return await original(self, expression, *args, **kwargs)
-
-    with patch.object(ScriptedPage, "evaluate", shorten_budget):
-        mutated = await build_policy_traces()
-
-    canonical = json.loads((TRACE_ROOT / _ROW_TRACE).read_text(encoding="utf-8"))
-    changed = _row_evaluation(mutated[_ROW_TRACE])
-    assert replaced
-    assert changed["operation"] == "conversation_thread_refs"
-    assert changed["program_digest"] != _row_evaluation(canonical)["program_digest"]
-    assert f"--- {TRACE_ROOT / _ROW_TRACE}" in policy_trace_diff(
-        {_ROW_TRACE: mutated[_ROW_TRACE]}
-    )
-
-
 async def test_section_navigation_and_callbacks_remain_one_to_one():
     traces = await build_policy_traces()
     person = traces["person-sections.json"]
@@ -438,184 +329,15 @@ async def test_job_reference_caps_fallbacks_and_stopping_page_upgrade():
     ]
 
 
-async def test_saved_jobs_and_write_gate_keep_their_caps_and_ordering():
+async def test_saved_jobs_keep_their_caps_and_ordering():
     traces = await build_policy_traces()
     saved = traces["saved-jobs.json"]
-    dry_run = traces["message-dry-run.json"]
 
     assert len(saved["result"]["job_ids"]) == 20
     assert saved["result"]["reference_count"] == 15
     assert saved["result"]["references"]["saved_jobs"][0]["text"] == (
         "Senior policy engineer with richer duplicate metadata"
     )
-    assert dry_run["result"]["status"] == "confirmation_required"
-    assert dry_run["result"]["recipient_selected"] is True
-    assert not any(
-        event["kind"] in {"evaluate_handle", "handle.evaluate"}
-        for event in dry_run["events"]
-    )
-
-
-async def test_message_target_resolution_distinguishes_handoff_from_failure():
-    traces = await build_policy_traces()
-    unavailable = traces["message-target-unavailable.json"]
-    unresolved = traces["message-target-unresolved.json"]
-
-    assert unavailable["result"]["status"] == "message_unavailable"
-    assert "connect_with_person" in unavailable["result"]["message"]
-    assert unresolved["result"]["status"] == "recipient_resolution_failed"
-    assert "connect_with_person" not in unresolved["result"]["message"]
-    assert unavailable["result"]["retry_safe"] is True
-    assert unresolved["result"]["retry_safe"] is True
-    assert all(
-        not any(event["kind"] == "evaluate_handle" for event in trace["events"])
-        for trace in (unavailable, unresolved)
-    )
-
-
-async def test_message_occupied_drafts_are_never_submitted_or_mutated():
-    traces = await build_policy_traces()
-    existing = traces["message-composer-occupied.json"]
-    restored = traces["message-composer-restored.json"]
-
-    assert existing["result"]["status"] == "composer_occupied"
-    assert restored["result"]["status"] == "composer_occupied"
-    assert all(trace["result"]["retry_safe"] is True for trace in (existing, restored))
-    assert not any(event["kind"] == "evaluate_handle" for event in existing["events"])
-    restored_operations = _operation_positions(restored)
-    assert restored_operations["message_composer_write"]
-    assert restored_operations["message_composer_cleanup"]
-    assert "message_submit" not in restored_operations
-    assert "message_confirmation_prepare" not in restored_operations
-
-
-async def test_message_pins_owner_route_and_submit_before_same_node_evidence():
-    sent = (await build_policy_traces())["message-sent.json"]
-    positions = _operation_positions(sent)
-
-    assert sent["result"]["status"] == "sent"
-    assert sent["result"]["sent"] is True
-    assert sent["result"]["retry_safe"] is False
-    assert (
-        positions["message_composer_owner"][0]
-        < positions["message_composer_write"][0]
-        < positions["message_submit_ready"][0]
-        < positions["message_confirmation_prepare"][0]
-        < positions["message_submit"][0]
-        < positions["message_confirmation_ready"][0]
-        < positions["message_confirmation_dispose"][0]
-        < positions["message_composer_dispose"][0]
-    )
-    readiness = [
-        event
-        for event in sent["events"]
-        if event.get("operation") == "message_submit_ready"
-    ]
-    assert len(readiness) == 2
-    owner = next(
-        event for event in sent["events"] if event["kind"] == "evaluate_handle"
-    )
-    assert owner["arg"] == {
-        "expectedRoute": policy_scenarios._MESSAGE_ROUTE,
-        "target": policy_scenarios._MESSAGE_TARGET,
-    }
-    confirmation = next(
-        event
-        for event in sent["events"]
-        if event.get("operation") == "message_confirmation_ready"
-    )
-    assert confirmation["arg"] == {
-        **policy_scenarios._MESSAGE_TARGET,
-        "expected": "New text",
-        "owner": {"handle": "handle-1"},
-        "token": "confirmation-1",
-    }
-
-
-async def test_message_retry_safety_and_cleanup_follow_dispatch_boundary():
-    traces = await build_policy_traces()
-    pre_submit = traces["message-pre-submit-cleanup.json"]
-    rejected = traces["message-submit-rejected.json"]
-    interrupted = traces["message-submit-interrupted.json"]
-    unconfirmed = traces["message-unconfirmed.json"]
-
-    for trace in (pre_submit, rejected):
-        assert trace["result"]["retry_safe"] is True
-        operations = _operation_positions(trace)
-        assert operations["message_composer_cleanup"]
-        assert operations["message_composer_dispose"]
-    assert "message_confirmation_prepare" not in _operation_positions(pre_submit)
-    assert rejected["result"]["status"] == "send_unavailable"
-
-    for trace in (interrupted, unconfirmed):
-        assert trace["result"]["status"] == "send_unconfirmed"
-        assert trace["result"]["sent"] is False
-        assert trace["result"]["retry_safe"] is False
-        operations = _operation_positions(trace)
-        assert operations["message_confirmation_dispose"]
-        assert operations["message_composer_dispose"]
-        assert "message_composer_cleanup" not in operations
-
-
-async def test_message_cancellation_propagates_after_owner_cleanup():
-    trace = (await build_policy_traces())["message-cancelled.json"]
-    positions = _operation_positions(trace)
-
-    assert trace["result"] == {"raised": "CancelledError"}
-    assert positions["message_submit"][0] < positions["message_confirmation_ready"][0]
-    assert (
-        positions["message_confirmation_ready"][0]
-        < positions["message_confirmation_dispose"][0]
-        < positions["message_composer_dispose"][0]
-        < positions["handle.dispose"][0]
-    )
-
-
-async def test_invalid_message_guards_cover_blank_c0_and_del_before_browser():
-    traces = await build_policy_traces()
-    for name in ("message-blank.json", "message-c0.json", "message-del.json"):
-        trace = traces[name]
-        assert trace["result"]["status"] == "invalid_message"
-        assert trace["result"]["sent"] is False
-        assert trace["result"]["retry_safe"] is True
-        assert trace["events"] == []
-
-
-async def test_feed_stale_stop_and_listener_cleanup_are_bounded():
-    feed = (await build_policy_traces())["feed-stale.json"]
-    events = feed["events"]
-
-    assert sum(e["kind"] == "mouse.wheel" for e in events) == 3
-    assert [e["callback_id"] for e in events if e["kind"] == "listener.add"] == [
-        "callback-1",
-        "callback-2",
-    ]
-    assert [e["callback_id"] for e in events if e["kind"] == "listener.remove"] == [
-        "callback-2",
-        "callback-1",
-    ]
-
-
-async def test_feed_response_tasks_cover_success_and_body_failure():
-    traces = await build_policy_traces()
-    success = traces["feed-response-success.json"]
-    failure = traces["feed-response-failure.json"]
-
-    assert success["result"]["references"] == [
-        {
-            "kind": "feed_post",
-            "url": "/posts/policy-ugcPost-123-example",
-            "context": "feed",
-        }
-    ]
-    assert sum(e["kind"] == "mouse.wheel" for e in success["events"]) == 1
-    assert failure["result"]["references"] == []
-    assert sum(e["kind"] == "mouse.wheel" for e in failure["events"]) == 3
-    for trace in (success, failure):
-        assert [
-            e["kind"] for e in trace["events"] if e["kind"].startswith("response.body.")
-        ] == ["response.body.start", "response.body.finish"]
-        assert any(e["kind"] == "listener.emit" for e in trace["events"])
 
 
 def test_trace_checker_generates_only_outside_canonical_fixture_tree(tmp_path):

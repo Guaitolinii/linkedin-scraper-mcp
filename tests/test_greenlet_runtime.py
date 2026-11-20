@@ -10,9 +10,9 @@ from types import ModuleType
 
 import pytest
 
-from linkedin_mcp_server import greenlet_runtime
-from linkedin_mcp_server.exceptions import VisualCPPRuntimeUnavailableError
-from linkedin_mcp_server.greenlet_runtime import explain_a_missing_runtime
+from linkedin_scraper_mcp import greenlet_runtime
+from linkedin_scraper_mcp.exceptions import VisualCPPRuntimeUnavailableError
+from linkedin_scraper_mcp.greenlet_runtime import explain_a_missing_runtime
 
 
 def _unwrapped(value: object) -> str:
@@ -348,10 +348,10 @@ sys.meta_path.insert(0, Refusing())
 
 _ENTRY_PATHS = {
     # What the console script generated from pyproject.toml does.
-    "console_script": "from linkedin_mcp_server.cli_main import main",
-    # What ``python -m linkedin_mcp_server`` does, which is also the MCPB
+    "console_script": "from linkedin_scraper_mcp.cli_main import main",
+    # What ``python -m linkedin_scraper_mcp`` does, which is also the MCPB
     # manifest command and the Dockerfile CMD.
-    "python_m": "runpy.run_module('linkedin_mcp_server', run_name='__main__')",
+    "python_m": "runpy.run_module('linkedin_scraper_mcp', run_name='__main__')",
 }
 
 
@@ -407,6 +407,6 @@ class TestBothEntryPaths:
         pyproject = tomllib.loads(
             (Path(__file__).resolve().parent.parent / "pyproject.toml").read_text()
         )
-        target = pyproject["project"]["scripts"]["mcp-server-linkedin"]
+        target = pyproject["project"]["scripts"]["linkedin-scraper-mcp"]
 
-        assert target.split(":")[0].startswith("linkedin_mcp_server.")
+        assert target.split(":")[0].startswith("linkedin_scraper_mcp.")

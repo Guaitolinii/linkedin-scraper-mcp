@@ -1,7 +1,7 @@
 # Daemon measurements
 
 What has been measured or observed about the shared-browser daemon
-(`linkedin_mcp_server/daemon/`), and which code each observation justifies.
+(`linkedin_scraper_mcp/daemon/`), and which code each observation justifies.
 
 Every number here is an observation, not a guarantee. Each entry names the
 commit that recorded it and that commit's date, which is the closest record of
@@ -10,7 +10,7 @@ version measured against; the project may have moved past it since. Code
 comments point here instead of restating these numbers. When a re-measurement
 changes a number, edit the entry and give its new source and date.
 
-Symbols are named relative to `linkedin_mcp_server`. Tests are named as
+Symbols are named relative to `linkedin_scraper_mcp`. Tests are named as
 `path::Class::test`.
 
 ## Lock

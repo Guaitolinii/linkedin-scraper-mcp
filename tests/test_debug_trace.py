@@ -8,9 +8,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from linkedin_mcp_server.profile_lease import ProfileLeaseUnavailableError
+from linkedin_scraper_mcp.profile_lease import ProfileLeaseUnavailableError
 
-from linkedin_mcp_server.debug_trace import (
+from linkedin_scraper_mcp.debug_trace import (
     _safe_source_profile_dir,
     cleanup_trace_dir,
     get_trace_dir,
@@ -136,11 +136,11 @@ async def test_reset_trace_state_resets_step_counter(monkeypatch, tmp_path):
 def test_safe_source_profile_dir_ignores_generic_env_fallback(monkeypatch):
     monkeypatch.setenv("USER_DATA_DIR", "/tmp/unrelated-user-data")
     monkeypatch.setattr(
-        "linkedin_mcp_server.debug_trace.get_source_profile_dir",
+        "linkedin_scraper_mcp.debug_trace.get_source_profile_dir",
         lambda: (_ for _ in ()).throw(RuntimeError("boom")),
     )
 
-    assert _safe_source_profile_dir() == Path("~/.linkedin-mcp/profile").expanduser()
+    assert _safe_source_profile_dir() == Path("~/.linkedin-scraper-mcp/profile").expanduser()
 
 
 def _aged_run(root: Path, name: str, *, days: float) -> Path:
@@ -156,7 +156,7 @@ def _aged_run(root: Path, name: str, *, days: float) -> Path:
 
 def _use_profile(monkeypatch, profile: Path) -> None:
     monkeypatch.setattr(
-        "linkedin_mcp_server.debug_trace.get_source_profile_dir", lambda: profile
+        "linkedin_scraper_mcp.debug_trace.get_source_profile_dir", lambda: profile
     )
 
 
@@ -191,7 +191,7 @@ def test_a_quiet_run_of_a_live_server_is_kept(monkeypatch, tmp_path):
         [
             sys.executable,
             "-c",
-            "from linkedin_mcp_server.debug_trace import get_trace_dir;"
+            "from linkedin_scraper_mcp.debug_trace import get_trace_dir;"
             "print(get_trace_dir(), flush=True); input()",
         ],
         stdin=subprocess.PIPE,
@@ -222,7 +222,7 @@ def test_a_run_that_could_not_be_locked_is_kept(monkeypatch, tmp_path):
         raise ProfileLeaseUnavailableError("no locks here")
 
     with monkeypatch.context() as patched:
-        patched.setattr("linkedin_mcp_server.debug_trace.try_lock", unavailable)
+        patched.setattr("linkedin_scraper_mcp.debug_trace.try_lock", unavailable)
         unlocked = get_trace_dir()
     assert unlocked is not None
     stamp = time.time() - 30 * 24 * 60 * 60

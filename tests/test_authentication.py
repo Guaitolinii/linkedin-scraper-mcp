@@ -2,13 +2,13 @@ import json
 
 import pytest
 
-from linkedin_mcp_server.authentication import (
+from linkedin_scraper_mcp.authentication import (
     clear_auth_state,
     get_authentication_source,
 )
-from linkedin_mcp_server.drivers.browser import profile_exists
-from linkedin_mcp_server.exceptions import CredentialsNotFoundError
-from linkedin_mcp_server.session_state import (
+from linkedin_scraper_mcp.drivers.browser import profile_exists
+from linkedin_scraper_mcp.exceptions import CredentialsNotFoundError
+from linkedin_scraper_mcp.session_state import (
     portable_cookie_path,
     runtime_profile_dir,
     runtime_storage_state_path,

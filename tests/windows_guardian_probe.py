@@ -296,7 +296,7 @@ def _owner(
     metadata_file: Path,
     ready_event: str,
 ) -> int:
-    from linkedin_mcp_server.profile_lease import ProfileLease
+    from linkedin_scraper_mcp.profile_lease import ProfileLease
 
     _win32api, _win32con, _win32event, win32job = _windows_modules()
     project_job = win32job.OpenJobObject(
@@ -595,7 +595,7 @@ def _guardian(
     armed_event: str,
     fault: str,
 ) -> int:
-    from linkedin_mcp_server.profile_lease import ProfileLease
+    from linkedin_scraper_mcp.profile_lease import ProfileLease
 
     win32api, win32con, win32event, win32job = _windows_modules()
     lease = ProfileLease(auth_root)
@@ -794,7 +794,7 @@ def _launch_owner(
     project_job_name: str,
     owner_ready_name: str,
 ) -> subprocess.Popen[bytes]:
-    from linkedin_mcp_server import process_tree
+    from linkedin_scraper_mcp import process_tree
 
     nonce = process_tree.release_nonce()
     command = [
@@ -827,8 +827,8 @@ def _new_event_name(label: str) -> str:
 
 
 def _run_probe(scenario: str, root: Path) -> dict[str, Any]:
-    from linkedin_mcp_server import process_tree
-    from linkedin_mcp_server.profile_lease import ProfileLease
+    from linkedin_scraper_mcp import process_tree
+    from linkedin_scraper_mcp.profile_lease import ProfileLease
 
     win32api, win32con, win32event, win32job = _windows_modules()
     root.mkdir(parents=True, exist_ok=True)
@@ -1467,7 +1467,7 @@ def require_locked_actor_identity(
     still_at: Callable[[int, Path], bool] | None = None,
 ) -> None:
     if still_at is None:
-        from linkedin_mcp_server.common_utils import is_still_at
+        from linkedin_scraper_mcp.common_utils import is_still_at
 
         still_at = is_still_at
     require_same_file_identity(expected, identity(fd))
@@ -3222,7 +3222,7 @@ def _run_job_topology_probe(scenario: str, root: Path) -> dict[str, Any]:
 
 def _run_region_falsification_probe(scenario: str, root: Path) -> dict[str, Any]:
     """Measure static region assignments against a byte-zero-only entrant."""
-    from linkedin_mcp_server import process_tree
+    from linkedin_scraper_mcp import process_tree
 
     _win32api, _win32con, win32event, _win32job = _windows_modules()
     root.mkdir(parents=True, exist_ok=True)
@@ -3698,7 +3698,7 @@ def _run_region_falsification_probe(scenario: str, root: Path) -> dict[str, Any]
 
 def _run_conjunction_probe(scenario: str, root: Path) -> dict[str, Any]:
     """Run native conjunction scenarios under the caller's outer harness Job."""
-    from linkedin_mcp_server import process_tree
+    from linkedin_scraper_mcp import process_tree
 
     win32api, win32con, win32event, win32job = _windows_modules()
     root.mkdir(parents=True, exist_ok=True)
@@ -4380,7 +4380,7 @@ async def _browser_launch_owner(root: Path, controls: dict[str, str]) -> int:
     import patchright
     from patchright.async_api import async_playwright
 
-    from linkedin_mcp_server import process_tree
+    from linkedin_scraper_mcp import process_tree
 
     ignored_node_override = os.environ.pop("PLAYWRIGHT_NODEJS_PATH", None)
     expected_node = Path(patchright.__file__).parent / "driver" / "node.exe"
@@ -4468,7 +4468,7 @@ async def _browser_launch_owner(root: Path, controls: dict[str, str]) -> int:
 
 
 def _browser_launch_guardian(root: Path, controls: dict[str, str]) -> int:
-    from linkedin_mcp_server.profile_lease import ProfileLease
+    from linkedin_scraper_mcp.profile_lease import ProfileLease
 
     win32api, win32con, win32event, win32job = _windows_modules()
     win32process = importlib.import_module("win32process")
@@ -5100,7 +5100,7 @@ def prepare_browser_probe_root(root: Path) -> str:
 
 
 def _run_browser_launch_probe(scenario: str, root: Path) -> dict[str, Any]:
-    from linkedin_mcp_server.profile_lease import ProfileLease
+    from linkedin_scraper_mcp.profile_lease import ProfileLease
 
     if scenario != "browser-launch-owner-loss":
         raise RuntimeError(f"unsupported browser launch scenario: {scenario}")

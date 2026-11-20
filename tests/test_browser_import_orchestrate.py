@@ -10,18 +10,18 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from linkedin_mcp_server.browser_import import orchestrate
-from linkedin_mcp_server.browser_import.discovery import BrowserProfile
-from linkedin_mcp_server.browser_import.extract import LiAtMeta, LinkedInCookie
-from linkedin_mcp_server.browser_import.orchestrate import (
+from linkedin_scraper_mcp.browser_import import orchestrate
+from linkedin_scraper_mcp.browser_import.discovery import BrowserProfile
+from linkedin_scraper_mcp.browser_import.extract import LiAtMeta, LinkedInCookie
+from linkedin_scraper_mcp.browser_import.orchestrate import (
     import_session_from_browser,
     rank_live_profiles,
 )
-from linkedin_mcp_server.exceptions import (
+from linkedin_scraper_mcp.exceptions import (
     CookieDecryptionError,
     NoLinkedInSessionFoundError,
 )
-from linkedin_mcp_server.session_state import (
+from linkedin_scraper_mcp.session_state import (
     portable_cookie_path,
     source_state_path,
 )
@@ -140,7 +140,7 @@ async def test_import_writes_full_set_then_persists_source_state(
     _patch_meta(monkeypatch, {profile: _meta(last_access=10.0)})
     monkeypatch.setattr(orchestrate, "extract_linkedin_cookies", lambda p: cookies)
     monkeypatch.setattr(
-        "linkedin_mcp_server.drivers.browser.validate_imported_cookies",
+        "linkedin_scraper_mcp.drivers.browser.validate_imported_cookies",
         AsyncMock(return_value=True),
     )
 
@@ -178,7 +178,7 @@ async def test_import_records_no_user_agent(isolate_profile_dir, monkeypatch):
     )
     validate = AsyncMock(return_value=True)
     monkeypatch.setattr(
-        "linkedin_mcp_server.drivers.browser.validate_imported_cookies", validate
+        "linkedin_scraper_mcp.drivers.browser.validate_imported_cookies", validate
     )
 
     ok = await import_session_from_browser("chrome", user_data_dir=user_data_dir)
@@ -212,7 +212,7 @@ async def test_import_tries_next_browser_when_first_rejected(
     monkeypatch.setattr(orchestrate, "extract_linkedin_cookies", fake_extract)
     # Fresh (chrome) tried first and rejected, then older (brave) accepted.
     monkeypatch.setattr(
-        "linkedin_mcp_server.drivers.browser.validate_imported_cookies",
+        "linkedin_scraper_mcp.drivers.browser.validate_imported_cookies",
         AsyncMock(side_effect=[False, True]),
     )
 
@@ -251,7 +251,7 @@ async def test_import_falls_through_on_unexpected_extract_error(
 
     monkeypatch.setattr(orchestrate, "extract_linkedin_cookies", fake_extract)
     monkeypatch.setattr(
-        "linkedin_mcp_server.drivers.browser.validate_imported_cookies",
+        "linkedin_scraper_mcp.drivers.browser.validate_imported_cookies",
         AsyncMock(return_value=True),
     )
 
@@ -278,7 +278,7 @@ async def test_import_validation_failure_removes_cookies(
         orchestrate, "extract_linkedin_cookies", lambda p: [_cookie("li_at")]
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.drivers.browser.validate_imported_cookies",
+        "linkedin_scraper_mcp.drivers.browser.validate_imported_cookies",
         AsyncMock(return_value=False),
     )
 
@@ -326,7 +326,7 @@ async def test_import_does_not_block_event_loop(isolate_profile_dir, monkeypatch
 
     monkeypatch.setattr(orchestrate, "extract_linkedin_cookies", blocking_extract)
     monkeypatch.setattr(
-        "linkedin_mcp_server.drivers.browser.validate_imported_cookies",
+        "linkedin_scraper_mcp.drivers.browser.validate_imported_cookies",
         AsyncMock(return_value=True),
     )
 
@@ -366,7 +366,7 @@ async def test_import_live_but_undecryptable_raises_decryption_error(
     monkeypatch.setattr(orchestrate, "_extract_and_stage", lambda p, path: False)
     validate = AsyncMock(return_value=True)
     monkeypatch.setattr(
-        "linkedin_mcp_server.drivers.browser.validate_imported_cookies", validate
+        "linkedin_scraper_mcp.drivers.browser.validate_imported_cookies", validate
     )
 
     with pytest.raises(CookieDecryptionError):
@@ -416,7 +416,7 @@ async def test_import_retires_the_previous_profile_first(monkeypatch, tmp_path):
         AsyncMock(side_effect=lambda *a: order.append("rotate")),
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.drivers.browser.validate_imported_cookies",
+        "linkedin_scraper_mcp.drivers.browser.validate_imported_cookies",
         AsyncMock(return_value=True),
     )
 
@@ -446,7 +446,7 @@ async def test_import_restores_the_session_when_every_candidate_is_rejected(
     monkeypatch.setattr(orchestrate, "rotate_shielded", AsyncMock(return_value=retired))
     monkeypatch.setattr(orchestrate, "restore_source_profile", restore)
     monkeypatch.setattr(
-        "linkedin_mcp_server.drivers.browser.validate_imported_cookies",
+        "linkedin_scraper_mcp.drivers.browser.validate_imported_cookies",
         AsyncMock(return_value=False),
     )
 
@@ -464,7 +464,7 @@ def _hold_the_profile_elsewhere(profile_dir):
     A second open file description on the lease file, which the kernel treats
     as a separate holder even inside this process.
     """
-    from linkedin_mcp_server.profile_lease import (
+    from linkedin_scraper_mcp.profile_lease import (
         _release_locked_fd,
         acquire_locked_fd,
         get_profile_lease,
@@ -492,7 +492,7 @@ def _one_accepted_candidate(monkeypatch):
         orchestrate, "extract_linkedin_cookies", lambda p: [_cookie("li_at")]
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.drivers.browser.validate_imported_cookies",
+        "linkedin_scraper_mcp.drivers.browser.validate_imported_cookies",
         AsyncMock(return_value=True),
     )
 
@@ -509,7 +509,7 @@ class TestWaitingForARetiringOwner:
     async def test_it_waits_for_the_holder_to_let_go(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server.profile_lease import get_profile_lease
+        from linkedin_scraper_mcp.profile_lease import get_profile_lease
 
         user_data_dir = isolate_profile_dir
         _one_accepted_candidate(monkeypatch)
@@ -530,8 +530,8 @@ class TestWaitingForARetiringOwner:
     async def test_a_holder_that_keeps_it_is_refused_with_nothing_imported(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server.exceptions import BrowserBusyError
-        from linkedin_mcp_server.profile_lease import get_profile_lease
+        from linkedin_scraper_mcp.exceptions import BrowserBusyError
+        from linkedin_scraper_mcp.profile_lease import get_profile_lease
 
         user_data_dir = isolate_profile_dir
         _one_accepted_candidate(monkeypatch)
@@ -554,7 +554,7 @@ class TestWaitingForARetiringOwner:
     async def test_every_other_caller_is_refused_at_once(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server.exceptions import BrowserBusyError
+        from linkedin_scraper_mcp.exceptions import BrowserBusyError
 
         user_data_dir = isolate_profile_dir
         _one_accepted_candidate(monkeypatch)

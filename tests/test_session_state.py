@@ -6,8 +6,8 @@ import socket
 
 import pytest
 
-from linkedin_mcp_server.profile_claim import ensure_profile_claim
-from linkedin_mcp_server.session_state import (
+from linkedin_scraper_mcp.profile_claim import ensure_profile_claim
+from linkedin_scraper_mcp.session_state import (
     SessionChangedError,
     _native_machine_win32,
     auth_state_identity,
@@ -31,7 +31,7 @@ from linkedin_mcp_server.session_state import (
 
 def test_write_source_state_creates_generation(monkeypatch, isolate_profile_dir):
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.get_runtime_id",
+        "linkedin_scraper_mcp.session_state.get_runtime_id",
         lambda: "macos-arm64-host",
     )
 
@@ -53,7 +53,7 @@ def test_load_source_state_ignores_a_recorded_user_agent(
     raising, and the next login writes the file without it.
     """
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.get_runtime_id",
+        "linkedin_scraper_mcp.session_state.get_runtime_id",
         lambda: "macos-arm64-host",
     )
     write_source_state(isolate_profile_dir)
@@ -69,7 +69,7 @@ def test_load_source_state_ignores_a_recorded_user_agent(
 
 def test_write_runtime_state_tracks_source_generation(monkeypatch, isolate_profile_dir):
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.get_runtime_id",
+        "linkedin_scraper_mcp.session_state.get_runtime_id",
         lambda: "macos-arm64-host",
     )
     source_state = write_source_state(isolate_profile_dir)
@@ -103,7 +103,7 @@ def test_write_runtime_state_tracks_source_generation(monkeypatch, isolate_profi
 
 def test_load_source_state_ignores_unknown_fields(monkeypatch, isolate_profile_dir):
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.get_runtime_id",
+        "linkedin_scraper_mcp.session_state.get_runtime_id",
         lambda: "macos-arm64-host",
     )
     state = write_source_state(isolate_profile_dir)
@@ -117,7 +117,7 @@ def test_load_source_state_ignores_unknown_fields(monkeypatch, isolate_profile_d
 
 def test_load_runtime_state_ignores_unknown_fields(monkeypatch, isolate_profile_dir):
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.get_runtime_id",
+        "linkedin_scraper_mcp.session_state.get_runtime_id",
         lambda: "macos-arm64-host",
     )
     source_state = write_source_state(isolate_profile_dir)
@@ -149,7 +149,7 @@ def test_write_runtime_state_accepts_explicit_created_at(
     monkeypatch, isolate_profile_dir
 ):
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.get_runtime_id",
+        "linkedin_scraper_mcp.session_state.get_runtime_id",
         lambda: "macos-arm64-host",
     )
     source_state = write_source_state(isolate_profile_dir)
@@ -186,15 +186,15 @@ def test_runtime_storage_state_path_uses_runtime_dir(isolate_profile_dir):
 
 
 def test_get_runtime_id_marks_container(monkeypatch):
-    monkeypatch.setattr("linkedin_mcp_server.session_state.sys.platform", "linux")
+    monkeypatch.setattr("linkedin_scraper_mcp.session_state.sys.platform", "linux")
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.platform.system", lambda: "Linux"
+        "linkedin_scraper_mcp.session_state.platform.system", lambda: "Linux"
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.platform.machine", lambda: "x86_64"
+        "linkedin_scraper_mcp.session_state.platform.machine", lambda: "x86_64"
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.Path.exists",
+        "linkedin_scraper_mcp.session_state.Path.exists",
         lambda self: str(self) == "/.dockerenv",
     )
 
@@ -202,19 +202,19 @@ def test_get_runtime_id_marks_container(monkeypatch):
 
 
 def test_get_runtime_id_marks_container_from_cgroup_v2_mountinfo(monkeypatch):
-    monkeypatch.setattr("linkedin_mcp_server.session_state.sys.platform", "linux")
+    monkeypatch.setattr("linkedin_scraper_mcp.session_state.sys.platform", "linux")
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.platform.system", lambda: "Linux"
+        "linkedin_scraper_mcp.session_state.platform.system", lambda: "Linux"
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.platform.machine", lambda: "x86_64"
+        "linkedin_scraper_mcp.session_state.platform.machine", lambda: "x86_64"
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.Path.exists",
+        "linkedin_scraper_mcp.session_state.Path.exists",
         lambda self: str(self) == "/proc/1/mountinfo",
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.Path.read_text",
+        "linkedin_scraper_mcp.session_state.Path.read_text",
         lambda self, *args, **kwargs: (
             "257 248 0:61 / / rw,relatime - overlay overlay "
             "rw,lowerdir=/var/lib/docker/overlay2/l"
@@ -225,19 +225,19 @@ def test_get_runtime_id_marks_container_from_cgroup_v2_mountinfo(monkeypatch):
 
 
 def test_get_runtime_id_ignores_non_root_overlay_mounts(monkeypatch):
-    monkeypatch.setattr("linkedin_mcp_server.session_state.sys.platform", "linux")
+    monkeypatch.setattr("linkedin_scraper_mcp.session_state.sys.platform", "linux")
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.platform.system", lambda: "Linux"
+        "linkedin_scraper_mcp.session_state.platform.system", lambda: "Linux"
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.platform.machine", lambda: "x86_64"
+        "linkedin_scraper_mcp.session_state.platform.machine", lambda: "x86_64"
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.Path.exists",
+        "linkedin_scraper_mcp.session_state.Path.exists",
         lambda self: str(self) == "/proc/1/mountinfo",
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.Path.read_text",
+        "linkedin_scraper_mcp.session_state.Path.read_text",
         lambda self, *args, **kwargs: (
             "257 248 0:61 /var/lib/containers/storage/overlay "
             "/var/lib/containers/storage/overlay rw,relatime - overlay overlay "
@@ -254,19 +254,19 @@ def test_get_runtime_id_ignores_other_containers_on_the_host(monkeypatch):
     # /var/lib/containers, which contains no marker word — so it passed either
     # way. A Docker host's mountinfo says "docker" outright, and that is what
     # the substring scan tripped over.
-    monkeypatch.setattr("linkedin_mcp_server.session_state.sys.platform", "linux")
+    monkeypatch.setattr("linkedin_scraper_mcp.session_state.sys.platform", "linux")
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.platform.system", lambda: "Linux"
+        "linkedin_scraper_mcp.session_state.platform.system", lambda: "Linux"
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.platform.machine", lambda: "x86_64"
+        "linkedin_scraper_mcp.session_state.platform.machine", lambda: "x86_64"
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.Path.exists",
+        "linkedin_scraper_mcp.session_state.Path.exists",
         lambda self: str(self) == "/proc/1/mountinfo",
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state.Path.read_text",
+        "linkedin_scraper_mcp.session_state.Path.read_text",
         lambda self, *args, **kwargs: (
             "30 1 259:2 / / rw,relatime shared:1 - ext4 /dev/nvme0n1p2 rw\n"
             "900 30 0:70 / /var/lib/docker/overlay2/abc/merged rw shared:400 "
@@ -281,9 +281,9 @@ def test_get_runtime_id_ignores_other_containers_on_the_host(monkeypatch):
 
 def _windows_runtime(monkeypatch) -> None:
     """Put the runtime id on the Windows branch, off a container."""
-    monkeypatch.setattr("linkedin_mcp_server.session_state.sys.platform", "win32")
+    monkeypatch.setattr("linkedin_scraper_mcp.session_state.sys.platform", "win32")
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state._is_container_runtime", lambda: False
+        "linkedin_scraper_mcp.session_state._is_container_runtime", lambda: False
     )
 
 
@@ -298,7 +298,7 @@ def _refuse_uname(monkeypatch) -> None:
     def refuse(*args: object, **kwargs: object) -> object:
         raise AssertionError("the runtime id asked Windows over WMI")
 
-    monkeypatch.setattr("linkedin_mcp_server.session_state.platform.uname", refuse)
+    monkeypatch.setattr("linkedin_scraper_mcp.session_state.platform.uname", refuse)
 
 
 def test_the_windows_runtime_id_never_asks_wmi(monkeypatch):
@@ -312,7 +312,7 @@ def test_the_windows_runtime_id_never_asks_wmi(monkeypatch):
     monkeypatch.delenv("PROCESSOR_ARCHITEW6432", raising=False)
     monkeypatch.setenv("PROCESSOR_ARCHITECTURE", "AMD64")
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state._native_machine_win32", lambda: "AMD64"
+        "linkedin_scraper_mcp.session_state._native_machine_win32", lambda: "AMD64"
     )
 
     assert get_runtime_id() == "windows-amd64-host"
@@ -328,7 +328,7 @@ def test_a_wow64_windows_frontend_reports_the_native_architecture(monkeypatch):
     monkeypatch.setenv("PROCESSOR_ARCHITEW6432", "ARM64")
     monkeypatch.setenv("PROCESSOR_ARCHITECTURE", "x86")
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state._native_machine_win32", lambda: "ARM64"
+        "linkedin_scraper_mcp.session_state._native_machine_win32", lambda: "ARM64"
     )
 
     assert get_runtime_id() == "windows-arm64-host"
@@ -346,7 +346,7 @@ def test_a_stripped_windows_environment_keeps_the_architecture(monkeypatch):
     monkeypatch.delenv("PROCESSOR_ARCHITEW6432", raising=False)
     monkeypatch.delenv("PROCESSOR_ARCHITECTURE", raising=False)
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state._native_machine_win32", lambda: "AMD64"
+        "linkedin_scraper_mcp.session_state._native_machine_win32", lambda: "AMD64"
     )
 
     assert get_runtime_id() == "windows-amd64-host"
@@ -361,7 +361,7 @@ def test_an_unnamed_windows_architecture_does_not_fall_back_to_wmi(monkeypatch):
     monkeypatch.setenv("PROCESSOR_ARCHITEW6432", "")
     monkeypatch.setenv("PROCESSOR_ARCHITECTURE", "")
     monkeypatch.setattr(
-        "linkedin_mcp_server.session_state._native_machine_win32", lambda: ""
+        "linkedin_scraper_mcp.session_state._native_machine_win32", lambda: ""
     )
 
     assert get_runtime_id() == "windows-unknown-host"
@@ -473,7 +473,7 @@ def test_a_native_machine_loader_error_is_nonfatal_and_logged(monkeypatch, caplo
         raise OSError("kernel32 unavailable")
 
     monkeypatch.setattr(ctypes, "WinDLL", fail, raising=False)
-    caplog.set_level("DEBUG", logger="linkedin_mcp_server.session_state")
+    caplog.set_level("DEBUG", logger="linkedin_scraper_mcp.session_state")
 
     assert _native_machine_win32() == ""
     assert "the kernel did not name the architecture" in caplog.text
@@ -632,7 +632,7 @@ class TestRotateSourceProfile:
             return real_move(src, dst)
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.session_state.shutil.move", explode_on_second
+            "linkedin_scraper_mcp.session_state.shutil.move", explode_on_second
         )
 
         with pytest.raises(OSError):
@@ -669,7 +669,7 @@ def _hold_elsewhere(profile_dir):
     as a separate holder even inside this process, so the lease's own
     reference count cannot answer for it.
     """
-    from linkedin_mcp_server.profile_lease import (
+    from linkedin_scraper_mcp.profile_lease import (
         _release_locked_fd,
         acquire_locked_fd,
         get_profile_lease,
@@ -693,7 +693,7 @@ class TestClearingOnceTheHolderLetsGo:
     def test_it_waits_for_a_holder_that_lets_go(self, isolate_profile_dir):
         import threading
 
-        from linkedin_mcp_server.profile_lease import get_profile_lease
+        from linkedin_scraper_mcp.profile_lease import get_profile_lease
 
         profile_dir = isolate_profile_dir
         _seed_session(profile_dir)
@@ -712,7 +712,7 @@ class TestClearingOnceTheHolderLetsGo:
     def test_a_holder_that_keeps_it_leaves_everything_in_place(
         self, isolate_profile_dir
     ):
-        from linkedin_mcp_server.profile_lease import get_profile_lease
+        from linkedin_scraper_mcp.profile_lease import get_profile_lease
 
         profile_dir = isolate_profile_dir
         _seed_session(profile_dir)
@@ -748,7 +748,7 @@ class TestClearingOnceTheHolderLetsGo:
         # that hands over on request would never hear this waiter.
         import threading
 
-        from linkedin_mcp_server.profile_lease import get_profile_lease
+        from linkedin_scraper_mcp.profile_lease import get_profile_lease
 
         profile_dir = isolate_profile_dir
         _seed_session(profile_dir)
@@ -1111,7 +1111,7 @@ class TestContainerDetection:
         ],
     )
     def test_a_host_is_not_read_as_a_container(self, tmp_path, label, cgroup):
-        from linkedin_mcp_server.session_state import _cgroup_path_is_containerised
+        from linkedin_scraper_mcp.session_state import _cgroup_path_is_containerised
 
         assert not _cgroup_path_is_containerised(self._probe(tmp_path, cgroup)), label
 
@@ -1151,7 +1151,7 @@ class TestContainerDetection:
         ],
     )
     def test_a_container_is_still_detected(self, tmp_path, label, cgroup):
-        from linkedin_mcp_server.session_state import _cgroup_path_is_containerised
+        from linkedin_scraper_mcp.session_state import _cgroup_path_is_containerised
 
         assert _cgroup_path_is_containerised(self._probe(tmp_path, cgroup)), label
 
@@ -1159,7 +1159,7 @@ class TestContainerDetection:
         # The root cause. mountinfo lists everything the namespace can see, so
         # a workstation running unrelated containers for a local database has
         # their overlay mounts in the file. Only our own root mount counts.
-        from linkedin_mcp_server.session_state import _root_mount_uses_overlay
+        from linkedin_scraper_mcp.session_state import _root_mount_uses_overlay
 
         path = tmp_path / "mountinfo"
         path.write_text(
@@ -1177,7 +1177,7 @@ class TestContainerDetection:
         # Checking only for an overlay filesystem type read this as a host,
         # which is the dangerous direction: the container would then hunt for a
         # browser keychain that does not exist. Measured on a real container.
-        from linkedin_mcp_server.session_state import _root_mount_uses_overlay
+        from linkedin_scraper_mcp.session_state import _root_mount_uses_overlay
 
         path = tmp_path / "mountinfo"
         path.write_text(
@@ -1191,7 +1191,7 @@ class TestContainerDetection:
     def test_a_host_root_on_the_same_filesystem_does_not(self, tmp_path):
         # The mirror image, and the reason the check reads the root line only:
         # this host has containerd storage on it, just not as its own root.
-        from linkedin_mcp_server.session_state import _root_mount_uses_overlay
+        from linkedin_scraper_mcp.session_state import _root_mount_uses_overlay
 
         path = tmp_path / "mountinfo"
         path.write_text(
@@ -1203,7 +1203,7 @@ class TestContainerDetection:
         assert not _root_mount_uses_overlay(path)
 
     def test_our_own_overlay_root_is_a_container(self, tmp_path):
-        from linkedin_mcp_server.session_state import _root_mount_uses_overlay
+        from linkedin_scraper_mcp.session_state import _root_mount_uses_overlay
 
         path = tmp_path / "mountinfo"
         path.write_text(
@@ -1233,7 +1233,7 @@ class TestContainerDetection:
         # environment variable. Asserted against a known-container fixture:
         # every runtime id ends in -host or -container, so accepting either
         # would pass no matter what the override did.
-        import linkedin_mcp_server.session_state as state
+        import linkedin_scraper_mcp.session_state as state
 
         cgroup = tmp_path / "cgroup"
         cgroup.write_text("0::/docker/3f2abc\n", encoding="utf-8")
@@ -1252,7 +1252,7 @@ class TestContainerDetection:
         # a full system with its own systemd and a persistent disk — measured.
         # Believing the marker classified it as a container and put it back
         # into "run --login on the host machine", which is this bug again.
-        import linkedin_mcp_server.session_state as state
+        import linkedin_scraper_mcp.session_state as state
 
         cgroup = tmp_path / "cgroup"
         cgroup.write_text("0::/.lxc\n", encoding="utf-8")
@@ -1273,7 +1273,7 @@ class TestContainerDetection:
         # itself containerised — outer machine and nested container both read
         # 0::/.lxc. The kernel's mount root still separates them, because only
         # the nested one is rooted under the container's rootfs.
-        from linkedin_mcp_server.session_state import _root_mount_uses_overlay
+        from linkedin_scraper_mcp.session_state import _root_mount_uses_overlay
 
         path = tmp_path / "mountinfo"
         path.write_text(
@@ -1288,7 +1288,7 @@ class TestContainerDetection:
         # The other half, and the reason the systemd marker is not consulted:
         # this reports container=lxc while being a full system with its own
         # systemd and a persistent disk. Believing it blocked every tool call.
-        from linkedin_mcp_server.session_state import _root_mount_uses_overlay
+        from linkedin_scraper_mcp.session_state import _root_mount_uses_overlay
 
         path = tmp_path / "mountinfo"
         path.write_text(
@@ -1304,7 +1304,7 @@ class TestContainerDetection:
         # exporting /var/lib/containers/workstations/alice is describing
         # somebody's laptop, and reading it turned a legitimate host into the
         # exact misdetection this fix exists to remove.
-        from linkedin_mcp_server.session_state import _root_mount_uses_overlay
+        from linkedin_scraper_mcp.session_state import _root_mount_uses_overlay
 
         path = tmp_path / "mountinfo"
         path.write_text(
@@ -1322,7 +1322,7 @@ class TestContainerDetection:
         # decides, rather than through its helpers. A Linux workstation whose
         # kernel files mention docker only because unrelated containers run on
         # it must come out as a host.
-        import linkedin_mcp_server.session_state as state
+        import linkedin_scraper_mcp.session_state as state
 
         cgroup = tmp_path / "cgroup"
         cgroup.write_text(
@@ -1342,7 +1342,7 @@ class TestContainerDetection:
     def test_the_whole_decision_still_finds_a_real_container(
         self, tmp_path, monkeypatch
     ):
-        import linkedin_mcp_server.session_state as state
+        import linkedin_scraper_mcp.session_state as state
 
         cgroup = tmp_path / "cgroup"
         cgroup.write_text("0::/docker/3f2abc\n", encoding="utf-8")

@@ -4,8 +4,8 @@ from urllib.parse import quote
 
 import pytest
 
-from linkedin_mcp_server.linkedin.fields import COMPANY_SECTIONS, PERSON_SECTIONS
-from linkedin_mcp_server.linkedin.link_metadata import (
+from linkedin_scraper_mcp.linkedin.fields import COMPANY_SECTIONS, PERSON_SECTIONS
+from linkedin_scraper_mcp.linkedin.link_metadata import (
     _REFERENCE_CAPS,
     RawReference,
     build_references,

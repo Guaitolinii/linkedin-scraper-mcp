@@ -39,13 +39,13 @@ from owner_hop import reach_owners_in_process
 from test_daemon_proxy import _attachment, _backend
 from test_profile_lease_integration import _hold_profile
 
-from linkedin_mcp_server import __version__
-from linkedin_mcp_server.daemon import election as election_module
-from linkedin_mcp_server.daemon import spawn as spawn_module
-from linkedin_mcp_server.daemon import proxy as proxy_module
-from linkedin_mcp_server.daemon.core.lookup import Reach
-from linkedin_mcp_server.daemon.core.spawn import Attempt
-from linkedin_mcp_server.daemon.discovery import (
+from linkedin_scraper_mcp import __version__
+from linkedin_scraper_mcp.daemon import election as election_module
+from linkedin_scraper_mcp.daemon import spawn as spawn_module
+from linkedin_scraper_mcp.daemon import proxy as proxy_module
+from linkedin_scraper_mcp.daemon.core.lookup import Reach
+from linkedin_scraper_mcp.daemon.core.spawn import Attempt
+from linkedin_scraper_mcp.daemon.discovery import (
     Attachment,
     DirectFallback,
     Mismatch,
@@ -53,9 +53,9 @@ from linkedin_mcp_server.daemon.discovery import (
     OwnerState,
     Unanswered,
 )
-from linkedin_mcp_server.daemon.forwarder import OwnerUnreachableError
-from linkedin_mcp_server.error_handler import CodedToolError, ErrorCode
-from linkedin_mcp_server.daemon.proxy import (
+from linkedin_scraper_mcp.daemon.forwarder import OwnerUnreachableError
+from linkedin_scraper_mcp.error_handler import CodedToolError, ErrorCode
+from linkedin_scraper_mcp.daemon.proxy import (
     FrontendCallHeartbeatMiddleware,
     FrontendCallMiddleware,
 )
@@ -531,8 +531,8 @@ class TestWhatAListingIsTold:
         verdicts: list[Reach],
         expected: str,
     ):
-        from linkedin_mcp_server.server import create_mcp_server
-        from linkedin_mcp_server.server_role import ServerRole
+        from linkedin_scraper_mcp.server import create_mcp_server
+        from linkedin_scraper_mcp.server_role import ServerRole
 
         monkeypatch.setattr(election_module, "_REACHABLE_SECONDS", 0.1)
         owner = _published(tmp_path, pid=4242)
@@ -575,8 +575,8 @@ class TestWhatTheHeartbeatsHeard:
         after_dispatch: list[Any],
         owner_clause: str,
     ):
-        from linkedin_mcp_server.server import create_mcp_server
-        from linkedin_mcp_server.server_role import ServerRole
+        from linkedin_scraper_mcp.server import create_mcp_server
+        from linkedin_scraper_mcp.server_role import ServerRole
 
         running = asyncio.Event()
         owner = FastMCP("owner")
@@ -628,12 +628,12 @@ class TestADirectServerAfterASilentOwner:
 
     @pytest.fixture
     def lease(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-        from linkedin_mcp_server.profile_lease import get_profile_lease
+        from linkedin_scraper_mcp.profile_lease import get_profile_lease
 
         monkeypatch.setenv("BROWSER_WAIT", "0.5")
         lease = get_profile_lease(tmp_path / "profile")
         monkeypatch.setattr(
-            "linkedin_mcp_server.sequential_tool_middleware.get_profile_lease",
+            "linkedin_scraper_mcp.sequential_tool_middleware.get_profile_lease",
             lambda: lease,
         )
         return lease
@@ -648,7 +648,7 @@ class TestADirectServerAfterASilentOwner:
     async def test_a_held_profile_names_the_owner_seen_silent_at_startup(
         self, tmp_path: Path, lease: Any
     ):
-        from linkedin_mcp_server.sequential_tool_middleware import (
+        from linkedin_scraper_mcp.sequential_tool_middleware import (
             SequentialToolExecutionMiddleware,
         )
 
@@ -674,7 +674,7 @@ class TestADirectServerAfterASilentOwner:
     async def test_once_this_server_had_the_profile_the_owner_is_not_named(
         self, tmp_path: Path, lease: Any
     ):
-        from linkedin_mcp_server.sequential_tool_middleware import (
+        from linkedin_scraper_mcp.sequential_tool_middleware import (
             SequentialToolExecutionMiddleware,
         )
 
@@ -730,14 +730,14 @@ async def _a_real_owner(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     tool called is ``close_session``, which with no browser open touches
     nothing. Yields what a test observes; always resumes and kills the owner.
     """
-    from linkedin_mcp_server.config.schema import AppConfig
-    from linkedin_mcp_server.daemon import owner as daemon_owner
-    from linkedin_mcp_server.daemon.core.call import Dispatch
-    from linkedin_mcp_server.daemon.forwarder import _call_being_made
-    from linkedin_mcp_server.daemon.proxy import DaemonProxyBackend
-    from linkedin_mcp_server.profile_claim import ensure_profile_claim
-    from linkedin_mcp_server.server import create_mcp_server
-    from linkedin_mcp_server.server_role import ServerRole
+    from linkedin_scraper_mcp.config.schema import AppConfig
+    from linkedin_scraper_mcp.daemon import owner as daemon_owner
+    from linkedin_scraper_mcp.daemon.core.call import Dispatch
+    from linkedin_scraper_mcp.daemon.forwarder import _call_being_made
+    from linkedin_scraper_mcp.daemon.proxy import DaemonProxyBackend
+    from linkedin_scraper_mcp.profile_claim import ensure_profile_claim
+    from linkedin_scraper_mcp.server import create_mcp_server
+    from linkedin_scraper_mcp.server_role import ServerRole
 
     home = tmp_path / "home"
     home.mkdir()
@@ -846,7 +846,7 @@ async def _a_real_owner(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
 
 def _published_instance(auth_root: Path) -> str | None:
-    from linkedin_mcp_server.daemon import descriptor as daemon_descriptor
+    from linkedin_scraper_mcp.daemon import descriptor as daemon_descriptor
 
     published = daemon_descriptor.read(auth_root)
     return None if published is None else published.instance_id
@@ -940,12 +940,12 @@ class TestAStoppedRealOwner:
     async def test_a_new_frontend_falls_back_and_names_the_owner_when_busy(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        import linkedin_mcp_server.server as server_module
-        from linkedin_mcp_server import cli_main
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.server import create_mcp_server
-        from linkedin_mcp_server.server_role import reset_process_role_for_testing
-        from linkedin_mcp_server.storage_class import Classification, StorageClass
+        import linkedin_scraper_mcp.server as server_module
+        from linkedin_scraper_mcp import cli_main
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.server import create_mcp_server
+        from linkedin_scraper_mcp.server_role import reset_process_role_for_testing
+        from linkedin_scraper_mcp.storage_class import Classification, StorageClass
 
         async def nothing(*_a: Any, **_k: Any) -> None:
             return None
@@ -964,7 +964,7 @@ class TestAStoppedRealOwner:
             monkeypatch.setattr(server_module, name, nothing)
         # The temporary directory's file system is not what this is about.
         monkeypatch.setattr(
-            "linkedin_mcp_server.storage_class.classify",
+            "linkedin_scraper_mcp.storage_class.classify",
             lambda _path: Classification(StorageClass.LOCAL, "test storage"),
         )
 
@@ -975,7 +975,7 @@ class TestAStoppedRealOwner:
             profile = Path(owner.config.browser.user_data_dir)
             monkeypatch.setattr(cli_main, "get_profile_dir", lambda: profile)
             monkeypatch.setattr(
-                "linkedin_mcp_server.session_state.get_source_profile_dir",
+                "linkedin_scraper_mcp.session_state.get_source_profile_dir",
                 lambda: profile,
             )
             os.kill(owner.pid, signal.SIGSTOP)
@@ -1031,8 +1031,8 @@ import uvicorn
 from fastmcp import FastMCP
 from starlette.responses import JSONResponse
 
-from linkedin_mcp_server.daemon.liveness import HEARTBEAT_PATH
-from linkedin_mcp_server.server import _StaticTokenAuth
+from linkedin_scraper_mcp.daemon.liveness import HEARTBEAT_PATH
+from linkedin_scraper_mcp.server import _StaticTokenAuth
 
 token, block_seconds = sys.argv[1], float(sys.argv[2])
 mcp = FastMCP("owner", auth=_StaticTokenAuth(token))
@@ -1177,18 +1177,18 @@ class TestABlockedOwnerLoop:
     async def test_a_blocked_owner_is_named_and_sent_nothing(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server.config.schema import AppConfig
-        from linkedin_mcp_server.daemon.descriptor import (
+        from linkedin_scraper_mcp.config.schema import AppConfig
+        from linkedin_scraper_mcp.daemon.descriptor import (
             build,
             commit_prepared,
             new_instance_id,
             new_token,
             prepare,
         )
-        from linkedin_mcp_server.daemon.proxy import DaemonProxyBackend
-        from linkedin_mcp_server.server import create_mcp_server
-        from linkedin_mcp_server.server_role import ServerRole
-        from linkedin_mcp_server.session_state import get_runtime_id
+        from linkedin_scraper_mcp.daemon.proxy import DaemonProxyBackend
+        from linkedin_scraper_mcp.server import create_mcp_server
+        from linkedin_scraper_mcp.server_role import ServerRole
+        from linkedin_scraper_mcp.session_state import get_runtime_id
 
         profile = tmp_path / "auth" / "profile"
         profile.mkdir(parents=True)

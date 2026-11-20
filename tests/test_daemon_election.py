@@ -37,23 +37,23 @@ from typing import Any, NoReturn, cast
 import pytest
 from mcp import MCPError
 
-import linkedin_mcp_server.daemon.discovery as daemon_module
-import linkedin_mcp_server.daemon.config as daemon_config
-import linkedin_mcp_server.daemon.descriptor as daemon_descriptor_module
-import linkedin_mcp_server.daemon.election as election_module
-import linkedin_mcp_server.daemon.spawn as spawn_module
-from linkedin_mcp_server.daemon.core import election as election_core
-import linkedin_mcp_server.daemon.owner as daemon_owner
-from linkedin_mcp_server import __version__
-from linkedin_mcp_server.config.schema import AppConfig
-from linkedin_mcp_server.daemon.discovery import Attachment, OwnerLookup, OwnerState
-from linkedin_mcp_server.daemon.core.spawn import Attempt, Started
-from linkedin_mcp_server.daemon.election import (
+import linkedin_scraper_mcp.daemon.discovery as daemon_module
+import linkedin_scraper_mcp.daemon.config as daemon_config
+import linkedin_scraper_mcp.daemon.descriptor as daemon_descriptor_module
+import linkedin_scraper_mcp.daemon.election as election_module
+import linkedin_scraper_mcp.daemon.spawn as spawn_module
+from linkedin_scraper_mcp.daemon.core import election as election_core
+import linkedin_scraper_mcp.daemon.owner as daemon_owner
+from linkedin_scraper_mcp import __version__
+from linkedin_scraper_mcp.config.schema import AppConfig
+from linkedin_scraper_mcp.daemon.discovery import Attachment, OwnerLookup, OwnerState
+from linkedin_scraper_mcp.daemon.core.spawn import Attempt, Started
+from linkedin_scraper_mcp.daemon.election import (
     ElectionOutcome,
     Reach,
     obtain_owner,
 )
-from linkedin_mcp_server.daemon.descriptor import (
+from linkedin_scraper_mcp.daemon.descriptor import (
     CommitPreflightError,
     build,
     commit_prepared,
@@ -61,11 +61,11 @@ from linkedin_mcp_server.daemon.descriptor import (
     new_token,
     prepare,
 )
-from linkedin_mcp_server.daemon.lock import DaemonLock, DaemonLockError
-from linkedin_mcp_server.daemon import startup
-from linkedin_mcp_server.daemon import version as daemon_version
-from linkedin_mcp_server.private_state import harden_directory
-from linkedin_mcp_server.process_tree import ProcessTreeError
+from linkedin_scraper_mcp.daemon.lock import DaemonLock, DaemonLockError
+from linkedin_scraper_mcp.daemon import startup
+from linkedin_scraper_mcp.daemon import version as daemon_version
+from linkedin_scraper_mcp.private_state import harden_directory
+from linkedin_scraper_mcp.process_tree import ProcessTreeError
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _RUNTIME = "test-runtime"
@@ -107,7 +107,7 @@ def _frames_in(written: bytes) -> list[dict[str, object]]:
 #: channel, greeted the way the owner greets, so the frontend's ACK check passes
 #: and the case reaches the stage it is about.
 _GREETED_CHILD = (
-    "from linkedin_mcp_server.daemon import startup, version\n"
+    "from linkedin_scraper_mcp.daemon import startup, version\n"
     "channel = startup.OwnerChannel.claim()\n"
     "nonce, _config = channel.accept(build=version.build_identity())\n"
 )
@@ -250,7 +250,7 @@ def _proxy_backend_for(attachment: Attachment):
     a replacement. These tests only need the answer, and the profile they pass is
     the one the attachment already describes.
     """
-    from linkedin_mcp_server.daemon.proxy import DaemonProxyBackend
+    from linkedin_scraper_mcp.daemon.proxy import DaemonProxyBackend
 
     profile = Path(attachment.descriptor.profile_path)
     return DaemonProxyBackend(
@@ -293,7 +293,7 @@ def _a_healthy_owner(profile: Path, config: AppConfig, monkeypatch: pytest.Monke
     in, so nothing is installed, launched or closed. Yields the attachment a
     frontend would read for it.
     """
-    import linkedin_mcp_server.server as server_module
+    import linkedin_scraper_mcp.server as server_module
 
     for name in (
         "initialize_bootstrap",
@@ -746,8 +746,8 @@ def _a_published_owner_on_loopback(
     """
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-    from linkedin_mcp_server.daemon.forwarder import HOP_PROTOCOL_VERSION
-    from linkedin_mcp_server.daemon.liveness import HEARTBEAT_PATH
+    from linkedin_scraper_mcp.daemon.forwarder import HOP_PROTOCOL_VERSION
+    from linkedin_scraper_mcp.daemon.liveness import HEARTBEAT_PATH
 
     token = new_token()
     methods: list[str] = []
@@ -874,8 +874,8 @@ async def _call_through_a_frontend(backend: Any) -> Any:
     """One tool call from an external client, through a proxy around *backend*."""
     from fastmcp import Client
 
-    from linkedin_mcp_server.server import create_mcp_server
-    from linkedin_mcp_server.server_role import ServerRole
+    from linkedin_scraper_mcp.server import create_mcp_server
+    from linkedin_scraper_mcp.server_role import ServerRole
 
     frontend = create_mcp_server(
         role=ServerRole.PROXY, proxy_backend=backend, tool_timeout=5.0
@@ -899,7 +899,7 @@ class TestTheProbeSpeaksTheHopsVersion:
     def test_an_owner_without_the_pinned_version_is_not_attached_to(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server.daemon.forwarder import OwnerFailure
+        from linkedin_scraper_mcp.daemon.forwarder import OwnerFailure
 
         profile = _profile(tmp_path)
         config = _config(profile)
@@ -1746,7 +1746,7 @@ class TestFailingFast:
         real = subprocess.Popen
 
         def reports_failure(command: list[str], **kwargs: Any) -> subprocess.Popen[Any]:
-            if command[1:4] != ["-P", "-m", "linkedin_mcp_server.daemon.owner"]:
+            if command[1:4] != ["-P", "-m", "linkedin_scraper_mcp.daemon.owner"]:
                 return real(command, **kwargs)
             child = real(
                 [
@@ -1792,7 +1792,7 @@ class TestFailingFast:
     def test_a_failed_owner_leaves_no_grandchild_process_group(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server.process_tree import process_group_exists
+        from linkedin_scraper_mcp.process_tree import process_group_exists
 
         profile = _profile(tmp_path)
         config = _config(profile)
@@ -1802,7 +1802,7 @@ class TestFailingFast:
         real = subprocess.Popen
 
         def reports_failure(command: list[str], **kwargs: Any) -> subprocess.Popen[Any]:
-            if command[1:4] != ["-P", "-m", "linkedin_mcp_server.daemon.owner"]:
+            if command[1:4] != ["-P", "-m", "linkedin_scraper_mcp.daemon.owner"]:
                 return real(command, **kwargs)
             script = (
                 _GREETED_CHILD + "import pathlib, subprocess, sys, time\n"
@@ -2002,10 +2002,10 @@ if sys.platform == "win32" and os.environ.get("__ELECTION_SOAK__"):
     _SEM_NOGPFAULTERRORBOX = 0x0002
     _kernel32.SetErrorMode(_kernel32.GetErrorMode() & ~_SEM_NOGPFAULTERRORBOX)
 
-from linkedin_mcp_server.config.schema import AppConfig
-from linkedin_mcp_server.daemon.election import obtain_owner
-from linkedin_mcp_server.daemon.lock import DaemonLock
-from linkedin_mcp_server.profile_claim import ensure_profile_claim
+from linkedin_scraper_mcp.config.schema import AppConfig
+from linkedin_scraper_mcp.daemon.election import obtain_owner
+from linkedin_scraper_mcp.daemon.lock import DaemonLock
+from linkedin_scraper_mcp.profile_claim import ensure_profile_claim
 
 profile = Path(sys.argv[1])
 # Optional launch barrier: argv[2]=ready_dir, argv[3]=slot,
@@ -2072,9 +2072,9 @@ import sys
 import time
 from pathlib import Path
 
-from linkedin_mcp_server.config.schema import AppConfig
-from linkedin_mcp_server.daemon.election import obtain_owner
-from linkedin_mcp_server.profile_claim import ensure_profile_claim
+from linkedin_scraper_mcp.config.schema import AppConfig
+from linkedin_scraper_mcp.daemon.election import obtain_owner
+from linkedin_scraper_mcp.profile_claim import ensure_profile_claim
 
 profile = Path(sys.argv[1])
 ensure_profile_claim(profile, claim_anyway=True)
@@ -2401,7 +2401,7 @@ class TestWindowsAtomicOwnerHandoff:
 
         def gate(target: list[str], nonce: str) -> list[str]:
             assert target[-2:] == ["--job-name", "named-owner-job"]
-            assert target[-4:-2] == ["-m", "linkedin_mcp_server.daemon.owner"]
+            assert target[-4:-2] == ["-m", "linkedin_scraper_mcp.daemon.owner"]
             assert nonce == "nonce"
             events.append("build-gate")
             return ["gate", nonce, "--", *target]
@@ -3196,7 +3196,7 @@ class TestAtomicStartupCommit:
     def test_production_stop_makes_a_real_unresponsive_child_terminal(
         self, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server.process_tree import (
+        from linkedin_scraper_mcp.process_tree import (
             terminate_process_group as stop_group,
         )
 
@@ -3627,8 +3627,8 @@ class TestAtomicStartupCommit:
         bootstrap.write_text(
             "import sys\n"
             "from pathlib import Path\n"
-            "from linkedin_mcp_server.daemon import descriptor as daemon_descriptor\n"
-            "from linkedin_mcp_server.daemon import owner as daemon_owner\n"
+            "from linkedin_scraper_mcp.daemon import descriptor as daemon_descriptor\n"
+            "from linkedin_scraper_mcp.daemon import owner as daemon_owner\n"
             "daemon_descriptor._account_home = lambda: Path(sys.argv[1])\n"
             "class Lock:\n"
             "    def release(self):\n"
@@ -3644,7 +3644,7 @@ class TestAtomicStartupCommit:
         real = subprocess.Popen
 
         def capture(command: list[str], **kwargs: Any) -> subprocess.Popen[Any]:
-            if command[-2:] == ["-m", "linkedin_mcp_server.daemon.owner"]:
+            if command[-2:] == ["-m", "linkedin_scraper_mcp.daemon.owner"]:
                 command = [command[0], str(bootstrap), str(home), str(imported)]
             child = real(command, **kwargs)
             children.append(child)
@@ -3696,8 +3696,8 @@ class TestAtomicStartupCommit:
         bootstrap.write_text(
             "import sys\n"
             "from pathlib import Path\n"
-            "from linkedin_mcp_server.daemon import descriptor as daemon_descriptor\n"
-            "from linkedin_mcp_server.daemon import owner as daemon_owner\n"
+            "from linkedin_scraper_mcp.daemon import descriptor as daemon_descriptor\n"
+            "from linkedin_scraper_mcp.daemon import owner as daemon_owner\n"
             "daemon_descriptor._account_home = lambda: Path(sys.argv[1])\n"
             "attach = daemon_owner._attach_daemon_log\n"
             "def marked(root):\n"
@@ -3711,7 +3711,7 @@ class TestAtomicStartupCommit:
         real = subprocess.Popen
 
         def capture(command: list[str], **kwargs: Any) -> subprocess.Popen[Any]:
-            if command[-2:] == ["-m", "linkedin_mcp_server.daemon.owner"]:
+            if command[-2:] == ["-m", "linkedin_scraper_mcp.daemon.owner"]:
                 command = [
                     command[0],
                     str(bootstrap),
@@ -4340,7 +4340,7 @@ class TestAtomicStartupCommit:
         # rather than a story about it, and without a Job Object: the handle
         # lookup fails on the argument, so this never reaches `self`. The real
         # Job path is covered separately in `tests/test_process_tree.py`.
-        from linkedin_mcp_server import process_tree as process_tree_module
+        from linkedin_scraper_mcp import process_tree as process_tree_module
 
         monkeypatch.setattr(
             spawn_module, "os", SimpleNamespace(name="nt", environ=os.environ)
@@ -4385,20 +4385,19 @@ class TestAForwardedCallThroughTheRealOwner:
         and the one called with ``"first"`` holds the call, and with it the
         sequential lock and the profile lease, until *release* is set.
         """
-        import linkedin_mcp_server.server as server_module
+        import linkedin_scraper_mcp.server as server_module
         from fastmcp.server.dependencies import get_http_headers
         from fastmcp.server.middleware import Middleware
 
-        from linkedin_mcp_server import update_check
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.daemon.liveness import CALL_HEADER, get_liveness
-        from linkedin_mcp_server.daemon.core.call import Dispatch
-        from linkedin_mcp_server.daemon.forwarder import _call_being_made
-        from linkedin_mcp_server.daemon.proxy import FrontendCallHeartbeatMiddleware
-        from linkedin_mcp_server.drivers import browser
-        from linkedin_mcp_server.profile_claim import ensure_profile_claim
-        from linkedin_mcp_server.profile_lease import get_profile_lease
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.daemon.liveness import CALL_HEADER, get_liveness
+        from linkedin_scraper_mcp.daemon.core.call import Dispatch
+        from linkedin_scraper_mcp.daemon.forwarder import _call_being_made
+        from linkedin_scraper_mcp.daemon.proxy import FrontendCallHeartbeatMiddleware
+        from linkedin_scraper_mcp.drivers import browser
+        from linkedin_scraper_mcp.profile_claim import ensure_profile_claim
+        from linkedin_scraper_mcp.profile_lease import get_profile_lease
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             reset_process_role_for_testing,
         )
@@ -4433,9 +4432,6 @@ class TestAForwardedCallThroughTheRealOwner:
         monkeypatch.setattr(browser, "note_call_started", lambda: None)
         monkeypatch.setattr(browser, "note_activity", lambda: None)
         monkeypatch.setattr(browser, "release_profile_if_idle_or_requested", nothing)
-        monkeypatch.setattr(update_check, "prime_from_cache", lambda: None)
-        monkeypatch.setattr(update_check, "refresh_latest_version", nothing)
-        monkeypatch.setattr(update_check, "pending_update_notice", lambda: None)
         elections: list[object] = []
 
         def no_election_expected(*_a: Any, **_k: Any) -> NoReturn:
@@ -4448,7 +4444,7 @@ class TestAForwardedCallThroughTheRealOwner:
         monkeypatch.setattr(election_module, "obtain_owner", no_election_expected)
         # Why a call was taken for an owner loss, in the captured log of a
         # failing run: the loss with its cause, and a hop's closing failures.
-        daemon_logger = logging.getLogger("linkedin_mcp_server.daemon")
+        daemon_logger = logging.getLogger("linkedin_scraper_mcp.daemon")
         logged_from = daemon_logger.level
         daemon_logger.setLevel(logging.DEBUG)
 
@@ -4592,8 +4588,8 @@ class TestAForwardedCallThroughTheRealOwner:
         from fastmcp import Client
         from fastmcp.client.transports import StreamableHttpTransport
 
-        from linkedin_mcp_server.daemon.forwarder import HOP_PROTOCOL_VERSION
-        from linkedin_mcp_server.daemon.liveness import (
+        from linkedin_scraper_mcp.daemon.forwarder import HOP_PROTOCOL_VERSION
+        from linkedin_scraper_mcp.daemon.liveness import (
             REFUSAL_KEY,
             UNMARKED_CALL,
             get_liveness,
@@ -4680,8 +4676,8 @@ class TestAForwardedCallThroughTheRealOwner:
         """
         from fastmcp import Client
 
-        from linkedin_mcp_server.daemon.core.owner import EXPIRY_SECONDS
-        from linkedin_mcp_server.daemon.liveness import get_liveness
+        from linkedin_scraper_mcp.daemon.core.owner import EXPIRY_SECONDS
+        from linkedin_scraper_mcp.daemon.liveness import get_liveness
 
         async with self._a_real_owner(tmp_path, monkeypatch) as owner:
             async with Client(owner.frontend) as client:
@@ -4929,7 +4925,7 @@ class TestRealOwner:
         child.write_text(
             _GREETED_CHILD + "import sys\n"
             "from pathlib import Path\n"
-            "from linkedin_mcp_server.daemon.lock import DaemonLock\n"
+            "from linkedin_scraper_mcp.daemon.lock import DaemonLock\n"
             "lock = DaemonLock(Path(sys.argv[1]))\n"
             "assert lock.try_acquire()\n"
             "Path(sys.argv[2]).write_text('locked')\n"
@@ -4942,15 +4938,15 @@ class TestRealOwner:
         frontend = (
             "import sys\n"
             "from pathlib import Path\n"
-            "import linkedin_mcp_server.daemon.election as election\n"
-            "import linkedin_mcp_server.daemon.spawn as spawn\n"
+            "import linkedin_scraper_mcp.daemon.election as election\n"
+            "import linkedin_scraper_mcp.daemon.spawn as spawn\n"
             "real = spawn.subprocess.Popen\n"
             "def substitute(command, **kwargs):\n"
-            "    if command[-2:] != ['-m', 'linkedin_mcp_server.daemon.owner']:\n"
+            "    if command[-2:] != ['-m', 'linkedin_scraper_mcp.daemon.owner']:\n"
             "        return real(command, **kwargs)\n"
             "    return real([command[0], sys.argv[2], sys.argv[3], sys.argv[4]], **kwargs)\n"
             "spawn.subprocess.Popen = substitute\n"
-            "from linkedin_mcp_server.config.schema import AppConfig\n"
+            "from linkedin_scraper_mcp.config.schema import AppConfig\n"
             "profile = Path(sys.argv[1])\n"
             "config = AppConfig()\n"
             "config.browser.user_data_dir = str(profile)\n"
@@ -5437,8 +5433,8 @@ class TestRealOwner:
         from fastmcp import Client
         from fastmcp.client.transports import StreamableHttpTransport
 
-        from linkedin_mcp_server.daemon.discovery import look_up_owner
-        from linkedin_mcp_server.server import ServerRole, create_mcp_server
+        from linkedin_scraper_mcp.daemon.discovery import look_up_owner
+        from linkedin_scraper_mcp.server import ServerRole, create_mcp_server
 
         profile = owner_profile
         result = _run_frontend(profile)
@@ -5499,10 +5495,10 @@ class TestRealOwner:
 
         from fastmcp import Client
 
-        from linkedin_mcp_server.daemon.discovery import look_up_owner
-        from linkedin_mcp_server.daemon.auth_repair import MARKER_KEY, MARKER_VERSION
-        from linkedin_mcp_server.daemon.proxy import FrontendCallMiddleware
-        from linkedin_mcp_server.server import ServerRole, create_mcp_server
+        from linkedin_scraper_mcp.daemon.discovery import look_up_owner
+        from linkedin_scraper_mcp.daemon.auth_repair import MARKER_KEY, MARKER_VERSION
+        from linkedin_scraper_mcp.daemon.proxy import FrontendCallMiddleware
+        from linkedin_scraper_mcp.server import ServerRole, create_mcp_server
 
         profile = owner_profile
         # Readiness must pass before the auth gate, but nothing here launches a
@@ -5594,9 +5590,9 @@ class TestRealOwner:
         from fastmcp import Client
         from mcp import MCPError
 
-        from linkedin_mcp_server.daemon import proxy as daemon_proxy
-        from linkedin_mcp_server.daemon.discovery import look_up_owner
-        from linkedin_mcp_server.server import ServerRole, create_mcp_server
+        from linkedin_scraper_mcp.daemon import proxy as daemon_proxy
+        from linkedin_scraper_mcp.daemon.discovery import look_up_owner
+        from linkedin_scraper_mcp.server import ServerRole, create_mcp_server
 
         # What the proxy's recovery was handed, because the client no longer
         # reads it: a failure recognised as the owner's reaches the client as a
@@ -5631,7 +5627,7 @@ class TestRealOwner:
                     await client.list_tools()
 
             async def asked_directly() -> int:
-                from linkedin_mcp_server.daemon import owner as daemon_owner
+                from linkedin_scraper_mcp.daemon import owner as daemon_owner
 
                 async with daemon_owner.direct_async_http_client() as http:
                     response = await http.post(
@@ -5768,9 +5764,9 @@ class TestVersionSkew:
         import httpx2
         import uvicorn
 
-        from linkedin_mcp_server import config as config_module
-        from linkedin_mcp_server.daemon import liveness as daemon_liveness
-        from linkedin_mcp_server.daemon import owner as daemon_owner
+        from linkedin_scraper_mcp import config as config_module
+        from linkedin_scraper_mcp.daemon import liveness as daemon_liveness
+        from linkedin_scraper_mcp.daemon import owner as daemon_owner
 
         config = _config(_profile(tmp_path))
         daemon_liveness.get_liveness().serving_as("the-owner")
@@ -5842,13 +5838,13 @@ class TestVersionSkew:
         import asyncio
         import socket
 
-        from linkedin_mcp_server import config as config_module
-        from linkedin_mcp_server.daemon import liveness as daemon_liveness
-        from linkedin_mcp_server.daemon import owner as daemon_owner
+        from linkedin_scraper_mcp import config as config_module
+        from linkedin_scraper_mcp.daemon import liveness as daemon_liveness
+        from linkedin_scraper_mcp.daemon import owner as daemon_owner
 
         config = _config(_profile(tmp_path))
         monkeypatch.setattr(config_module, "_config", config)
-        from linkedin_mcp_server.daemon.core import owner as lifecycle
+        from linkedin_scraper_mcp.daemon.core import owner as lifecycle
 
         liveness = daemon_liveness.get_liveness()
         liveness.serving_as("the-owner")
@@ -5909,7 +5905,7 @@ class TestVersionSkew:
         import socket
         import threading
 
-        from linkedin_mcp_server.daemon import owner as daemon_owner
+        from linkedin_scraper_mcp.daemon import owner as daemon_owner
 
         # Any local process may connect to a fresh loopback port: some desktop
         # apps probe every new listener with `GET /`. So the capture keeps
@@ -6021,7 +6017,7 @@ class TestVersionSkew:
         inspect_command = (
             "import json, sys\n"
             f"sys.path[:0] = {import_paths!r}\n"
-            "from linkedin_mcp_server.daemon.spawn import _spawn_command\n"
+            "from linkedin_scraper_mcp.daemon.spawn import _spawn_command\n"
             "print(json.dumps(_spawn_command()))\n"
         )
         parent = subprocess.run(
@@ -6036,7 +6032,7 @@ class TestVersionSkew:
         command = json.loads(parent.stdout.strip().splitlines()[-1])
         assert all(flag in command for flag in parent_flags), command
         assert "-P" in command, command
-        assert command[-2:] == ["-m", "linkedin_mcp_server.daemon.owner"]
+        assert command[-2:] == ["-m", "linkedin_scraper_mcp.daemon.owner"]
 
         child = subprocess.run(
             [*command[:-2], "-c", startup_probe],
@@ -6062,7 +6058,7 @@ class TestVersionSkew:
         inspect_command = (
             "import json, sys\n"
             f"sys.path[:0] = {import_paths!r}\n"
-            "from linkedin_mcp_server.daemon.spawn import _spawn_command\n"
+            "from linkedin_scraper_mcp.daemon.spawn import _spawn_command\n"
             "print(json.dumps(_spawn_command()))\n"
         )
 
@@ -6082,7 +6078,7 @@ class TestVersionSkew:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
         # `python -m` puts the inherited working directory first on sys.path, so
-        # a workspace containing linkedin_mcp_server/daemon/owner.py is imported
+        # a workspace containing linkedin_scraper_mcp/daemon/owner.py is imported
         # in preference to the installed package. That code would receive the
         # whole configuration on standard input, proxy_password included, merely because an MCP client happened
         # to be started in that directory.
@@ -6090,7 +6086,7 @@ class TestVersionSkew:
         # Exercised against a real interpreter rather than by inspecting the
         # command, because what matters is which module actually loads.
         workspace = tmp_path / "workspace"
-        shadow = workspace / "linkedin_mcp_server"
+        shadow = workspace / "linkedin_scraper_mcp"
         (shadow / "daemon").mkdir(parents=True)
         (shadow / "__init__.py").write_text("")
         (shadow / "daemon" / "__init__.py").write_text("")
@@ -6100,7 +6096,7 @@ class TestVersionSkew:
         # which file that module resolved to. Everything before it, including the
         # interpreter and its flags, is exactly what production uses.
         command = spawn_module._spawn_command()
-        assert command[-2:] == ["-m", "linkedin_mcp_server.daemon.owner"], command
+        assert command[-2:] == ["-m", "linkedin_scraper_mcp.daemon.owner"], command
         monkeypatch.setenv("PYTHONPATH", ".")
         environment = spawn_module._owner_environment()
         assert "PYTHONPATH" not in environment
@@ -6108,7 +6104,7 @@ class TestVersionSkew:
             [
                 *command[:-2],
                 "-c",
-                "import linkedin_mcp_server.daemon.owner as m; print(m.__file__)",
+                "import linkedin_scraper_mcp.daemon.owner as m; print(m.__file__)",
             ],
             capture_output=True,
             text=True,
@@ -6157,7 +6153,7 @@ class TestVersionSkew:
         # refuses to encode such a header and so cannot send the request at all.
         # That is a property of one client library, not of the endpoint, which
         # is reachable by anything on the machine.
-        from linkedin_mcp_server.daemon.owner import _matches_token
+        from linkedin_scraper_mcp.daemon.owner import _matches_token
 
         assert not _matches_token("töken", "the-token")
         assert not _matches_token("\udcff", "the-token")
@@ -6309,7 +6305,7 @@ class TestBudgets:
         # waiting for uvicorn and again probing, so it could legitimately answer
         # at 60s while the frontend gave up at 45. The two stages share one
         # deadline now, and this pins the remaining margin.
-        from linkedin_mcp_server.daemon import owner as daemon_owner
+        from linkedin_scraper_mcp.daemon import owner as daemon_owner
 
         owner_allowance = (
             daemon_owner._STARTUP_PROBE_SECONDS + daemon_owner._COMMIT_AUTH_SECONDS
@@ -6338,7 +6334,7 @@ class TestNotHoldingTheLockForever:
         # hangs leaves the task pending and the flag false for good.
         import asyncio
 
-        from linkedin_mcp_server.daemon import owner as daemon_owner
+        from linkedin_scraper_mcp.daemon import owner as daemon_owner
 
         class NeverStarts:
             started = False
@@ -6377,8 +6373,8 @@ class TestNotHoldingTheLockForever:
         """
         import asyncio
 
-        from linkedin_mcp_server import server_role
-        from linkedin_mcp_server.daemon import owner as daemon_owner
+        from linkedin_scraper_mcp import server_role
+        from linkedin_scraper_mcp.daemon import owner as daemon_owner
 
         class Serving:
             started = True
@@ -6416,7 +6412,7 @@ class TestNotHoldingTheLockForever:
     ):
         import asyncio
 
-        from linkedin_mcp_server.daemon import owner as daemon_owner
+        from linkedin_scraper_mcp.daemon import owner as daemon_owner
 
         exited: list[bool] = []
         monkeypatch.setattr(daemon_owner, "hard_exit_required", lambda: True)
@@ -6437,7 +6433,7 @@ class TestNotHoldingTheLockForever:
     ):
         import asyncio
 
-        from linkedin_mcp_server.daemon import owner as daemon_owner
+        from linkedin_scraper_mcp.daemon import owner as daemon_owner
 
         exited: list[bool] = []
         monkeypatch.setattr(daemon_owner, "hard_exit_required", lambda: True)
@@ -6463,7 +6459,7 @@ class TestNotHoldingTheLockForever:
         # finds the position held by a process that will never serve again.
         import asyncio
 
-        from linkedin_mcp_server.daemon import owner as daemon_owner
+        from linkedin_scraper_mcp.daemon import owner as daemon_owner
 
         class NeverStops:
             started = True
@@ -6525,10 +6521,10 @@ class TestNotHoldingTheLockForever:
         script.write_text(
             "import asyncio, os, sys\n"
             "from pathlib import Path\n"
-            "import linkedin_mcp_server.daemon.descriptor as descriptor\n"
+            "import linkedin_scraper_mcp.daemon.descriptor as descriptor\n"
             "descriptor._account_home = lambda: Path(sys.argv[1])\n"
-            "from linkedin_mcp_server.daemon import owner as daemon_owner\n"
-            "from linkedin_mcp_server.daemon.lock import DaemonLock\n"
+            "from linkedin_scraper_mcp.daemon import owner as daemon_owner\n"
+            "from linkedin_scraper_mcp.daemon.lock import DaemonLock\n"
             "lock = DaemonLock(Path(sys.argv[2]))\n"
             "assert lock.try_acquire()\n"
             "daemon_owner._STAND_DOWN_SHUTDOWN_SECONDS = 0.5\n"
@@ -6591,7 +6587,7 @@ class TestTheHardExitFreesTheElectionFirst:
         # which is what hands the lock down, stays the real one.
         import asyncio
 
-        from linkedin_mcp_server.daemon import owner as daemon_owner
+        from linkedin_scraper_mcp.daemon import owner as daemon_owner
 
         nonce = "0123456789abcdef" * 4
         profile = _profile(tmp_path)
@@ -7505,7 +7501,7 @@ class TestPublishingLast:
         frontend nothing was published; the prepared state and the token stay
         where a successor's election finds them.
         """
-        from linkedin_mcp_server.daemon.core.owner import Retirement
+        from linkedin_scraper_mcp.daemon.core.owner import Retirement
 
         order: list[str] = []
         monkeypatch.setattr(
@@ -7564,9 +7560,9 @@ class TestPublishingLast:
         import asyncio
         from unittest.mock import MagicMock
 
-        from linkedin_mcp_server.daemon import proxy
-        from linkedin_mcp_server.daemon.core import call as calls
-        from linkedin_mcp_server.daemon.liveness import (
+        from linkedin_scraper_mcp.daemon import proxy
+        from linkedin_scraper_mcp.daemon.core import call as calls
+        from linkedin_scraper_mcp.daemon.liveness import (
             CALL_HEADER,
             OwnerCallLivenessMiddleware,
             new_call_id,
@@ -8607,7 +8603,7 @@ class TestOutcome:
     def test_the_outcome_reports_what_the_lookup_says(self, tmp_path: Path):
         # A thin wrapper, pinned because callers branch on it and the two
         # answers must not be able to disagree.
-        from linkedin_mcp_server.daemon.discovery import OwnerLookup
+        from linkedin_scraper_mcp.daemon.discovery import OwnerLookup
 
         absent = ElectionOutcome(OwnerLookup(state=OwnerState.ABSENT))
 
@@ -8618,7 +8614,7 @@ def _prepare_browser_cache(profile: Path) -> None:
     """Satisfy the readiness gate without borrowing or installing a browser."""
     from test_bootstrap import _materialize_install, _write_metadata
 
-    from linkedin_mcp_server import bootstrap
+    from linkedin_scraper_mcp import bootstrap
 
     targets = bootstrap._patchright_install_targets()
     assert targets is not None

@@ -9,11 +9,11 @@ from urllib.parse import urlparse
 
 import pytest
 
-from linkedin_mcp_server.core.exceptions import (
+from linkedin_scraper_mcp.core.exceptions import (
     InvalidReferenceError,
     LinkedInOperationError,
 )
-from linkedin_mcp_server.linkedin.identifiers import (
+from linkedin_scraper_mcp.linkedin.identifiers import (
     company_page_url,
     job_id_from_path,
     job_view_url,
@@ -26,7 +26,7 @@ from linkedin_mcp_server.linkedin.identifiers import (
     normalize_thread_id,
     person_profile_url,
 )
-from linkedin_mcp_server.linkedin.link_metadata import classify_link
+from linkedin_scraper_mcp.linkedin.link_metadata import classify_link
 
 PROFILE_ID = "ACoAADdZSNYBiaacxEw6je-wVIKjGkKp-it0gD8"
 

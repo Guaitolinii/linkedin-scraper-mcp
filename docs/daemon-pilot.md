@@ -27,8 +27,8 @@ DIR="$HOME/linkedin-pilot"
 CACHE="$DIR/cache-$SHA"
 PILOT="$DIR/sessions"
 FROM="git+https://github.com/stickerdaniel/linkedin-mcp-server@$SHA"
-CANDIDATE="uvx --isolated --cache-dir '$CACHE' --from $FROM mcp-server-linkedin"
-server() { uvx --isolated --cache-dir "$CACHE" --from "$FROM" mcp-server-linkedin "$@"; }
+CANDIDATE="uvx --isolated --cache-dir '$CACHE' --from $FROM linkedin-scraper-mcp"
+server() { uvx --isolated --cache-dir "$CACHE" --from "$FROM" linkedin-scraper-mcp "$@"; }
 recorder() { uvx --isolated --cache-dir "$CACHE" --from "$FROM" python "$DIR/daemon_pilot.py" "$@"; }
 mkdir -p "$DIR"
 curl -fsSLo "$DIR/daemon_pilot.py" \
@@ -50,15 +50,15 @@ $Dir = "C:\linkedin-pilot"
 $Cache = "$Dir\cache-$Sha"
 $Pilot = "$Dir\sessions"
 $From = "git+https://github.com/stickerdaniel/linkedin-mcp-server@$Sha"
-$Candidate = "uvx --isolated --cache-dir $Cache --from $From mcp-server-linkedin"
-function Server { uvx --isolated --cache-dir $Cache --from $From mcp-server-linkedin @args }
+$Candidate = "uvx --isolated --cache-dir $Cache --from $From linkedin-scraper-mcp"
+function Server { uvx --isolated --cache-dir $Cache --from $From linkedin-scraper-mcp @args }
 function Recorder { uvx --isolated --cache-dir $Cache --from $From python "$Dir\daemon_pilot.py" @args }
 New-Item -ItemType Directory -Force $Dir | Out-Null
 Invoke-WebRequest "https://raw.githubusercontent.com/stickerdaniel/linkedin-mcp-server/$Sha/scripts/daemon_pilot.py" -OutFile "$Dir\daemon_pilot.py"
 Server --login
 ```
 
-Keep the pilot directory outside `~/.linkedin-mcp` and `~/.linkedin-mcp-daemon`;
+Keep the pilot directory outside `~/.linkedin-scraper-mcp` and `~/.linkedin-scraper-mcp-daemon`;
 the recorder refuses one inside either. Leave the session folders as the
 recorder writes them: `after` refuses a folder that holds a link or anything
 the recorder did not write.
@@ -77,7 +77,7 @@ Windows) and of the cache directory.
       "args": [
         "--isolated", "--cache-dir", "/absolute/path/to/cache-<sha>",
         "--from", "git+https://github.com/stickerdaniel/linkedin-mcp-server@<sha>",
-        "mcp-server-linkedin",
+        "linkedin-scraper-mcp",
         "--daemon", "--log-level", "INFO", "--browser-idle-timeout", "600"
       ],
       "env": { "LINKEDIN_TRACE_MODE": "always" }
@@ -133,7 +133,7 @@ maintainer privately. Each holds `before.json`, `after.json`, and a
 The logs contain tool arguments: profile names, search keywords, message
 recipients. Read them first and redact what you do not want to share. Never
 send `cookies.json`, `source-state.json`, the browser profile, or anything else
-from `~/.linkedin-mcp`; the recorder never copies them.
+from `~/.linkedin-scraper-mcp`; the recorder never copies them.
 
 ## Completion
 

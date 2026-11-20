@@ -107,13 +107,13 @@ from typing import Protocol
 
 import pytest
 
-from linkedin_mcp_server.daemon.core import call as calls
-from linkedin_mcp_server.daemon.core import election
-from linkedin_mcp_server.daemon.core import lookup
-from linkedin_mcp_server.daemon.core import owner as lifecycle
-from linkedin_mcp_server.daemon.core import spawn
-from linkedin_mcp_server.daemon.core.lookup import Finding, Reach, Reading
-from linkedin_mcp_server.daemon.core.spawn import Started
+from linkedin_scraper_mcp.daemon.core import call as calls
+from linkedin_scraper_mcp.daemon.core import election
+from linkedin_scraper_mcp.daemon.core import lookup
+from linkedin_scraper_mcp.daemon.core import owner as lifecycle
+from linkedin_scraper_mcp.daemon.core import spawn
+from linkedin_scraper_mcp.daemon.core.lookup import Finding, Reach, Reading
+from linkedin_scraper_mcp.daemon.core.spawn import Started
 
 R, C1, C2 = "r", "c1", "c2"
 #: Whether running the call again could change something.

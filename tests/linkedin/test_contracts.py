@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from linkedin_mcp_server.linkedin import contracts
-from linkedin_mcp_server.linkedin.contracts import (
+from linkedin_scraper_mcp.linkedin import contracts
+from linkedin_scraper_mcp.linkedin.contracts import (
     RATE_LIMITED_SECTION_TEXT,
     SEND_INTERRUPTED_WARNING,
     ExtractedSection,

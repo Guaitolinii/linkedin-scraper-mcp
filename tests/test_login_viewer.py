@@ -12,8 +12,8 @@ from typing import Any, cast
 
 import pytest
 
-import linkedin_mcp_server.login_viewer as viewer_module
-from linkedin_mcp_server.login_viewer import (
+import linkedin_scraper_mcp.login_viewer as viewer_module
+from linkedin_scraper_mcp.login_viewer import (
     LoginViewer,
     LoginViewerError,
     mount_points,
@@ -132,7 +132,7 @@ def test_mount_preflight_rejects_an_unwritable_authentication_root(
     with pytest.raises(LoginViewerError, match="is not writable") as error:
         require_persistent_profile_mount(profile, mountinfo_path=mountinfo)
 
-    assert "mkdir -p ~/.linkedin-mcp" not in str(error.value)
+    assert "mkdir -p ~/.linkedin-scraper-mcp" not in str(error.value)
     assert marker.read_text(encoding="utf-8") == "unchanged"
 
 
@@ -147,14 +147,14 @@ def test_mount_preflight_rejects_only_the_container_root(tmp_path: Path) -> None
 
 
 def test_default_mount_remedy_is_exact(tmp_path: Path) -> None:
-    from linkedin_mcp_server.config.schema import DEFAULT_USER_DATA_DIR
+    from linkedin_scraper_mcp.config.schema import DEFAULT_USER_DATA_DIR
 
     mountinfo = tmp_path / "mountinfo"
     mountinfo.write_text("36 25 0:31 / / rw - overlay overlay rw\n", encoding="utf-8")
 
     with pytest.raises(
         LoginViewerError,
-        match=r"\-v ~[/]\.linkedin-mcp:/home/pwuser/\.linkedin-mcp",
+        match=r"\-v ~[/]\.linkedin-scraper-mcp:/home/pwuser/\.linkedin-scraper-mcp",
     ):
         require_persistent_profile_mount(
             Path(DEFAULT_USER_DATA_DIR), mountinfo_path=mountinfo
@@ -280,7 +280,7 @@ def test_dockerfile_installs_viewer_packages_without_x11_utils() -> None:
 
 
 def test_config_requires_login_and_rejects_other_one_shot_modes() -> None:
-    from linkedin_mcp_server.config.schema import AppConfig, ConfigurationError
+    from linkedin_scraper_mcp.config.schema import AppConfig, ConfigurationError
 
     config = AppConfig()
     config.server.login_viewer = True
@@ -296,8 +296,8 @@ def test_config_requires_login_and_rejects_other_one_shot_modes() -> None:
 def test_cli_preflight_rejects_a_host_before_mount_read(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from linkedin_mcp_server import cli_main
-    from linkedin_mcp_server.config.schema import AppConfig, ConfigurationError
+    from linkedin_scraper_mcp import cli_main
+    from linkedin_scraper_mcp.config.schema import AppConfig, ConfigurationError
 
     config = AppConfig()
     config.server.login = True
@@ -311,7 +311,7 @@ def test_cli_preflight_rejects_a_host_before_mount_read(
 
 
 def test_viewer_signal_notifies_the_async_login_and_restores_handlers() -> None:
-    import linkedin_mcp_server.setup as setup
+    import linkedin_scraper_mcp.setup as setup
 
     received: list[int] = []
     previous = signal.getsignal(signal.SIGTERM)
@@ -326,7 +326,7 @@ def test_viewer_signal_notifies_the_async_login_and_restores_handlers() -> None:
 
 @pytest.mark.asyncio
 async def test_viewer_signal_cancels_and_awaits_login_cleanup() -> None:
-    import linkedin_mcp_server.setup as setup
+    import linkedin_scraper_mcp.setup as setup
 
     cleaned = False
 
@@ -368,7 +368,7 @@ async def test_login_prompt_reports_the_effective_viewer_budget(
     login_viewer: bool,
     expected_budget: str,
 ) -> None:
-    import linkedin_mcp_server.setup as setup
+    import linkedin_scraper_mcp.setup as setup
 
     class Manager:
         close_confirmed = True
@@ -416,7 +416,7 @@ async def test_a_viewer_that_never_starts_leaves_the_profile_free(
     Chromium that would not shut down: the profile stays marked busy for the
     life of the process, over a browser that never ran.
     """
-    import linkedin_mcp_server.setup as setup
+    import linkedin_scraper_mcp.setup as setup
 
     class Manager:
         # As constructed, and never opened.
@@ -456,7 +456,7 @@ async def test_a_viewer_that_never_starts_leaves_the_profile_free(
 def test_viewer_hard_cap_applies_when_login_timeout_is_unlimited(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    import linkedin_mcp_server.setup as setup
+    import linkedin_scraper_mcp.setup as setup
 
     started = False
 
@@ -481,7 +481,7 @@ def test_viewer_hard_cap_applies_when_login_timeout_is_unlimited(
 async def test_deadline_closes_exposure_before_waiting_for_profile_cleanup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import linkedin_mcp_server.setup as setup
+    import linkedin_scraper_mcp.setup as setup
 
     exposure_closed = asyncio.Event()
     release_profile_cleanup = asyncio.Event()
@@ -513,7 +513,7 @@ async def test_remote_teardown_precedes_chromium_and_preserves_failure(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    import linkedin_mcp_server.setup as setup
+    import linkedin_scraper_mcp.setup as setup
 
     events: list[str] = []
 
@@ -565,7 +565,7 @@ async def test_window_manager_teardown_does_not_mask_cookie_export_failure(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    import linkedin_mcp_server.setup as setup
+    import linkedin_scraper_mcp.setup as setup
 
     events: list[str] = []
 

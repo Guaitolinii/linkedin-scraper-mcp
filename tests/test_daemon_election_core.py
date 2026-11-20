@@ -15,11 +15,11 @@ from dataclasses import dataclass, replace
 
 import pytest
 
-from linkedin_mcp_server.daemon.core import election as core
-from linkedin_mcp_server.daemon.core import lookup
-from linkedin_mcp_server.daemon.core import spawn
-from linkedin_mcp_server.daemon.core.lookup import Finding, Reach, Reading
-from linkedin_mcp_server.daemon.core.spawn import Attempt, Started
+from linkedin_scraper_mcp.daemon.core import election as core
+from linkedin_scraper_mcp.daemon.core import lookup
+from linkedin_scraper_mcp.daemon.core import spawn
+from linkedin_scraper_mcp.daemon.core.lookup import Finding, Reach, Reading
+from linkedin_scraper_mcp.daemon.core.spawn import Attempt, Started
 
 A, B = "v1." + "a" * 32, "v1." + "b" * 32
 

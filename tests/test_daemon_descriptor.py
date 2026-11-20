@@ -20,9 +20,9 @@ from typing import Any
 
 import pytest
 
-import linkedin_mcp_server.daemon.descriptor as daemon_descriptor_module
-from linkedin_mcp_server.config.schema import AppConfig
-from linkedin_mcp_server.daemon.descriptor import (
+import linkedin_scraper_mcp.daemon.descriptor as daemon_descriptor_module
+from linkedin_scraper_mcp.config.schema import AppConfig
+from linkedin_scraper_mcp.daemon.descriptor import (
     CONTROL_FLOOR_PROTOCOL,
     PROTOCOL_VERSION,
     SCHEMA_VERSION,
@@ -47,7 +47,7 @@ from linkedin_mcp_server.daemon.descriptor import (
     token_path,
     validate_prepared,
 )
-from linkedin_mcp_server.private_state import (
+from linkedin_scraper_mcp.private_state import (
     PrivateStateError,
     harden_created_file,
 )
@@ -87,7 +87,7 @@ def _stub_windows_hardening(monkeypatch: pytest.MonkeyPatch) -> None:
     assert the order of the namespace and tombstone steps, so neither half of
     the pair is their subject.
     """
-    from linkedin_mcp_server import windows_acl
+    from linkedin_scraper_mcp import windows_acl
 
     monkeypatch.setattr(
         windows_acl, "restrict_to_current_user", lambda *args, **kwargs: None
@@ -105,7 +105,7 @@ def _isolate_daemon_state(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
 def _config(**browser: object) -> AppConfig:
     config = AppConfig()
     config.browser.user_data_dir = str(
-        daemon_descriptor_module._account_home() / ".linkedin-mcp" / "profile"
+        daemon_descriptor_module._account_home() / ".linkedin-scraper-mcp" / "profile"
     )
     for name, value in browser.items():
         setattr(config.browser, name, value)
@@ -185,7 +185,7 @@ class TestRoundTrip:
 
     @pytest.mark.skipif(os.name != "nt", reason="Windows ACLs are required")
     def test_descriptor_and_token_use_the_private_file_acl(self, tmp_path: Path):
-        from linkedin_mcp_server.windows_acl import describe_dacl
+        from linkedin_scraper_mcp.windows_acl import describe_dacl
 
         token = new_token()
         descriptor = _descriptor(tmp_path, token)
@@ -780,13 +780,13 @@ class TestEndpointUrl:
 
 class TestStateLocation:
     #: Where earlier releases kept daemon state: every platform, and Windows.
-    _EARLIER_NAMESPACES = (".mcp-server-linkedin", ".mcp-server-linkedin-v2")
+    _EARLIER_NAMESPACES = (".linkedin-scraper-mcp", ".linkedin-scraper-mcp-v2")
 
     def test_state_lives_in_a_namespace_no_release_used(self, tmp_path: Path):
         root = daemon_descriptor_module.daemon_state_root()
 
         assert root.relative_to(tmp_path.resolve()).parts == (
-            ".linkedin-mcp-daemon",
+            ".linkedin-scraper-mcp-daemon",
             "daemon",
         )
         assert root.parent.name not in self._EARLIER_NAMESPACES
@@ -799,7 +799,7 @@ class TestStateLocation:
         # one. This build shares no coordination state with it, so it must not
         # read, create, replace or remove anything there.
         if windows:
-            from linkedin_mcp_server import windows_acl
+            from linkedin_scraper_mcp import windows_acl
 
             monkeypatch.setattr(daemon_descriptor_module, "_WINDOWS", True)
             monkeypatch.setattr(
@@ -824,12 +824,12 @@ class TestStateLocation:
         assert (after.st_ino, after.st_mtime_ns) == (before.st_ino, before.st_mtime_ns)
         assert sorted(entry.name for entry in earlier.iterdir()) == ["daemon"]
         assert not (tmp_path / self._EARLIER_NAMESPACES[1]).exists()
-        assert (tmp_path / ".linkedin-mcp-daemon" / "daemon").is_dir()
+        assert (tmp_path / ".linkedin-scraper-mcp-daemon" / "daemon").is_dir()
 
     def test_windows_account_home_pin_retains_every_replaceable_component(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         real_lstat = Path.lstat
         opened: list[Path] = []
@@ -870,7 +870,7 @@ class TestStateLocation:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
         """A home like ``D:\\`` has no parent edge, so nothing is pinned there."""
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         root = Path(tmp_path.anchor)
         assert root.parent == root
@@ -915,7 +915,7 @@ class TestStateLocation:
     def test_windows_refuses_an_unsafe_account_home_before_writing_state(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         monkeypatch.setattr(daemon_descriptor_module, "_WINDOWS", True)
 
@@ -933,7 +933,7 @@ class TestStateLocation:
     def test_windows_refuses_a_link_at_the_application_namespace(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server import windows_acl
+        from linkedin_scraper_mcp import windows_acl
 
         target = tmp_path / "redirected"
         target.mkdir()
@@ -952,7 +952,7 @@ class TestStateLocation:
 
     @windows_only
     def test_windows_refuses_a_permissive_application_namespace(self, tmp_path: Path):
-        from linkedin_mcp_server.windows_acl import describe_dacl
+        from linkedin_scraper_mcp.windows_acl import describe_dacl
 
         application = tmp_path / daemon_descriptor_module._APPLICATION_STATE_DIR
         application.mkdir()
@@ -1270,7 +1270,7 @@ class TestEndpointSpelling:
 
         import httpx2
 
-        from linkedin_mcp_server.daemon import owner
+        from linkedin_scraper_mcp.daemon import owner
 
         if family == "IPv4":
             # A host with IPv6 disabled, which the owner falls back from.

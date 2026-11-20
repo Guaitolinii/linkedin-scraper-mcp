@@ -4,18 +4,16 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock
 
-from linkedin_mcp_server.linkedin import message_sender as message_sender_module
-from linkedin_mcp_server.linkedin.message_sender import MessageSender
-from linkedin_mcp_server.linkedin.navigation import PageNavigator
-from linkedin_mcp_server.linkedin.profile_page import ProfilePageReader
-from linkedin_mcp_server.linkedin.session import PageSession
+from linkedin_scraper_mcp.linkedin import profile_urn as profile_urn_module
+from linkedin_scraper_mcp.linkedin.profile_page import ProfilePageReader
+from linkedin_scraper_mcp.linkedin.profile_urn import ProfileUrnReader
+from linkedin_scraper_mcp.linkedin.session import PageSession
 
 
 def _reader(page) -> ProfilePageReader:
     """Wire the reader the way the facade does."""
     session = PageSession(page)
-    sender = MessageSender(session, PageNavigator(session))
-    return ProfilePageReader(session, sender._read_profile_message_target)
+    return ProfilePageReader(session, ProfileUrnReader(session).read)
 
 
 class TestExtractProfileUrn:
@@ -36,7 +34,7 @@ class TestExtractProfileUrn:
 
         assert result == "ACoAAB"
         mock_page.evaluate.assert_awaited_once_with(
-            message_sender_module._PROFILE_MESSAGE_TARGET_JS
+            profile_urn_module._PROFILE_MESSAGE_TARGET_JS
         )
 
     async def test_returns_none_for_ambiguous_top_card_links(self, mock_page):
@@ -58,7 +56,7 @@ class TestExtractProfileUrn:
 
 
 class TestReadProfileDisplayName:
-    """The name read the conversation lookup matches threads against.
+    """The display name read off a loaded profile page.
 
     Nothing else in the suite drives this read: every caller stubs it, so
     without these the program could return the wrong line and stay green.

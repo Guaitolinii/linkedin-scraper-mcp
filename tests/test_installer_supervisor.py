@@ -13,7 +13,7 @@ from typing import Any, BinaryIO, cast
 
 import pytest
 
-import linkedin_mcp_server.installer_supervisor as supervisor
+import linkedin_scraper_mcp.installer_supervisor as supervisor
 
 
 class _IdleThread:
@@ -149,7 +149,7 @@ def test_worker_status_preserves_target_result_and_command(
     assert commands[0][1:4] == [
         "-P",
         "-m",
-        "linkedin_mcp_server.installer_worker",
+        "linkedin_scraper_mcp.installer_worker",
     ]
     assert commands[0][-2:] == ["target", "arg"]
     assert options[0]["stdin"] == supervisor.subprocess.PIPE
@@ -315,7 +315,7 @@ def _venv_with_site_hook(tmp_path: Path, hook: str) -> tuple[str, dict[str, str]
 
 def _production_supervisor_command(interpreter: str, target: list[str]) -> list[str]:
     """The command production builds, run by the interpreter that has the hook."""
-    from linkedin_mcp_server.bootstrap import _installer_supervisor_command
+    from linkedin_scraper_mcp.bootstrap import _installer_supervisor_command
 
     command = _installer_supervisor_command(target)
     assert command[0] == sys.executable
@@ -394,7 +394,7 @@ def test_real_user_site_hook_cannot_join_the_completion_frame(tmp_path: Path):
     )
     assert process.stdin is not None and process.stderr is not None
     try:
-        from linkedin_mcp_server.process_protocol import read_authenticated_status
+        from linkedin_scraper_mcp.process_protocol import read_authenticated_status
 
         process.stdin.write(f"{_NONCE}\n".encode())
         process.stdin.flush()
@@ -483,7 +483,7 @@ def test_a_startup_hook_cannot_spawn_a_pipe_holder_in_the_supervisor(tmp_path: P
     assert process.stdin is not None
     assert process.stdout is not None and process.stderr is not None
     try:
-        from linkedin_mcp_server.process_protocol import read_authenticated_status
+        from linkedin_scraper_mcp.process_protocol import read_authenticated_status
 
         process.stdin.write(f"{_NONCE}\n".encode())
         process.stdin.flush()
@@ -535,7 +535,7 @@ def test_an_inherited_path_cannot_answer_the_supervisor_import(tmp_path: Path):
     regardless.
     """
     sentinel = tmp_path / "shadow-loaded.txt"
-    shadow = tmp_path / "shadow" / "linkedin_mcp_server"
+    shadow = tmp_path / "shadow" / "linkedin_scraper_mcp"
     shadow.mkdir(parents=True)
     (shadow / "__init__.py").write_text(
         f"open({str(sentinel)!r}, 'a').write('loaded\\n')\n"
@@ -558,7 +558,7 @@ def test_an_inherited_path_cannot_answer_the_supervisor_import(tmp_path: Path):
     )
     assert process.stdin is not None and process.stderr is not None
     try:
-        from linkedin_mcp_server.process_protocol import read_authenticated_status
+        from linkedin_scraper_mcp.process_protocol import read_authenticated_status
 
         process.stdin.write(f"{_NONCE}\n".encode())
         process.stdin.flush()

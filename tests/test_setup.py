@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from linkedin_mcp_server.config.schema import AppConfig
-from linkedin_mcp_server.session_state import portable_cookie_path
-from linkedin_mcp_server.setup import interactive_login
+from linkedin_scraper_mcp.config.schema import AppConfig
+from linkedin_scraper_mcp.session_state import portable_cookie_path
+from linkedin_scraper_mcp.setup import interactive_login
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -46,27 +46,27 @@ def _patch_login_deps(
 ) -> None:
     """Patch all interactive_login dependencies in one place."""
     monkeypatch.setattr(
-        "linkedin_mcp_server.setup.get_config", lambda: config or AppConfig()
+        "linkedin_scraper_mcp.setup.get_config", lambda: config or AppConfig()
     )
-    monkeypatch.setattr("linkedin_mcp_server.setup.BrowserManager", browser_factory)
+    monkeypatch.setattr("linkedin_scraper_mcp.setup.BrowserManager", browser_factory)
     monkeypatch.setattr(
-        "linkedin_mcp_server.setup.resolve_remember_me_prompt",
+        "linkedin_scraper_mcp.setup.resolve_remember_me_prompt",
         AsyncMock(return_value=False),
     )
-    monkeypatch.setattr("linkedin_mcp_server.setup.wait_for_manual_login", AsyncMock())
+    monkeypatch.setattr("linkedin_scraper_mcp.setup.wait_for_manual_login", AsyncMock())
     monkeypatch.setattr(
-        "linkedin_mcp_server.setup.write_source_state",
+        "linkedin_scraper_mcp.setup.write_source_state",
         write_source_state
         or MagicMock(return_value=SimpleNamespace(login_generation="gen-1")),
     )
-    monkeypatch.setattr("linkedin_mcp_server.setup.asyncio.sleep", AsyncMock())
+    monkeypatch.setattr("linkedin_scraper_mcp.setup.asyncio.sleep", AsyncMock())
     rotate = rotate_source_profile or MagicMock(return_value=None)
     monkeypatch.setattr(
-        "linkedin_mcp_server.setup.rotate_shielded",
+        "linkedin_scraper_mcp.setup.rotate_shielded",
         AsyncMock(side_effect=lambda *a: rotate(*a)),
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.setup.close_browser", close_browser or AsyncMock()
+        "linkedin_scraper_mcp.setup.close_browser", close_browser or AsyncMock()
     )
 
 
@@ -234,7 +234,7 @@ async def test_interactive_login_threads_login_timeout(monkeypatch, tmp_path):
         config=config,
     )
     wait_mock = AsyncMock()
-    monkeypatch.setattr("linkedin_mcp_server.setup.wait_for_manual_login", wait_mock)
+    monkeypatch.setattr("linkedin_scraper_mcp.setup.wait_for_manual_login", wait_mock)
 
     await interactive_login(tmp_path / "profile")
 
@@ -259,7 +259,7 @@ async def test_interactive_login_threads_login_timeout_zero_unlimited(
         config=config,
     )
     wait_mock = AsyncMock()
-    monkeypatch.setattr("linkedin_mcp_server.setup.wait_for_manual_login", wait_mock)
+    monkeypatch.setattr("linkedin_scraper_mcp.setup.wait_for_manual_login", wait_mock)
 
     await interactive_login(tmp_path / "profile")
 
@@ -336,7 +336,7 @@ async def test_interactive_login_restores_the_session_when_login_fails(
         ),
         rotate_source_profile=MagicMock(return_value=retired),
     )
-    monkeypatch.setattr("linkedin_mcp_server.setup.restore_source_profile", restore)
+    monkeypatch.setattr("linkedin_scraper_mcp.setup.restore_source_profile", restore)
 
     assert await interactive_login(tmp_path / "profile") is False
 
@@ -356,7 +356,7 @@ async def test_interactive_login_keeps_the_retired_session_on_success(
         ),
         rotate_source_profile=MagicMock(return_value=tmp_path / "invalid-state-x"),
     )
-    monkeypatch.setattr("linkedin_mcp_server.setup.restore_source_profile", restore)
+    monkeypatch.setattr("linkedin_scraper_mcp.setup.restore_source_profile", restore)
 
     assert await interactive_login(tmp_path / "profile") is True
 
@@ -369,7 +369,7 @@ async def test_rotate_shielded_restores_when_cancelled(tmp_path, monkeypatch):
     after the move: the session is gone and its backup path with it."""
     import threading
 
-    from linkedin_mcp_server import session_state
+    from linkedin_scraper_mcp import session_state
 
     retired = tmp_path / "invalid-state-x"
     released = threading.Event()
@@ -398,7 +398,7 @@ async def test_rotate_shielded_survives_overlapping_cancels(tmp_path, monkeypatc
     not abandon the worker thread mid-rotation, or the session is stranded."""
     import threading
 
-    from linkedin_mcp_server import session_state
+    from linkedin_scraper_mcp import session_state
 
     retired = tmp_path / "invalid-state-x"
     released = threading.Event()
@@ -434,7 +434,7 @@ def test_rotate_shielded_does_not_wedge_event_loop_shutdown(tmp_path):
     script = textwrap.dedent(f"""
         import asyncio, pathlib, sys, time
         sys.path.insert(0, {str(REPO_ROOT)!r})
-        from linkedin_mcp_server import session_state
+        from linkedin_scraper_mcp import session_state
 
         session_state.rotate_source_profile = lambda *a: (
             time.sleep(0.2), pathlib.Path("/tmp/backup-x")
@@ -518,7 +518,7 @@ class TestTheExplicitCommandsStayUnguarded:
     """
 
     def test_login_passes_no_generation(self, monkeypatch):
-        import linkedin_mcp_server.setup as setup
+        import linkedin_scraper_mcp.setup as setup
 
         seen: dict[str, object] = {}
 
@@ -533,7 +533,7 @@ class TestTheExplicitCommandsStayUnguarded:
         assert "superseded_by" not in seen, seen
 
     def test_import_passes_no_generation(self, monkeypatch):
-        import linkedin_mcp_server.browser_import.orchestrate as orchestrate
+        import linkedin_scraper_mcp.browser_import.orchestrate as orchestrate
 
         seen: dict[str, object] = {}
 
@@ -541,8 +541,8 @@ class TestTheExplicitCommandsStayUnguarded:
             seen.update(kwargs)
             return True
 
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.config.schema import AppConfig
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.config.schema import AppConfig
 
         # Installed because the handler reads process-global config and this
         # test needs the import selector below to be present there.
@@ -552,13 +552,13 @@ class TestTheExplicitCommandsStayUnguarded:
 
         monkeypatch.setattr(orchestrate, "import_session_from_browser", capture)
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.configure_browser_environment", lambda: None
+            "linkedin_scraper_mcp.cli_main.configure_browser_environment", lambda: None
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.cli_main.set_headless", lambda _v: None
+            "linkedin_scraper_mcp.cli_main.set_headless", lambda _v: None
         )
 
-        from linkedin_mcp_server.cli_main import import_from_browser_and_exit
+        from linkedin_scraper_mcp.cli_main import import_from_browser_and_exit
 
         with pytest.raises(SystemExit) as caught:
             import_from_browser_and_exit()

@@ -18,7 +18,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from linkedin_mcp_server.bootstrap import (
+from linkedin_scraper_mcp.bootstrap import (
     AuthState,
     _auto_import_allowed,
     _CACHE_REPORT_MARKER,
@@ -45,9 +45,9 @@ from linkedin_mcp_server.bootstrap import (
     start_background_browser_setup_if_needed,
     wait_for_login_to_finish,
 )
-from linkedin_mcp_server.config.schema import AppConfig
-from linkedin_mcp_server.core.exceptions import AccountRestrictedError, NetworkError
-from linkedin_mcp_server.exceptions import (
+from linkedin_scraper_mcp.config.schema import AppConfig
+from linkedin_scraper_mcp.core.exceptions import AccountRestrictedError, NetworkError
+from linkedin_scraper_mcp.exceptions import (
     AuthenticationBootstrapFailedError,
     AuthenticationInProgressError,
     AuthenticationStartedError,
@@ -58,7 +58,7 @@ from linkedin_mcp_server.exceptions import (
     NoLinkedInSessionFoundError,
     OwnerStandingDownError,
 )
-from linkedin_mcp_server.session_state import (
+from linkedin_scraper_mcp.session_state import (
     PeerSessionInPlaceError,
     portable_cookie_path,
     source_state_path,
@@ -83,7 +83,7 @@ def _patch_inline_wait(monkeypatch, seconds: float, *, auto_import=False) -> Non
         server=SimpleNamespace(transport="stdio", host="127.0.0.1"),
         is_interactive=False,
     )
-    monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+    monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
 
 
 async def _wait_event(event: asyncio.Event) -> None:
@@ -120,10 +120,10 @@ class TestBootstrap:
 
         _patch_inline_wait(monkeypatch, 0)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_setup_ready", lambda: False
+            "linkedin_scraper_mcp.bootstrap.browser_setup_ready", lambda: False
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_browser_setup", fake_setup
+            "linkedin_scraper_mcp.bootstrap._run_browser_setup", fake_setup
         )
 
         initialize_bootstrap("managed")
@@ -135,7 +135,7 @@ class TestBootstrap:
         await state.setup_task
 
     async def test_owner_first_use_starts_deferred_setup(self, monkeypatch):
-        from linkedin_mcp_server.server_role import ServerRole, set_process_role
+        from linkedin_scraper_mcp.server_role import ServerRole, set_process_role
 
         release = asyncio.Event()
 
@@ -144,10 +144,10 @@ class TestBootstrap:
 
         _patch_inline_wait(monkeypatch, 0)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_setup_ready", lambda: False
+            "linkedin_scraper_mcp.bootstrap.browser_setup_ready", lambda: False
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_browser_setup", fake_setup
+            "linkedin_scraper_mcp.bootstrap._run_browser_setup", fake_setup
         )
         set_process_role(ServerRole.OWNER)
         initialize_bootstrap("managed")
@@ -164,8 +164,8 @@ class TestBootstrap:
     async def test_unclaimed_managed_root_is_refused_before_readiness(
         self, tmp_path, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import ProfileRootRefusedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import ProfileRootRefusedError
 
         profile = tmp_path / "unclaimed-start" / "profile"
         metadata = profile.parent / "browser-install.json"
@@ -210,11 +210,11 @@ class TestBootstrap:
 
         _patch_inline_wait(monkeypatch, 0)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_setup_ready", lambda: True
+            "linkedin_scraper_mcp.bootstrap.browser_setup_ready", lambda: True
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._auth_ready", lambda: False)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._auth_ready", lambda: False)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._start_login_if_needed", fake_start_login
+            "linkedin_scraper_mcp.bootstrap._start_login_if_needed", fake_start_login
         )
 
         initialize_bootstrap("managed")
@@ -224,9 +224,9 @@ class TestBootstrap:
 
     async def test_login_in_progress_reuses_existing_session(self, monkeypatch):
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_setup_ready", lambda: True
+            "linkedin_scraper_mcp.bootstrap.browser_setup_ready", lambda: True
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._auth_ready", lambda: False)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._auth_ready", lambda: False)
         _patch_inline_wait(monkeypatch, 0.05)
 
         # A real, still-running task so the inline wait can await it without
@@ -251,7 +251,7 @@ class TestBootstrap:
             login_task.cancel()
 
     async def test_docker_requires_host_login(self, monkeypatch):
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._auth_ready", lambda: False)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._auth_ready", lambda: False)
         initialize_bootstrap("docker")
         with pytest.raises(DockerHostLoginRequiredError):
             await ensure_tool_ready_or_raise("search_jobs")
@@ -337,7 +337,7 @@ class TestInvalidateAuthAndTriggerRelogin:
             return None
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", fake_login_flow
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", fake_login_flow
         )
         initialize_bootstrap("managed")
 
@@ -376,7 +376,7 @@ class TestInvalidateAuthAndTriggerRelogin:
         _make_auth_ready(isolate_profile_dir)
 
         # Confirm _auth_ready() would return True before the move.
-        from linkedin_mcp_server.bootstrap import _auth_ready
+        from linkedin_scraper_mcp.bootstrap import _auth_ready
 
         assert _auth_ready()
 
@@ -426,18 +426,18 @@ def _set_headless(monkeypatch, headless: bool) -> None:
     config = SimpleNamespace(
         browser=SimpleNamespace(headless=headless, chrome_path=None),
     )
-    monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+    monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
 
 
 def _patch_targets_and_version(
     monkeypatch, *, targets=_DEFAULT_TARGETS, version=_PATCHRIGHT_VERSION
 ):
     monkeypatch.setattr(
-        "linkedin_mcp_server.bootstrap._patchright_install_targets",
+        "linkedin_scraper_mcp.bootstrap._patchright_install_targets",
         lambda: dict(targets) if targets else None,
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.bootstrap._patchright_pkg_version", lambda: version
+        "linkedin_scraper_mcp.bootstrap._patchright_pkg_version", lambda: version
     )
 
 
@@ -516,7 +516,7 @@ class TestBrowserSetupReady:
     async def test_peer_metadata_does_not_restart_setup(
         self, isolate_profile_dir, monkeypatch, version, revision, peer_version
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         _patch_inline_wait(monkeypatch, 0)
         _patch_targets_and_version(
@@ -705,7 +705,7 @@ class TestRetainedRevisionReport:
         _set_headless(monkeypatch, True)
 
     def _report(self, caplog) -> str:
-        with caplog.at_level(logging.WARNING, logger="linkedin_mcp_server.bootstrap"):
+        with caplog.at_level(logging.WARNING, logger="linkedin_scraper_mcp.bootstrap"):
             _report_retained_browser_revisions()
         return caplog.text
 
@@ -833,10 +833,10 @@ class TestRetainedRevisionReport:
             return 1024
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._directory_size", blocked_size
+            "linkedin_scraper_mcp.bootstrap._directory_size", blocked_size
         )
         with (
-            caplog.at_level(logging.WARNING, logger="linkedin_mcp_server.bootstrap"),
+            caplog.at_level(logging.WARNING, logger="linkedin_scraper_mcp.bootstrap"),
             ThreadPoolExecutor(max_workers=2) as pool,
         ):
             first = pool.submit(_report_retained_browser_revisions)
@@ -913,7 +913,7 @@ class TestRetainedRevisionReport:
         def boom(*args, **kwargs):
             raise OSError("read-only cache")
 
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.secure_write_text", boom)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.secure_write_text", boom)
 
         assert "chromium-1208" in self._report(caplog)
 
@@ -990,7 +990,7 @@ class TestRetainedRevisionReportCallSites:
     def _record(self, monkeypatch) -> list[int]:
         calls: list[int] = []
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._report_retained_browser_revisions",
+            "linkedin_scraper_mcp.bootstrap._report_retained_browser_revisions",
             lambda: calls.append(1),
         )
         return calls
@@ -1018,8 +1018,8 @@ class TestRetainedRevisionReportCallSites:
     async def test_ready_owner_reports_retained_revisions(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.server_role import ServerRole, set_process_role
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.server_role import ServerRole, set_process_role
 
         _patch_targets_and_version(monkeypatch)
         _set_headless(monkeypatch, True)
@@ -1054,7 +1054,7 @@ class TestRetainedRevisionReportCallSites:
             assert finish_scan.wait(timeout=1)
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._report_retained_browser_revisions",
+            "linkedin_scraper_mcp.bootstrap._report_retained_browser_revisions",
             blocked_report,
         )
 
@@ -1076,7 +1076,7 @@ class TestRetainedRevisionReportCallSites:
         config = SimpleNamespace(
             browser=SimpleNamespace(headless=True, chrome_path="/usr/bin/chromium"),
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
         calls = self._record(monkeypatch)
 
         initialize_bootstrap("managed")
@@ -1088,17 +1088,17 @@ class TestRetainedRevisionReportCallSites:
     async def test_a_finished_install_reports(self, isolate_profile_dir, monkeypatch):
         _patch_targets_and_version(monkeypatch)
         config = SimpleNamespace(browser=SimpleNamespace(headless=True))
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
 
         async def fake_install(extra_arg: str, **_kwargs: object) -> None:
             return None
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_patchright_install", fake_install
+            "linkedin_scraper_mcp.bootstrap._run_patchright_install", fake_install
         )
         calls = self._record(monkeypatch)
 
-        from linkedin_mcp_server.bootstrap import _run_browser_setup
+        from linkedin_scraper_mcp.bootstrap import _run_browser_setup
 
         await _run_browser_setup()
         report_task = get_bootstrap_state().cache_report_task
@@ -1109,9 +1109,9 @@ class TestRetainedRevisionReportCallSites:
 
     def test_a_ready_cli_setup_reports(self, isolate_profile_dir, monkeypatch):
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._uses_custom_chrome", lambda: False
+            "linkedin_scraper_mcp.bootstrap._uses_custom_chrome", lambda: False
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.browser_ready", lambda: True)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.browser_ready", lambda: True)
         calls = self._record(monkeypatch)
 
         ensure_browser_installed()
@@ -1122,14 +1122,14 @@ class TestRetainedRevisionReportCallSites:
         self, isolate_profile_dir, monkeypatch, caplog
     ):
         """Nobody awaits this task, so an escape is only reported on drop."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         def explode() -> None:
             raise json.JSONDecodeError("inventory", "", 0)
 
         monkeypatch.setattr(bootstrap, "_report_retained_browser_revisions", explode)
 
-        with caplog.at_level(logging.WARNING, logger="linkedin_mcp_server.bootstrap"):
+        with caplog.at_level(logging.WARNING, logger="linkedin_scraper_mcp.bootstrap"):
             bootstrap._schedule_retained_browser_revision_report()
             task = get_bootstrap_state().cache_report_task
             assert task is not None
@@ -1169,9 +1169,9 @@ class TestSetupGate:
             await release.wait()
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_browser_setup", fake_setup
+            "linkedin_scraper_mcp.bootstrap._run_browser_setup", fake_setup
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._auth_ready", lambda: True)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._auth_ready", lambda: True)
 
         initialize_bootstrap("managed")
 
@@ -1186,8 +1186,8 @@ class TestSetupGate:
     async def test_immediate_setup_failure_uses_the_setup_error_contract(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         async def setup(**_kwargs: object) -> None:
             raise NotADirectoryError("browser cache is a file")
@@ -1207,8 +1207,8 @@ class TestSetupGate:
     async def test_completed_setup_failure_is_reported_before_retry(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         fail = asyncio.Event()
         retry = asyncio.Event()
@@ -1262,12 +1262,12 @@ class TestSetupGate:
         exits between the two calls, and the retry then reaches a fresh owner
         that starts setup over instead of reporting what went wrong.
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.daemon import liveness as daemon_liveness
-        from linkedin_mcp_server.daemon.core import owner as lifecycle
-        from linkedin_mcp_server.daemon.owner import _serve_until_stopped
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
-        from linkedin_mcp_server.server_role import ServerRole
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.daemon import liveness as daemon_liveness
+        from linkedin_scraper_mcp.daemon.core import owner as lifecycle
+        from linkedin_scraper_mcp.daemon.owner import _serve_until_stopped
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp.server_role import ServerRole
 
         fail = asyncio.Event()
         attempts = 0
@@ -1325,7 +1325,7 @@ class TestSetupGate:
         _write_metadata(install_metadata_path(), bdir)
         configure_browser_environment()
 
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._auth_ready", lambda: True)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._auth_ready", lambda: True)
 
         initialize_bootstrap("managed")
 
@@ -1353,8 +1353,8 @@ class TestChromePathShortCircuit:
         self, isolate_profile_dir, monkeypatch, headless
     ):
         config = self._config(headless=headless, chrome_path="/usr/bin/chromium")
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._auth_ready", lambda: True)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._auth_ready", lambda: True)
 
         # No metadata, no install on disk: a managed gate would block, but the
         # custom executable must short-circuit straight to ready.
@@ -1364,7 +1364,7 @@ class TestChromePathShortCircuit:
             called["value"] = True
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_browser_setup", fail_setup
+            "linkedin_scraper_mcp.bootstrap._run_browser_setup", fail_setup
         )
 
         initialize_bootstrap("managed")
@@ -1379,7 +1379,7 @@ class TestChromePathShortCircuit:
         self, isolate_profile_dir, monkeypatch, headless
     ):
         config = self._config(headless=headless, chrome_path="/usr/bin/chromium")
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
 
         initialize_bootstrap("managed")
         await start_background_browser_setup_if_needed()
@@ -1400,7 +1400,7 @@ class TestTwoStageInstall:
             calls.append(extra_arg)
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_patchright_install", fake_install
+            "linkedin_scraper_mcp.bootstrap._run_patchright_install", fake_install
         )
         return calls
 
@@ -1414,10 +1414,10 @@ class TestTwoStageInstall:
         """
         _patch_targets_and_version(monkeypatch)
         config = SimpleNamespace(browser=SimpleNamespace(headless=headless))
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
         calls = self._stub_install(monkeypatch)
 
-        from linkedin_mcp_server.bootstrap import _run_browser_setup
+        from linkedin_scraper_mcp.bootstrap import _run_browser_setup
 
         await _run_browser_setup()
 
@@ -1433,20 +1433,20 @@ class TestTwoStageInstall:
         self, isolate_profile_dir, monkeypatch
     ):
         """A failed install must not leave metadata claiming a usable browser."""
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         _patch_targets_and_version(monkeypatch)
         config = SimpleNamespace(browser=SimpleNamespace(headless=True))
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
 
         async def fake_install(extra_arg: str, **_kwargs: object) -> None:
             raise BrowserSetupFailedError("network down")
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_patchright_install", fake_install
+            "linkedin_scraper_mcp.bootstrap._run_patchright_install", fake_install
         )
 
-        from linkedin_mcp_server.bootstrap import _run_browser_setup
+        from linkedin_scraper_mcp.bootstrap import _run_browser_setup
 
         with pytest.raises(BrowserSetupFailedError):
             await _run_browser_setup()
@@ -1461,9 +1461,9 @@ class TestTwoStageInstall:
         config = SimpleNamespace(
             browser=SimpleNamespace(headless=False, chrome_path=None)
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_setup_ready", lambda: False
+            "linkedin_scraper_mcp.bootstrap.browser_setup_ready", lambda: False
         )
         calls = self._stub_install(monkeypatch)
 
@@ -1478,9 +1478,9 @@ class TestTwoStageInstall:
     async def test_readiness_io_is_inside_the_setup_deadline(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
-        from linkedin_mcp_server.server_role import ServerRole
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp.server_role import ServerRole
 
         # The deadline passes on the loop's clock, and only while readiness is
         # blocked in its thread. In real time a loaded host spent it before
@@ -1532,7 +1532,7 @@ class TestTwoStageInstall:
     async def test_cancelled_first_caller_does_not_abandon_readiness(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         blocked = threading.Event()
         release = threading.Event()
@@ -1578,7 +1578,7 @@ class TestTwoStageInstall:
         waiter in a ``finally``, while the shared setup task, which is what the
         shield was there to protect, is not something this await can cancel.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         blocked = threading.Event()
         release = threading.Event()
@@ -1624,7 +1624,7 @@ class TestTwoStageInstall:
     async def test_readiness_miss_keeps_existing_metadata_until_install_succeeds(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         release = asyncio.Event()
         bdir = browsers_path()
@@ -1656,7 +1656,7 @@ class TestTwoStageInstall:
     async def test_installer_activity_extends_the_inactivity_deadline(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         loop = asyncio.get_running_loop()
         clock = [loop.time()]
@@ -1710,7 +1710,7 @@ class TestTwoStageInstall:
         self, isolate_profile_dir, monkeypatch
     ):
         """The absolute ceiling must not cost the inactivity extension."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         loop = asyncio.get_running_loop()
         clock = [loop.time()]
@@ -1769,8 +1769,8 @@ class TestTwoStageInstall:
     async def test_continuous_activity_cannot_extend_the_absolute_lifetime(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         rounds = 0
         # Time passes on the loop's clock, and only while the installer runs.
@@ -1806,10 +1806,10 @@ class TestTwoStageInstall:
     async def test_owner_idle_hold_ends_after_the_lifetime_failure(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.daemon import liveness as daemon_liveness
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
-        from linkedin_mcp_server.server_role import ServerRole
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.daemon import liveness as daemon_liveness
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp.server_role import ServerRole
 
         # Time passes on the loop's clock, and only while the installer runs,
         # so the readiness check cannot spend the lifetime on a loaded host.
@@ -1867,9 +1867,9 @@ class TestTwoStageInstall:
     async def test_owner_setup_completion_resets_the_idle_clock(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.daemon import liveness as daemon_liveness
-        from linkedin_mcp_server.server_role import ServerRole
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.daemon import liveness as daemon_liveness
+        from linkedin_scraper_mcp.server_role import ServerRole
 
         async def setup(**_kwargs: object) -> None:
             return None
@@ -1887,9 +1887,9 @@ class TestTwoStageInstall:
     async def test_ready_owner_setup_resets_the_idle_clock(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.daemon import liveness as daemon_liveness
-        from linkedin_mcp_server.server_role import ServerRole
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.daemon import liveness as daemon_liveness
+        from linkedin_scraper_mcp.server_role import ServerRole
 
         liveness = MagicMock()
         monkeypatch.setattr(bootstrap, "_browser_setup_ready", lambda: True)
@@ -1903,9 +1903,9 @@ class TestTwoStageInstall:
     async def test_failed_owner_setup_resets_the_idle_clock(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.daemon import liveness as daemon_liveness
-        from linkedin_mcp_server.server_role import ServerRole
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.daemon import liveness as daemon_liveness
+        from linkedin_scraper_mcp.server_role import ServerRole
 
         async def setup(**_kwargs: object) -> None:
             raise RuntimeError("install failed")
@@ -1924,9 +1924,9 @@ class TestTwoStageInstall:
     async def test_background_setup_has_a_whole_operation_deadline(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
-        from linkedin_mcp_server.server_role import ServerRole
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp.server_role import ServerRole
 
         stood_down: list[str] = []
 
@@ -1979,7 +1979,7 @@ class TestTwoStageInstall:
     async def test_inner_timeout_keeps_its_specific_failure(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         async def startup_timeout(**_kwargs: object) -> None:
             raise TimeoutError("supervisor did not arm")
@@ -1993,8 +1993,8 @@ class TestTwoStageInstall:
     async def test_slow_profile_ownership_cannot_block_the_deadline(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         # The deadline passes on the loop's clock, and only while ownership is
         # blocked in its thread. In real time a loaded host spent it before
@@ -2036,8 +2036,8 @@ class TestTwoStageInstall:
     async def test_slow_cache_filesystem_cannot_block_the_deadline(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         # The deadline passes on the loop's clock, and only while cache
         # preparation is blocked in its thread. A fallback timed from before
@@ -2076,7 +2076,7 @@ class TestTwoStageInstall:
         assert not fell_back.is_set(), "the deadline waited for cache preparation"
 
     async def test_setup_filesystem_work_uses_a_daemon_thread(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         daemon_flags: list[bool] = []
         real_thread = threading.Thread
@@ -2094,7 +2094,7 @@ class TestTwoStageInstall:
     async def test_shutdown_awaits_setup_cancellation_cleanup(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         cleaned = asyncio.Event()
 
@@ -2118,7 +2118,7 @@ class TestTwoStageInstall:
     async def test_shutdown_preserves_simultaneous_caller_cancellation(
         self, isolate_profile_dir
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         stopping: list[asyncio.Task[None]] = []
 
@@ -2314,7 +2314,7 @@ class TestDaemonThreadHandover:
         with the cancellation rather than the value, so without a handover
         here the installer root would keep its pin until the process exits.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         monkeypatch.setattr(bootstrap, "threading", self._InlineThreads())
         discarded: list[str] = []
@@ -2335,7 +2335,7 @@ class TestDaemonThreadHandover:
         assert discarded == ["the installer root"]
 
     async def test_a_delivered_answer_is_not_discarded(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         monkeypatch.setattr(bootstrap, "threading", self._InlineThreads())
         discarded: list[str] = []
@@ -2357,7 +2357,7 @@ class TestInstallerTemporaryRootRemoval:
         reason="root ignores directory modes",
     )
     def test_a_refused_entry_names_the_root_it_stays_in(self, tmp_path, caplog):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         root = tmp_path / "linkedin-mcp-installer-x"
         locked = root / "locked"
@@ -2371,7 +2371,7 @@ class TestInstallerTemporaryRootRemoval:
         locked.chmod(0o500)
         try:
             with caplog.at_level(
-                logging.WARNING, logger="linkedin_mcp_server.bootstrap"
+                logging.WARNING, logger="linkedin_scraper_mcp.bootstrap"
             ):
                 bootstrap._remove_installer_temporary_root(temporary)
         finally:
@@ -2385,7 +2385,7 @@ class TestInstallerTemporaryRootRemoval:
         self, tmp_path, monkeypatch, caplog
     ):
         """The Windows branch leaves before rmtree, so it reports for itself."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         root = tmp_path / "linkedin-mcp-installer-z"
         root.mkdir()
@@ -2406,7 +2406,7 @@ class TestInstallerTemporaryRootRemoval:
             bootstrap, "_close_installer_temporary_root_pin", lambda _root: None
         )
 
-        with caplog.at_level(logging.WARNING, logger="linkedin_mcp_server.bootstrap"):
+        with caplog.at_level(logging.WARNING, logger="linkedin_scraper_mcp.bootstrap"):
             bootstrap._remove_installer_temporary_root(temporary)
 
         assert (root / "chromium.zip").exists()
@@ -2416,7 +2416,7 @@ class TestInstallerTemporaryRootRemoval:
     def test_a_windows_root_already_gone_says_nothing(
         self, tmp_path, monkeypatch, caplog
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         root = tmp_path / "linkedin-mcp-installer-w"
         temporary = bootstrap._InstallerTemporaryRoot(root, 1, 2, object())
@@ -2425,13 +2425,13 @@ class TestInstallerTemporaryRootRemoval:
             bootstrap, "_close_installer_temporary_root_pin", lambda _root: None
         )
 
-        with caplog.at_level(logging.WARNING, logger="linkedin_mcp_server.bootstrap"):
+        with caplog.at_level(logging.WARNING, logger="linkedin_scraper_mcp.bootstrap"):
             bootstrap._remove_installer_temporary_root(temporary)
 
         assert caplog.text == ""
 
     def test_a_cleared_root_says_nothing(self, tmp_path, caplog):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         root = tmp_path / "linkedin-mcp-installer-y"
         (root / "sub").mkdir(parents=True)
@@ -2442,7 +2442,7 @@ class TestInstallerTemporaryRootRemoval:
             root, details.st_dev, details.st_ino, pin
         )
 
-        with caplog.at_level(logging.WARNING, logger="linkedin_mcp_server.bootstrap"):
+        with caplog.at_level(logging.WARNING, logger="linkedin_scraper_mcp.bootstrap"):
             bootstrap._remove_installer_temporary_root(temporary)
 
         assert not root.exists()
@@ -2452,12 +2452,12 @@ class TestInstallerTemporaryRootRemoval:
 class TestInstallerSupervisorLaunch:
     @pytest.fixture(autouse=True)
     def _stable_supervisor_nonce(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         monkeypatch.setattr(bootstrap, "new_nonce", lambda: _SUPERVISOR_NONCE)
 
     def test_posix_supervisor_runs_the_file_without_startup_hooks(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         monkeypatch.setattr(
             bootstrap, "os", SimpleNamespace(name="posix", environ=os.environ)
@@ -2475,7 +2475,7 @@ class TestInstallerSupervisorLaunch:
         assert command[-3:] == ["--", "target", "arg"]
 
     def test_windows_supervisor_keeps_the_module_form(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         monkeypatch.setattr(
             bootstrap, "os", SimpleNamespace(name="nt", environ=os.environ)
@@ -2487,14 +2487,14 @@ class TestInstallerSupervisorLaunch:
             sys.executable,
             "-P",
             "-m",
-            "linkedin_mcp_server.installer_supervisor",
+            "linkedin_scraper_mcp.installer_supervisor",
             "--",
             "target",
             "arg",
         ]
 
     async def test_silent_download_file_growth_reports_activity(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         snapshots = iter([(("archive.zip", 1024, 1),)])
         active = asyncio.Event()
@@ -2519,7 +2519,7 @@ class TestInstallerSupervisorLaunch:
         self, monkeypatch
     ):
         """Growth is reported; only the total decides whether it is refused."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         opening = (("archive.zip", 256, 1),)
         scripted = [
@@ -2558,8 +2558,8 @@ class TestInstallerSupervisorLaunch:
         its size escapes on: patchright skips a cache directory it has already
         marked complete, so the retry writes nothing and passes.
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         inherited = (("chromium-1217/chrome", 4096, 1),)
         monkeypatch.setattr(
@@ -2579,8 +2579,8 @@ class TestInstallerSupervisorLaunch:
             )
 
     async def test_a_runaway_download_stops_and_reaps_the_installer(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         proc = _NeverExitingProc([], 0)
         overflowing = (("archive.zip", 5 * 1024**3, 1),)
@@ -2624,8 +2624,8 @@ class TestInstallerSupervisorLaunch:
         ceiling exists to bound is gone with it. The install keeps its own
         result and the breach stays a log line.
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         proc = _FakeProc([], 0)
 
@@ -2654,7 +2654,7 @@ class TestInstallerSupervisorLaunch:
         )
         monkeypatch.setattr(bootstrap, "_watch_installer_activity", watcher)
 
-        with caplog.at_level(logging.WARNING, logger="linkedin_mcp_server.bootstrap"):
+        with caplog.at_level(logging.WARNING, logger="linkedin_scraper_mcp.bootstrap"):
             await bootstrap._run_patchright_install(
                 "--no-shell", activity_callback=lambda: None
             )
@@ -2668,8 +2668,8 @@ class TestInstallerSupervisorLaunch:
         difference between them sees zero. It is the footprint the first poll
         finds that decides.
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         proc = _NeverExitingProc([], 0)
         overflowing = (("archive.zip", 5 * 1024**3, 1),)
@@ -2720,7 +2720,7 @@ class TestInstallerSupervisorLaunch:
         last of the install lands with the activity watcher parked between two
         five-second polls and nothing but the final snapshot left to see it.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         exited = asyncio.Event()
 
@@ -2753,8 +2753,8 @@ class TestInstallerSupervisorLaunch:
         self, isolate_profile_dir, tmp_path, monkeypatch
     ):
         """The final snapshot refuses a tree the installer exited 0 on."""
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         _patch_targets_and_version(monkeypatch)
         monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(tmp_path / "browsers"))
@@ -2780,8 +2780,8 @@ class TestInstallerSupervisorLaunch:
         The ceiling adds nothing to an install that is refused already, and the
         output it collected is the only account of the failure there is.
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         _patch_targets_and_version(monkeypatch)
         monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(tmp_path / "browsers"))
@@ -2802,7 +2802,7 @@ class TestInstallerSupervisorLaunch:
         self, isolate_profile_dir, tmp_path, monkeypatch
     ):
         """A tree that stays under the ceiling is recorded as installed."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         _patch_targets_and_version(monkeypatch)
         monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(tmp_path / "browsers"))
@@ -2826,8 +2826,8 @@ class TestInstallerSupervisorLaunch:
         all, so the second one downloads nothing. Charging growth would then
         find none and record the very tree the ceiling had just refused.
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         _patch_targets_and_version(monkeypatch)
         browsers = tmp_path / "browsers"
@@ -2875,7 +2875,7 @@ class TestInstallerSupervisorLaunch:
         inactivity deadline and pass none, which is not an opinion about how
         many bytes they may write.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         proc = _FakeProc([], 0)
         watched: list[Callable[[], None]] = []
@@ -2908,8 +2908,8 @@ class TestInstallerSupervisorLaunch:
 
     async def test_endless_growth_contains_a_direct_install(self, monkeypatch):
         """The ceiling reaps the installer and its private root either way."""
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         proc = _NeverExitingProc([], 0)
         overflowing = (("archive.zip", 5 * 1024**3, 1),)
@@ -2957,8 +2957,8 @@ class TestInstallerSupervisorLaunch:
         loaded host by the setup before the spawn, and then there was no
         installer to reap.
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         proc = _NeverExitingProc([], 0)
         loop = asyncio.get_running_loop()
@@ -2996,7 +2996,7 @@ class TestInstallerSupervisorLaunch:
         happened to begin, so an attempt could outlive the ceiling by however
         long the readiness check and the setup around it took.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         armed = 0
         real_timeout_at = asyncio.timeout_at
@@ -3021,7 +3021,7 @@ class TestInstallerSupervisorLaunch:
         assert armed == 2
 
     def test_real_activity_scanner_observes_private_archive_growth(self, tmp_path):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         temporary_root = tmp_path / "private"
         archive = temporary_root / "playwright-download-current" / "archive.zip"
@@ -3035,7 +3035,7 @@ class TestInstallerSupervisorLaunch:
         assert after != before
 
     def test_unrelated_global_download_does_not_report_activity(self, tmp_path):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         temporary_root = tmp_path / "private"
         unrelated = tmp_path / "global" / "playwright-download-other" / "archive.zip"
@@ -3052,7 +3052,7 @@ class TestInstallerSupervisorLaunch:
     def test_only_the_locked_cache_revision_reports_activity(
         self, tmp_path, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         temporary_root = tmp_path / "private"
         cache = tmp_path / "cache"
@@ -3097,7 +3097,7 @@ class TestInstallerSupervisorLaunch:
         assert after_expected != after_unrelated
 
     def test_a_direct_download_archive_reports_activity(self, tmp_path):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         temporary_root = tmp_path / "private"
         temporary_root.mkdir()
@@ -3117,7 +3117,7 @@ class TestInstallerSupervisorLaunch:
         ``os.walk`` refuses to descend through a directory symlink, and a file
         symlink reaches as far by another name.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         temporary_root = tmp_path / "private"
         download = temporary_root / "playwright-download-current"
@@ -3147,8 +3147,8 @@ class TestInstallerSupervisorLaunch:
         A suppressed read error subtracts those bytes from the ceiling, so the
         install it was meant to bound passes as a smaller one.
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         target = tmp_path / "chromium-1234"
         target.mkdir()
@@ -3192,8 +3192,8 @@ class TestInstallerSupervisorLaunch:
         a warning, while the same breach a turn earlier refused it. A peak no
         poll ever saw is still bounded only by the final accounting (#815).
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         proc = _FakeProc([b"done\n"], 0)
 
@@ -3215,8 +3215,8 @@ class TestInstallerSupervisorLaunch:
 
     async def test_a_failed_install_keeps_its_message_over_a_breach(self, monkeypatch):
         """The installer's own failure still outranks the watcher's report."""
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         proc = _FakeProc([b"ERROR: the mirror refused the archive\n"], 1)
 
@@ -3242,8 +3242,8 @@ class TestInstallerSupervisorLaunch:
         Everything the scan can say here is that it could not measure a tree
         the install already abandoned.
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         proc = _FakeProc([b"ERROR: the mirror refused the archive\n"], 1)
         scans = iter([()])
@@ -3283,7 +3283,7 @@ class TestInstallerSupervisorLaunch:
         A one-shot CLI mode reaches interpreter exit within milliseconds of a
         refused install, and the root left behind holds its download.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         registered: list[Callable[[], None]] = []
         started = threading.Event()
@@ -3317,8 +3317,8 @@ class TestInstallerSupervisorLaunch:
         A pattern match over the root answers an unreadable directory with no
         matches, which reads exactly like an install that has written nothing.
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         real_scandir = os.scandir
 
@@ -3338,8 +3338,8 @@ class TestInstallerSupervisorLaunch:
         Nothing the installer does can shrink a cache it is never started for,
         and the guidance the client receives is to try again.
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         spawned: list[object] = []
         monkeypatch.setattr(
@@ -3365,8 +3365,8 @@ class TestInstallerSupervisorLaunch:
         Everything it cannot measure becomes a bound, so the install it can no
         longer watch is stopped rather than left to finish unobserved.
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         proc = _NeverExitingProc([], 0)
         scans = iter([()])
@@ -3397,8 +3397,8 @@ class TestInstallerSupervisorLaunch:
 
     async def test_an_oversized_custom_cache_names_itself(self, monkeypatch, tmp_path):
         """The operator moved the cache, so the default is not what to remove."""
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         elsewhere = tmp_path / "browser-cache"
         monkeypatch.setenv("PLAYWRIGHT_BROWSERS_PATH", str(elsewhere))
@@ -3459,7 +3459,7 @@ class TestInstallerSupervisorLaunch:
         replacement that raises something else. The production path is
         `test_a_scan_failure_mid_install_stops_the_installer` below.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         proc = _FakeProc([], 0)
 
@@ -3483,7 +3483,7 @@ class TestInstallerSupervisorLaunch:
         )
         monkeypatch.setattr(bootstrap, "_watch_installer_activity", watcher)
 
-        with caplog.at_level(logging.WARNING, logger="linkedin_mcp_server.bootstrap"):
+        with caplog.at_level(logging.WARNING, logger="linkedin_scraper_mcp.bootstrap"):
             await bootstrap._run_patchright_install(
                 "--no-shell", activity_callback=lambda: None
             )
@@ -3499,8 +3499,8 @@ class TestInstallerSupervisorLaunch:
         already in flight, and the final accounting only ever judges what a
         finished installer left behind.
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         async def unavailable(function, *args, **kwargs):
             raise RuntimeError("can't start new thread")
@@ -3522,7 +3522,7 @@ class TestInstallerSupervisorLaunch:
     async def test_parent_cancellation_during_watcher_cleanup_is_preserved(
         self, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         proc = _FakeProc([], 0)
         cleanup_started = asyncio.Event()
@@ -3565,7 +3565,7 @@ class TestInstallerSupervisorLaunch:
     async def test_launches_the_internal_supervisor_and_reads_its_target(
         self, tmp_path, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         proc = _FakeProc([], 0)
         captured: dict[str, object] = {}
@@ -3605,7 +3605,7 @@ class TestInstallerSupervisorLaunch:
         }
 
     async def test_windows_assigns_the_gate_before_releasing_it(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         events: list[str] = []
         proc = _FakeProc([], 0)
@@ -3692,7 +3692,7 @@ class TestInstallerSupervisorLaunch:
     async def test_startup_diagnostics_do_not_hide_control_frames(
         self, tmp_path, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         proc = _FakeProc([], 0)
         proc.stderr = _FakeProtocol(
@@ -3714,7 +3714,7 @@ class TestInstallerSupervisorLaunch:
         )
 
     async def test_cleanup_drains_output_before_process_collection(self):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         proc = _FakeProc([b"buffered output\n"], 1)
 
@@ -3724,8 +3724,8 @@ class TestInstallerSupervisorLaunch:
         assert proc.waited
 
     async def test_start_failure_reports_the_tracebacks_final_cause(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         proc = _FakeProc([], 1)
         stderr = asyncio.StreamReader()
@@ -3745,8 +3745,8 @@ class TestInstallerSupervisorLaunch:
             )
 
     async def test_start_failure_sanitizes_the_final_diagnostic(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         proc = _FakeProc([], 1)
         stderr = asyncio.StreamReader()
@@ -3768,8 +3768,8 @@ class TestInstallerSupervisorLaunch:
         assert "https://***@example.test/***" in reported
 
     async def _start_error(self, monkeypatch, *writes: bytes) -> str:
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         proc = _FakeProc([], 1)
         proc.stderr = _FakeProtocol(*writes)
@@ -3789,7 +3789,7 @@ class TestInstallerSupervisorLaunch:
         recognises it. Redaction now happens before the trim, so the URL is an
         origin long before the tail is short enough to need one.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         long_url = "https://mirror.example/" + "a" * 9000 + "?key=s3cr3t"
         reported = await self._start_error(
@@ -3810,7 +3810,7 @@ class TestInstallerSupervisorLaunch:
         it. The credential arrives after that head is gone and has to go with
         it, scheme and all.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         reported = await self._start_error(
             monkeypatch,
@@ -3876,8 +3876,8 @@ class TestInstallerSupervisorLaunch:
     async def test_handshake_timeout_reports_the_missing_stage(
         self, monkeypatch, lines, message, written
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         class _HangingProtocol(_FakeProtocol):
             async def read(self, n: int = -1) -> bytes:
@@ -3903,7 +3903,7 @@ class TestInstallerSupervisorLaunch:
         assert proc.waited
 
     async def test_cancellation_waits_for_tree_cleanup(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         proc = _FakeProc([], 0)
         started = asyncio.Event()
@@ -3925,7 +3925,7 @@ class TestInstallerSupervisorLaunch:
             await stopping
 
     async def test_hard_fallback_stops_the_unresponsive_supervisor(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         proc = _FakeProc([], 0)
         exits = iter([False, True])
@@ -3941,7 +3941,7 @@ class TestInstallerSupervisorLaunch:
         assert proc.killed
 
     async def test_cleanup_stages_share_one_stop_deadline(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         proc = _FakeProc([], 0)
         remaining_values = iter([10.0, 6.0, 4.0, 0.0, 0.0])
@@ -3973,7 +3973,7 @@ class TestInstallerSupervisorLaunch:
     async def test_assigned_windows_cleanup_releases_handle_before_drain_off_loop(
         self,
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         main_thread = threading.get_ident()
         worker_threads: list[int] = []
@@ -4039,7 +4039,7 @@ class TestInstallerSupervisorLaunch:
         assert managed.windows_popen is None
 
     async def test_waits_for_the_unregister_completion_callback(self):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         event_fut = asyncio.get_running_loop().create_future()
 
@@ -4080,8 +4080,8 @@ class TestInstallerSupervisorLaunch:
         assert process_wait._ov is None
 
     async def test_missing_unregister_proof_keeps_the_popen_handle(self):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.process_tree import ProcessTreeError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.process_tree import ProcessTreeError
 
         proc = _FakeProc([], 0)
         popen = SimpleNamespace(returncode=None, _handle=object())
@@ -4112,7 +4112,7 @@ class TestInstallerSupervisorLaunch:
         assert managed.windows_popen is popen
 
     async def test_termination_failure_closes_the_kill_on_close_job(self):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         proc = _FakeProc([], 0)
 
@@ -4143,7 +4143,7 @@ class TestInstallerSupervisorLaunch:
 
     @pytest.mark.skipif(os.name != "nt", reason="requires the CPython proactor")
     async def test_real_cpython_wait_unregister_contract(self):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         raw_proc = await asyncio.create_subprocess_exec(
             sys.executable,
@@ -4178,7 +4178,7 @@ class TestInstallerSupervisorLaunch:
         assert wait_contract._ov is None
 
     async def test_unassigned_windows_cleanup_closes_the_gate_and_job(self):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         proc = _FakeProc([], 0)
 
@@ -4216,14 +4216,14 @@ class TestPatchrightInstallStreaming:
             return spawned.proc
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._start_installer_supervisor", fake_start
+            "linkedin_scraper_mcp.bootstrap._start_installer_supervisor", fake_start
         )
         return spawned
 
     async def test_second_cancel_before_task_settlement_cannot_skip_cleanup(
         self, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         installer_started = asyncio.Event()
         cleanup_started = asyncio.Event()
@@ -4293,7 +4293,7 @@ class TestPatchrightInstallStreaming:
     async def test_slow_temporary_root_creation_cannot_block_timeout(
         self, tmp_path, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         blocked = threading.Event()
         release = threading.Event()
@@ -4352,7 +4352,7 @@ class TestPatchrightInstallStreaming:
         assert not private.exists(), "the canceled thread discarded its pinned root"
 
     async def test_cold_registry_read_cannot_block_timeout(self, tmp_path, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         blocked = threading.Event()
         release = threading.Event()
@@ -4411,7 +4411,7 @@ class TestPatchrightInstallStreaming:
         3.12.0 gets exactly the same directory 3.13 does. The releases below the
         old floor are the point of the sweep.
         """
-        from linkedin_mcp_server import bootstrap, windows_acl
+        from linkedin_scraper_mcp import bootstrap, windows_acl
 
         temporary_root = tmp_path / "private"
         temporary_root.mkdir()
@@ -4443,7 +4443,7 @@ class TestPatchrightInstallStreaming:
     def test_installer_temporary_parent_respects_configured_installer_temp_dir(
         self, tmp_path, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         custom_temp = tmp_path / "custom_temp"
         custom_temp.mkdir()
@@ -4458,7 +4458,7 @@ class TestPatchrightInstallStreaming:
     def test_installer_temporary_parent_prefers_config_over_env(
         self, tmp_path, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         cli_temp = tmp_path / "cli_temp"
         cli_temp.mkdir()
@@ -4476,7 +4476,7 @@ class TestPatchrightInstallStreaming:
     def test_installer_temporary_parent_defaults_to_gettempdir_when_unset(
         self, tmp_path, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         fake_config = SimpleNamespace(browser=SimpleNamespace(installer_temp_dir=None))
         monkeypatch.setattr(bootstrap, "get_config", lambda: fake_config)
@@ -4490,8 +4490,8 @@ class TestPatchrightInstallStreaming:
     def test_replaceable_temporary_parent_is_refused_before_creation(
         self, tmp_path, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.private_state import PrivateStateError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.private_state import PrivateStateError
 
         shared = tmp_path / "shared"
         shared.mkdir(mode=0o777)
@@ -4509,8 +4509,8 @@ class TestPatchrightInstallStreaming:
     def test_windows_reparse_temporary_root_is_refused_after_pinning(
         self, tmp_path, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap, windows_acl
-        from linkedin_mcp_server.private_state import PrivateStateError
+        from linkedin_scraper_mcp import bootstrap, windows_acl
+        from linkedin_scraper_mcp.private_state import PrivateStateError
 
         temporary_root = tmp_path / "private"
         temporary_root.mkdir()
@@ -4540,8 +4540,8 @@ class TestPatchrightInstallStreaming:
         assert closed == [pin]
 
     def test_mac_extended_acl_on_temp_parent_is_refused(self, tmp_path, monkeypatch):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.private_state import PrivateStateError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.private_state import PrivateStateError
 
         parent = tmp_path / "temporary"
         parent.mkdir()
@@ -4569,7 +4569,7 @@ class TestPatchrightInstallStreaming:
     def test_installer_temporary_root_is_hardened_before_use(
         self, tmp_path, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         temporary_root = tmp_path / "private"
         events: list[tuple[str, Path]] = []
@@ -4599,7 +4599,7 @@ class TestPatchrightInstallStreaming:
     def test_installer_temporary_root_is_removed_when_hardening_fails(
         self, tmp_path, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         temporary_root = tmp_path / "private"
 
@@ -4620,7 +4620,7 @@ class TestPatchrightInstallStreaming:
 
     @pytest.mark.skipif(os.name == "nt", reason="the Windows pin prevents replacement")
     def test_cleanup_refuses_a_replaced_temporary_root(self, tmp_path, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         temporary_root = tmp_path / "private"
 
@@ -4646,7 +4646,7 @@ class TestPatchrightInstallStreaming:
     def test_cleanup_thread_start_failure_closes_the_root_pin(
         self, tmp_path, monkeypatch, caplog
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         temporary_root = tmp_path / "private"
         temporary_root.mkdir()
@@ -4664,7 +4664,7 @@ class TestPatchrightInstallStreaming:
                 raise RuntimeError("thread limit")
 
         monkeypatch.setattr(bootstrap.threading, "Thread", RefusingThread)
-        with caplog.at_level(logging.WARNING, logger="linkedin_mcp_server.bootstrap"):
+        with caplog.at_level(logging.WARNING, logger="linkedin_scraper_mcp.bootstrap"):
             bootstrap._start_installer_temporary_root_cleanup(created)
 
         with pytest.raises(OSError):
@@ -4678,7 +4678,7 @@ class TestPatchrightInstallStreaming:
     ):
         import shutil
 
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         temporary_root = tmp_path / "private"
         temporary_root.mkdir()
@@ -4715,7 +4715,7 @@ class TestPatchrightInstallStreaming:
     async def test_private_temp_environment_is_removed_after_tree_exit(
         self, tmp_path, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         temporary_root = tmp_path / "private"
 
@@ -4749,7 +4749,7 @@ class TestPatchrightInstallStreaming:
         assert removed_after_exit == [True]
 
     async def test_the_callback_gets_every_line_in_order(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         spawned = self._patch_proc(
             monkeypatch,
@@ -4766,10 +4766,10 @@ class TestPatchrightInstallStreaming:
 
     async def test_the_background_path_logs_every_line(self, monkeypatch, caplog):
         """With no callback there is no bar, and the log is the only display."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         self._patch_proc(monkeypatch, [b"Downloading 100%\n"], 0)
-        with caplog.at_level(logging.DEBUG, logger="linkedin_mcp_server.bootstrap"):
+        with caplog.at_level(logging.DEBUG, logger="linkedin_scraper_mcp.bootstrap"):
             await bootstrap._run_patchright_install("--no-shell")
 
         assert any("Downloading 100%" in r.message for r in caplog.records)
@@ -4778,10 +4778,10 @@ class TestPatchrightInstallStreaming:
         self, monkeypatch, caplog
     ):
         """Otherwise every percentage is printed permanently above the bar."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         self._patch_proc(monkeypatch, [b"Downloading 100%\n"], 0)
-        with caplog.at_level(logging.DEBUG, logger="linkedin_mcp_server.bootstrap"):
+        with caplog.at_level(logging.DEBUG, logger="linkedin_scraper_mcp.bootstrap"):
             await bootstrap._run_patchright_install(
                 "--no-shell", line_callback=lambda _l: None
             )
@@ -4796,7 +4796,7 @@ class TestPatchrightInstallStreaming:
         change removes. So the moment matters: each line must reach the
         callback while the installer is still running.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         spawned = self._patch_proc(monkeypatch, [b"10%\n", b"20%\n"], 0)
         waited_when_seen: list[bool] = []
@@ -4811,8 +4811,8 @@ class TestPatchrightInstallStreaming:
         assert waited_when_seen == [False, False]
 
     async def test_failure_message_is_built_from_streamed_lines(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         self._patch_proc(monkeypatch, [b"resolving...\n", b"error: no network\n"], 1)
 
@@ -4820,8 +4820,8 @@ class TestPatchrightInstallStreaming:
             await bootstrap._run_patchright_install("--no-shell")
 
     async def test_failure_without_output_has_a_default_message(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         self._patch_proc(monkeypatch, [], 1)
 
@@ -4836,7 +4836,7 @@ class TestPatchrightInstallStreaming:
         one. Reading through ``readline`` raises ValueError there, mid-download,
         leaving the child running.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         long_line = "E" * 200_000
         self._patch_proc(monkeypatch, [long_line.encode() + b"\n"], 0)
@@ -4855,7 +4855,7 @@ class TestPatchrightInstallStreaming:
         Trimming every fragment would eat a space the installer wrote, at
         whatever offset the cap happens to fall on.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         cut = bootstrap._MAX_LINE_CHARS
         payload = "A" * (cut - 1) + " " + "B" * bootstrap._MAX_LINE_CHARS
@@ -4872,7 +4872,7 @@ class TestPatchrightInstallStreaming:
 
     async def test_output_that_never_ends_a_line_stays_bounded(self, monkeypatch):
         """Output with no newline at all must not grow the buffer without limit."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         self._patch_proc(monkeypatch, [b"N" * 500_000], 0)
         seen: list[str] = []
@@ -4884,7 +4884,7 @@ class TestPatchrightInstallStreaming:
 
     async def test_multibyte_split_across_reads_is_not_corrupted(self, monkeypatch):
         """A UTF-8 character straddling two reads must survive decoding."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         encoded = "100% ■ fertig".encode()
         self._patch_proc(monkeypatch, [encoded[:7], encoded[7:] + b"\n"], 0)
@@ -4895,7 +4895,7 @@ class TestPatchrightInstallStreaming:
         assert seen == ["100% ■ fertig"]
 
     async def test_a_trailing_line_without_a_newline_arrives(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         self._patch_proc(monkeypatch, [b"no trailing newline"], 0)
         seen: list[str] = []
@@ -4906,13 +4906,13 @@ class TestPatchrightInstallStreaming:
 
     async def test_mirror_credentials_are_not_logged(self, monkeypatch, caplog):
         """Userinfo in a download URL reaches neither the terminal nor the log."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         url = "https://ci-bot:s3cr3t@mirror.example/chromium.zip"
         self._patch_proc(monkeypatch, [f"Downloading from {url}\n".encode()], 0)
         seen: list[str] = []
 
-        with caplog.at_level(logging.DEBUG, logger="linkedin_mcp_server.bootstrap"):
+        with caplog.at_level(logging.DEBUG, logger="linkedin_scraper_mcp.bootstrap"):
             await bootstrap._run_patchright_install(
                 "--no-shell", line_callback=seen.append
             )
@@ -4936,8 +4936,8 @@ class TestPatchrightInstallStreaming:
     async def test_mirror_path_credentials_are_not_reported(
         self, monkeypatch, caplog, variable: str
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         token = "private-access-token"
         host = f"https://mirror.example/{token}"
@@ -4945,7 +4945,7 @@ class TestPatchrightInstallStreaming:
         monkeypatch.setenv(variable, host)
         self._patch_proc(monkeypatch, [f"Downloading from {url}\n".encode()], 1)
 
-        with caplog.at_level(logging.DEBUG, logger="linkedin_mcp_server.bootstrap"):
+        with caplog.at_level(logging.DEBUG, logger="linkedin_scraper_mcp.bootstrap"):
             with pytest.raises(BrowserSetupFailedError) as excinfo:
                 await bootstrap._run_patchright_install("--no-shell")
 
@@ -4966,8 +4966,8 @@ class TestPatchrightInstallStreaming:
         configured prefix never reaches that URL: it runs with the variable both
         unset and set to an origin the redirect leaves.
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         if configured:
             monkeypatch.setenv("PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST", configured)
@@ -4984,7 +4984,7 @@ class TestPatchrightInstallStreaming:
         )
         seen: list[str] = []
 
-        with caplog.at_level(logging.DEBUG, logger="linkedin_mcp_server.bootstrap"):
+        with caplog.at_level(logging.DEBUG, logger="linkedin_scraper_mcp.bootstrap"):
             with pytest.raises(BrowserSetupFailedError) as excinfo:
                 await bootstrap._run_patchright_install("--no-shell")
             with pytest.raises(BrowserSetupFailedError):
@@ -5009,7 +5009,7 @@ class TestPatchrightInstallStreaming:
         stable under append: a version that drops the delimiter along with the
         path lets the next read's token land against the hostname.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         url = "https://cdn.example/another-bearer-token/chromium.zip"
         line = f"Downloading Chromium from {url}\n".encode()
@@ -5028,8 +5028,8 @@ class TestPatchrightInstallStreaming:
 
     async def test_the_failure_message_is_bounded(self, monkeypatch):
         """A pathological installer must not be quoted back in full."""
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         chunk = b"".join(f"line {i}\n".encode() for i in range(5_000))
         self._patch_proc(monkeypatch, [chunk], 1)
@@ -5049,8 +5049,8 @@ class TestPatchrightInstallStreaming:
         response body. The character bound is what stops it, and a test built
         from short lines never reaches it.
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         big = b"".join((b"H" * 40_000) + b"\n" for _ in range(20))
         self._patch_proc(monkeypatch, [big], 1)
@@ -5074,7 +5074,7 @@ class TestPatchrightInstallStreaming:
         The supervisor owns the Python wrapper, Node CLI and downloader, so the
         lease cannot finish while only the direct child has stopped.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         spawned = self._patch_proc(monkeypatch, [b"downloading\n"], 0)
 
@@ -5089,7 +5089,7 @@ class TestPatchrightInstallStreaming:
         assert spawned.proc.waited
 
     async def test_cancellation_stops_the_installer(self, tmp_path, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         temporary_root = tmp_path / "private"
 
@@ -5117,7 +5117,7 @@ class TestPatchrightInstallStreaming:
     async def test_blocked_temp_cleanup_does_not_hold_cancellation(
         self, tmp_path, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         temporary_root = tmp_path / "private"
 
@@ -5179,7 +5179,7 @@ class TestPatchrightInstallStreaming:
     async def test_windows_normal_completion_uses_exit_callback_before_pipe_eof(
         self, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         events: list[str] = []
         pipe_eof = asyncio.Event()
@@ -5277,7 +5277,7 @@ class TestPatchrightInstallStreaming:
         assert not managed.assigned
 
     async def test_windows_callback_failure_drains_the_job(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         events: list[str] = []
 
@@ -5348,7 +5348,7 @@ class TestPatchrightInstallStreaming:
     async def test_windows_cancellation_during_normal_drain_reuses_one_cleanup(
         self, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         events: list[str] = []
         drain_started = threading.Event()
@@ -5419,8 +5419,8 @@ class TestPatchrightInstallStreaming:
         assert not managed.assigned
 
     async def test_windows_drain_failure_is_not_swallowed_or_retried(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.process_tree import ProcessTreeError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.process_tree import ProcessTreeError
 
         events: list[str] = []
 
@@ -5471,7 +5471,7 @@ class TestPatchrightInstallStreaming:
 class TestWindowsInstallerTempFallback:
     @pytest.fixture
     def windows_temp(self, tmp_path, monkeypatch):
-        from linkedin_mcp_server import bootstrap, windows_acl
+        from linkedin_scraper_mcp import bootstrap, windows_acl
 
         home = tmp_path / "home"
         temporary = home / "AppData" / "Local" / "Temp"
@@ -5499,8 +5499,8 @@ class TestWindowsInstallerTempFallback:
     def test_rejected_default_temp_falls_back_to_home(
         self, windows_temp, monkeypatch, caplog, os_error
     ):
-        from linkedin_mcp_server import bootstrap, windows_acl
-        from linkedin_mcp_server.private_state import PrivateStateError
+        from linkedin_scraper_mcp import bootstrap, windows_acl
+        from linkedin_scraper_mcp.private_state import PrivateStateError
 
         home, temporary = windows_temp
         refusal = f"{home / 'AppData'} grants S-1-15-2-1 permission to remove or re-permission the installer path below it"
@@ -5530,7 +5530,7 @@ class TestWindowsInstallerTempFallback:
     def test_default_parent_resolution_failure_falls_back(
         self, windows_temp, monkeypatch, error
     ):
-        from linkedin_mcp_server import bootstrap, windows_acl
+        from linkedin_scraper_mcp import bootstrap, windows_acl
 
         home, _temporary = windows_temp
 
@@ -5552,7 +5552,7 @@ class TestWindowsInstallerTempFallback:
         assert root.path.is_dir()
 
     def test_safe_default_keeps_system_temp(self, windows_temp, monkeypatch):
-        from linkedin_mcp_server import bootstrap, windows_acl
+        from linkedin_scraper_mcp import bootstrap, windows_acl
 
         _home, temporary = windows_temp
 
@@ -5572,8 +5572,8 @@ class TestWindowsInstallerTempFallback:
     def test_explicit_temp_never_falls_back(
         self, windows_temp, monkeypatch, configured, resolution_fails
     ):
-        from linkedin_mcp_server import bootstrap, windows_acl
-        from linkedin_mcp_server.private_state import PrivateStateError
+        from linkedin_scraper_mcp import bootstrap, windows_acl
+        from linkedin_scraper_mcp.private_state import PrivateStateError
 
         home, temporary = windows_temp
         if configured == "config":
@@ -5598,8 +5598,8 @@ class TestWindowsInstallerTempFallback:
         assert list(home.iterdir()) == [home / "AppData"]
 
     def test_unsafe_home_reports_both_failures(self, windows_temp, monkeypatch):
-        from linkedin_mcp_server import bootstrap, windows_acl
-        from linkedin_mcp_server.private_state import PrivateStateError
+        from linkedin_scraper_mcp import bootstrap, windows_acl
+        from linkedin_scraper_mcp.private_state import PrivateStateError
 
         home, temporary = windows_temp
 
@@ -5620,8 +5620,8 @@ class TestWindowsInstallerTempFallback:
     def test_unavailable_home_keeps_recovery_guidance(
         self, windows_temp, monkeypatch, error
     ):
-        from linkedin_mcp_server import bootstrap, windows_acl
-        from linkedin_mcp_server.private_state import PrivateStateError
+        from linkedin_scraper_mcp import bootstrap, windows_acl
+        from linkedin_scraper_mcp.private_state import PrivateStateError
 
         def refuse(parent, *, prefix):
             raise PrivateStateError("sandbox grant")
@@ -5662,7 +5662,7 @@ class TestCredentialRedaction:
         ],
     )
     def test_the_secret_never_survives(self, url):
-        from linkedin_mcp_server.bootstrap import _safe_to_print
+        from linkedin_scraper_mcp.bootstrap import _safe_to_print
 
         redacted = _safe_to_print(f"Downloading Chromium from {url}")
         assert "s3cr3t" not in redacted
@@ -5702,7 +5702,7 @@ class TestCredentialRedaction:
         ],
     )
     def test_a_url_keeps_its_origin_and_nothing_else(self, url, expected):
-        from linkedin_mcp_server.bootstrap import _safe_to_print
+        from linkedin_scraper_mcp.bootstrap import _safe_to_print
 
         assert _safe_to_print(f"from {url} now") == f"from {expected} now"
 
@@ -5728,7 +5728,7 @@ class TestCredentialRedaction:
         that arrives in two halves must not survive the join. Every offset is
         swept because only some of them straddle a delimiter.
         """
-        from linkedin_mcp_server.bootstrap import _safe_to_print
+        from linkedin_scraper_mcp.bootstrap import _safe_to_print
 
         text = f"Downloading Chromium from {url} now"
         surviving = [
@@ -5747,7 +5747,7 @@ class TestCredentialRedaction:
         A configured host with no scheme is not a URL to any pattern here, so
         the path patchright pastes onto it would print as ordinary text.
         """
-        from linkedin_mcp_server.bootstrap import _safe_to_print
+        from linkedin_scraper_mcp.bootstrap import _safe_to_print
 
         monkeypatch.setenv("PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST", "mirror.example/s3cr3t")
 
@@ -5758,7 +5758,7 @@ class TestCredentialRedaction:
     def test_an_invalid_unused_fallback_does_not_break_output(
         self, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server.bootstrap import _safe_to_print
+        from linkedin_scraper_mcp.bootstrap import _safe_to_print
 
         monkeypatch.setenv("PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST", "https://valid.example")
         monkeypatch.setenv("PLAYWRIGHT_DOWNLOAD_HOST", "http://[")
@@ -5778,7 +5778,7 @@ class TestCredentialRedaction:
         sweep the boundaries a cut and a read can land on, and a version that
         redacts the fragments instead leaks in at least one of them.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         secret = "https://ci-bot:s3cr3t@mirror.example/x.zip"
         cap = bootstrap._MAX_LINE_CHARS
@@ -5838,7 +5838,7 @@ class TestAnApostropheDoesNotEndAUrl:
         ],
     )
     def test_the_whole_url_goes_including_its_apostrophes(self, url, expected):
-        from linkedin_mcp_server.bootstrap import _safe_to_print
+        from linkedin_scraper_mcp.bootstrap import _safe_to_print
 
         cleaned = _safe_to_print(f"from {url} now")
 
@@ -5862,7 +5862,7 @@ class TestAnApostropheDoesNotEndAUrl:
         Every offset is swept because only some of them leave an apostrophe at
         the end of the text, which is where the closing marker is held back.
         """
-        from linkedin_mcp_server.bootstrap import _safe_to_print
+        from linkedin_scraper_mcp.bootstrap import _safe_to_print
 
         text = f"Downloading Chromium from {url} now"
         surviving = [
@@ -5890,7 +5890,7 @@ class TestAnApostropheDoesNotEndAUrl:
         out of sanitised text, and without it the body never closes and every
         later line of the install is dropped as body.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         cleaned = bootstrap._safe_to_print(text)
 
@@ -5907,7 +5907,7 @@ class TestAnApostropheDoesNotEndAUrl:
         that pass to find. Both offsets a URL run can reach are swept: the
         marker's apostrophe alone, and its full stop with it.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         marker = bootstrap._RESPONSE_BODY_CLOSES
         head = (
@@ -5923,7 +5923,7 @@ class TestAnApostropheDoesNotEndAUrl:
 
     def test_an_apostrophe_outside_a_marker_is_still_redacted(self):
         """Only a real marker earns the hold-back, not any trailing quote."""
-        from linkedin_mcp_server.bootstrap import _safe_to_print
+        from linkedin_scraper_mcp.bootstrap import _safe_to_print
 
         assert _safe_to_print("from https://mirror.example/s3cr3t' now") == (
             "from https://mirror.example/*** now"
@@ -5937,7 +5937,7 @@ class TestAnApostropheDoesNotEndAUrl:
         the only thing that ever sees the raw bytes, and the marker detection
         never does.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         original = bootstrap._safe_to_print
         offered: list[str] = []
@@ -5976,8 +5976,8 @@ class TestAnApostropheDoesNotEndAUrl:
         They share one producer, so a leak reaches all three, and a fix has to
         be checked against all three rather than against the pattern alone.
         """
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         seen: list[str] = []
 
@@ -5991,7 +5991,7 @@ class TestAnApostropheDoesNotEndAUrl:
             )
 
         monkeypatch.setattr(bootstrap, "_start_installer_supervisor", fake_start)
-        caplog.set_level(logging.DEBUG, logger="linkedin_mcp_server.bootstrap")
+        caplog.set_level(logging.DEBUG, logger="linkedin_scraper_mcp.bootstrap")
 
         with pytest.raises(BrowserSetupFailedError) as raised:
             await bootstrap._run_patchright_install("--no-shell")
@@ -6019,7 +6019,7 @@ class TestAnApostropheDoesNotEndAUrl:
         Gluing it to the filler instead would measure the ``\\b`` the pattern
         opens on rather than the apostrophe this is about.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         secret = " https://cdn.example/browser's.zip?X-Amz-Signature=s3cr3t"
         cap = bootstrap._MAX_LINE_CHARS
@@ -6056,7 +6056,7 @@ class TestAForcedCutDoesNotSplitAUrl:
     URL = "https://ci-bot:s3cr3t@mirror.example/p?key=s3cr3t"
 
     async def _lines(self, *writes: bytes) -> list[str]:
-        from linkedin_mcp_server.bootstrap import _installer_lines
+        from linkedin_scraper_mcp.bootstrap import _installer_lines
 
         stream = cast(Any, _FakeStdout(list(writes)))
         return [line async for line in _installer_lines(stream)]
@@ -6078,7 +6078,7 @@ class TestAForcedCutDoesNotSplitAUrl:
         front of it, and only the first half of the userinfo has been read when
         the fragment is forced out.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         cap = bootstrap._MAX_LINE_CHARS
         printed = "".join(await self._lines(*self._writes(cap, offset=10, head=14)))
@@ -6096,7 +6096,7 @@ class TestAForcedCutDoesNotSplitAUrl:
         the same thing. Small also puts the URL over the cap, which is the case
         that has no cut point at all.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         cap = 40
         monkeypatch.setattr(bootstrap, "_MAX_LINE_CHARS", cap)
@@ -6118,7 +6118,7 @@ class TestAForcedCutDoesNotSplitAUrl:
         not. The credential arrives after the drop has begun and has to be
         dropped with it: it carries no scheme of its own by then.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         cap = bootstrap._MAX_LINE_CHARS
         printed = "".join(
@@ -6142,7 +6142,7 @@ class TestAForcedCutDoesNotSplitAUrl:
         than a scheme-less credential. Dropping on that evidence would delete
         ordinary output, so the cut stands there.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         cap = bootstrap._MAX_LINE_CHARS
         blob = "//" + "N" * (2 * cap)
@@ -6180,7 +6180,7 @@ class TestAForcedCutDoesNotSplitAUrl:
         leaves those where they are. Losing either would elide the rest of the
         install.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         cap = bootstrap._MAX_LINE_CHARS
         opener = "Download failed: server returned code 403 body '"
@@ -6206,14 +6206,14 @@ class TestEofFragmentsLikeEveryOtherBoundary:
     """
 
     async def _pieces(self, *writes: bytes) -> list[tuple[str, bool]]:
-        from linkedin_mcp_server.bootstrap import _split_installer_output
+        from linkedin_scraper_mcp.bootstrap import _split_installer_output
 
         stream = cast(Any, _FakeStdout(list(writes)))
         return [piece async for piece in _split_installer_output(stream)]
 
     async def test_what_sanitation_grows_at_eof_is_still_bounded(self):
         """Exactly the cap, so the fold and the growth both land on EOF."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         cap = bootstrap._MAX_LINE_CHARS
         payload = ("http://[ " * (cap // 9 + 1))[:cap]
@@ -6257,7 +6257,7 @@ class TestAConfiguredMirrorSurvivesEveryBoundary:
     }
 
     async def _lines(self, *writes: bytes) -> list[str]:
-        from linkedin_mcp_server.bootstrap import _installer_lines
+        from linkedin_scraper_mcp.bootstrap import _installer_lines
 
         stream = cast(Any, _FakeStdout(list(writes)))
         return [line async for line in _installer_lines(stream)]
@@ -6271,7 +6271,7 @@ class TestAConfiguredMirrorSurvivesEveryBoundary:
         64 KiB one turns this into hundreds of copies of a 128 KiB buffer. The
         space in front of the value is the one patchright writes there.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         configured = self.FORMS[form]
         monkeypatch.setenv("PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST", configured)
@@ -6300,7 +6300,7 @@ class TestAConfiguredMirrorSurvivesEveryBoundary:
         makes the rest of it unrecognisable, so the trim has to move off it the
         way it already moves off a URL.
         """
-        from linkedin_mcp_server.bootstrap import _RedactedTail
+        from linkedin_scraper_mcp.bootstrap import _RedactedTail
 
         configured = self.FORMS[form]
         monkeypatch.setenv("PLAYWRIGHT_DOWNLOAD_HOST", configured)
@@ -6326,7 +6326,7 @@ class TestAConfiguredMirrorSurvivesEveryBoundary:
         tail, and ``_supervisor_start_error`` turns its last line into the
         ``BrowserSetupFailedError`` an MCP client is shown.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         configured = self.FORMS["scheme-less"]
         monkeypatch.setenv("PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST", configured)
@@ -6358,7 +6358,7 @@ class TestAConfiguredMirrorSurvivesEveryBoundary:
         mirror is configured here, so the check is live while the token that is
         not one goes through untouched.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         monkeypatch.setenv(
             "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST", self.FORMS["scheme-relative"]
@@ -6377,7 +6377,7 @@ class TestAConfiguredMirrorSurvivesEveryBoundary:
         every pair of characters. Left unguarded, the marker would be spliced
         through the whole buffer and every position would read as the start of
         a secret."""
-        from linkedin_mcp_server.bootstrap import _safe_to_print
+        from linkedin_scraper_mcp.bootstrap import _safe_to_print
 
         monkeypatch.setenv("PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST", "///")
 
@@ -6412,7 +6412,7 @@ class TestSanitationIsLinearInWhatArrives:
 
     async def _scanned(self, payload: bytes) -> int:
         """Characters handed to ``_safe_to_print`` for the whole stream."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         original = bootstrap._safe_to_print
         scanned = 0
@@ -6455,7 +6455,7 @@ class TestSanitationIsLinearInWhatArrives:
         Each fold has to be charged to the window it emits, so the total stays
         proportional to the bytes that arrived rather than to their square.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         cap = 64
         monkeypatch.setattr(bootstrap, "_MAX_LINE_CHARS", cap)
@@ -6492,7 +6492,7 @@ class TestQuotedResponseBodiesAreDropped:
     )
 
     async def _lines(self, monkeypatch, *chunks: bytes) -> list[str]:
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         seen: list[str] = []
 
@@ -6625,7 +6625,7 @@ class TestQuotedResponseBodiesAreDropped:
         the elision carries in two places: where it opens, and on every
         fragment it stays open across.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         cap = bootstrap._MAX_LINE_CHARS
         opener = "Download failed: server returned code 403 body '"
@@ -6653,7 +6653,7 @@ class TestQuotedResponseBodiesAreDropped:
 
         import patchright
 
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         # Searched rather than named: where patchright builds this moved
         # between the versions this project accepts. `pyproject.toml` allows
@@ -6700,7 +6700,7 @@ class TestAConfiguredMirrorCannotDeleteTheMarkers:
     """
 
     async def _lines(self, *writes: bytes) -> list[str]:
-        from linkedin_mcp_server.bootstrap import _installer_lines
+        from linkedin_scraper_mcp.bootstrap import _installer_lines
 
         stream = cast(Any, _FakeStdout(list(writes)))
         return [line async for line in _installer_lines(stream)]
@@ -6743,7 +6743,7 @@ class TestAConfiguredMirrorCannotDeleteTheMarkers:
 
     def test_a_marker_split_by_a_read_survives_the_replacement(self, monkeypatch):
         """Sanitation runs per fold, so an edit to the folded half sticks."""
-        from linkedin_mcp_server.bootstrap import _RESPONSE_BODY_OPENS, _safe_to_print
+        from linkedin_scraper_mcp.bootstrap import _RESPONSE_BODY_OPENS, _safe_to_print
 
         monkeypatch.setenv("PLAYWRIGHT_DOWNLOAD_HOST", "bo")
         head = _safe_to_print("Error: Download failed: server returned code 403 bo")
@@ -6758,7 +6758,7 @@ class TestAConfiguredMirrorCannotDeleteTheMarkers:
         so an occurrence reaching over that edge is replaced nowhere. This
         records the residue rather than claiming it away.
         """
-        from linkedin_mcp_server.bootstrap import _RESPONSE_BODY_OPENS, _safe_to_print
+        from linkedin_scraper_mcp.bootstrap import _RESPONSE_BODY_OPENS, _safe_to_print
 
         monkeypatch.setenv("PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST", "403 body 'PRIVATE")
         printed = _safe_to_print("server returned code 403 body 'PRIVATE/x.zip")
@@ -6768,7 +6768,7 @@ class TestAConfiguredMirrorCannotDeleteTheMarkers:
 
     def test_an_ordinary_mirror_is_still_replaced_whole(self, monkeypatch):
         """Nothing about a value clear of the markers changed."""
-        from linkedin_mcp_server.bootstrap import _safe_to_print
+        from linkedin_scraper_mcp.bootstrap import _safe_to_print
 
         monkeypatch.setenv("PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST", "mirror.example/s3cr3t")
         printed = _safe_to_print(
@@ -6793,7 +6793,7 @@ class TestTerminalControlsAreStripped:
         ],
     )
     def test_a_response_body_cannot_drive_the_terminal(self, payload):
-        from linkedin_mcp_server.bootstrap import _safe_to_print
+        from linkedin_scraper_mcp.bootstrap import _safe_to_print
 
         cleaned = _safe_to_print(f"Download failed: body '{payload}'")
         assert "\x1b" not in cleaned
@@ -6822,7 +6822,7 @@ class TestControlsComeOutBeforeCredentials:
         ],
     )
     def test_a_credential_broken_up_by_controls_is_still_redacted(self, line):
-        from linkedin_mcp_server.bootstrap import _safe_to_print
+        from linkedin_scraper_mcp.bootstrap import _safe_to_print
 
         cleaned = _safe_to_print(line)
 
@@ -6844,7 +6844,7 @@ class TestPlainLinePrinting:
         ``sys.stdout`` and the wreckage is invisible, so this only surfaces
         under ``-s``, which is how CI runs.
         """
-        from linkedin_mcp_server.bootstrap import _print_whatever_the_stream_takes
+        from linkedin_scraper_mcp.bootstrap import _print_whatever_the_stream_takes
 
         class _Ascii(io.StringIO):
             encoding = "ascii"
@@ -6867,7 +6867,7 @@ class TestPlainLinePrinting:
         """
         import builtins
 
-        from linkedin_mcp_server.bootstrap import _print_whatever_the_stream_takes
+        from linkedin_scraper_mcp.bootstrap import _print_whatever_the_stream_takes
 
         flushes: list[object] = []
         monkeypatch.setattr(
@@ -6879,7 +6879,7 @@ class TestPlainLinePrinting:
 
     def test_a_closed_stream_does_not_abort_the_install(self, monkeypatch):
         """The replacement attempt can meet the same broken pipe as the first."""
-        from linkedin_mcp_server.bootstrap import _print_whatever_the_stream_takes
+        from linkedin_scraper_mcp.bootstrap import _print_whatever_the_stream_takes
 
         class _Broken(io.StringIO):
             encoding = "ascii"
@@ -6899,7 +6899,7 @@ class TestPlainLinePrinting:
         stdout before starting it leaves the other one, and catching just the
         pipe would turn a cosmetic write into a failed install.
         """
-        from linkedin_mcp_server.bootstrap import _print_whatever_the_stream_takes
+        from linkedin_scraper_mcp.bootstrap import _print_whatever_the_stream_takes
 
         closed = io.StringIO()
         closed.close()
@@ -6920,7 +6920,7 @@ class TestRendererSurvivesOddOutput:
 
         from rich.progress import Progress
 
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         buffer = _io.StringIO()
         built: list = [buffer]
@@ -6959,7 +6959,7 @@ class TestRendererSurvivesOddOutput:
         ],
     )
     def test_it_prints_instead_of_raising(self, monkeypatch, line):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         buffer = self._terminal(monkeypatch)[0]
         with bootstrap._cli_progress() as report:
@@ -6971,7 +6971,7 @@ class TestRendererSurvivesOddOutput:
         its own output line reaches the description, five times over. Without
         escaping, the callback raises MarkupError and the retries are lost.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         self._terminal(monkeypatch)
         with bootstrap._cli_progress() as report:
@@ -6992,7 +6992,7 @@ class TestRendererSurvivesOddOutput:
         which kills the installer and reports arithmetic in place of a
         download failure.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         assert bootstrap._PATCHRIGHT_PERCENT.search(line) is None
         self._terminal(monkeypatch)
@@ -7004,7 +7004,7 @@ class TestRendererSurvivesOddOutput:
         fails after that. It then retries the same artifact, up to five times.
         Keeping the finished bar would leave four of them for one browser.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         built = self._terminal(monkeypatch)
         with bootstrap._cli_progress() as report:
@@ -7026,7 +7026,7 @@ class TestRendererSurvivesOddOutput:
         Patchright retries five times, so a renderer that starts a bar on every
         backwards step leaves five of them for one download.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         built = self._terminal(monkeypatch)
         with bootstrap._cli_progress() as report:
@@ -7048,7 +7048,7 @@ class TestRendererSurvivesOddOutput:
         completed bars for one browser. The total is what tells a retry from
         the next artifact, which is a different archive.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         built = self._terminal(monkeypatch)
         with bootstrap._cli_progress() as report:
@@ -7068,7 +7068,7 @@ class TestRendererSurvivesOddOutput:
         percentages. Feeding ffmpeg's ten percent to the finished browser bar
         leaves it finished at ten percent.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         built = self._terminal(monkeypatch)
         with bootstrap._cli_progress() as report:
@@ -7082,7 +7082,7 @@ class TestRendererSurvivesOddOutput:
 
     def test_a_retry_replaces_its_unfinished_bar(self, monkeypatch):
         """Patchright retries a failed download, announcing it the same way."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         built = self._terminal(monkeypatch)
         with bootstrap._cli_progress() as report:
@@ -7094,7 +7094,7 @@ class TestRendererSurvivesOddOutput:
         assert bars == 1, "the abandoned attempt should not keep spinning"
 
     def test_a_finished_bar_stays_when_the_next_artifact_starts(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         built = self._terminal(monkeypatch)
         with bootstrap._cli_progress() as report:
@@ -7124,7 +7124,7 @@ class TestCliProgress:
         """
         from rich.progress import Progress
 
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         self._enable_rich_terminal(monkeypatch)
         buffer = io.StringIO()
@@ -7182,7 +7182,7 @@ class TestCliProgress:
         unpacked. Going quiet leaves the install running, which is the answer
         the plain-line path already gives a stream that will not take a line.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         self._enable_rich_terminal(monkeypatch)
 
@@ -7222,7 +7222,7 @@ class TestCliProgress:
         """
         from rich.console import Console
 
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         for error in (
             ValueError("I/O operation on closed file"),
@@ -7257,7 +7257,7 @@ class TestCliProgress:
         caller leaves without raising. A caller that raises is a failed
         install, and filling its bar to 100% would report the opposite.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         built = self._terminal(monkeypatch)
         with pytest.raises(RuntimeError):
@@ -7276,7 +7276,7 @@ class TestCliProgress:
         """
         from rich.progress import Progress
 
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         self._terminal(monkeypatch)
         created: list[str] = []
@@ -7305,7 +7305,7 @@ class TestCliProgress:
         ``write`` and raises. Inside the live region that leaves the read loop,
         kills the installer and reports an encoding error in place of a browser.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         class _AsciiTty(io.StringIO):
             encoding = "ascii"
@@ -7330,7 +7330,7 @@ class TestCliProgress:
         bar, the spinner or a column fails here rather than on the terminal of
         whoever has an ascii stdout.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         buffer = self._terminal(monkeypatch)[0]
 
@@ -7349,7 +7349,7 @@ class TestCliProgress:
 
     def test_without_a_terminal_the_lines_are_printed(self, monkeypatch):
         """Redirected output keeps the installer's own lines."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         monkeypatch.setattr(sys.stdout, "isatty", lambda: False, raising=False)
 
@@ -7357,7 +7357,7 @@ class TestCliProgress:
             assert report is bootstrap._print_whatever_the_stream_takes
 
     def test_a_terminal_gets_a_bar_carrying_the_artifact_name(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         built = self._terminal(monkeypatch)
         buffer = built[0]
@@ -7381,7 +7381,7 @@ class TestCliProgress:
 
     def test_lines_that_are_not_progress_survive(self, monkeypatch):
         """A format change must cost the bar, never the message."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         buffer = self._terminal(monkeypatch)[0]
 
@@ -7392,7 +7392,7 @@ class TestCliProgress:
 
     def test_a_second_artifact_gets_its_own_bar(self, monkeypatch):
         """ffmpeg follows the browser; it must not rewind the finished bar."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         buffer = self._terminal(monkeypatch)[0]
 
@@ -7444,7 +7444,7 @@ class TestWhereAStreamWrites:
         the operator chose. Guessing no draws one record through the bar. Only
         the first is unrecoverable, so an unknown is never a match.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         class _TerminalWithoutADescriptor(io.StringIO):
             def isatty(self) -> bool:
@@ -7463,7 +7463,7 @@ class TestWhereAStreamWrites:
 
     def test_two_streams_that_cannot_name_a_device_still_use_the_terminal_guess(self):
         """Both unknown is where the old answer is still the best one."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         assert bootstrap._same_destination(
             _StdoutThatClaimsATerminal(), _StdoutThatClaimsATerminal()
@@ -7480,7 +7480,7 @@ class TestWhereAStreamWrites:
         is exactly the pairing ``2>errors.log`` produces. Patched here because
         the platform that answers this way cannot run the suite.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         zeroed = os.stat_result((0o010600, 0, 0, 0, 0, 0, 0, 0, 0, 0))
         monkeypatch.setattr(bootstrap.os, "fstat", lambda fd: zeroed)
@@ -7496,7 +7496,7 @@ class TestLogHandlersDuringTheBar:
     """Log records must not be drawn through the live region."""
 
     def _terminal(self, monkeypatch, file: IO[str] | None = None) -> None:
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         drawn_on = _StdoutThatClaimsATerminal() if file is None else file
         quiet = bootstrap._ConsoleThatGoesQuiet
@@ -7518,7 +7518,7 @@ class TestLogHandlersDuringTheBar:
         Measured in a pty: without this, a DEBUG record emitted while the bar
         is up ends up on the same physical line as the bar.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         self._terminal(monkeypatch)
 
@@ -7552,7 +7552,7 @@ class TestLogHandlersDuringTheBar:
         stdout. A handler whose stderr is a file cannot collide with the bar,
         so it has nothing to gain and a destination to lose.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         self._terminal(monkeypatch)
         redirected = io.StringIO()  # isatty() is False, as a file's is
@@ -7577,7 +7577,7 @@ class TestLogHandlersDuringTheBar:
         to ``isatty`` while the bar is live, and measured against that: the
         record was written into the middle of a rendered frame.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         log = tmp_path / "build.log"
         with log.open("w") as out, log.open("a") as err:
@@ -7605,7 +7605,7 @@ class TestLogHandlersDuringTheBar:
         else. Both proxies write through the progress console, so this one's
         records would leave the file the operator named.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         with (tmp_path / "build.log").open("w") as out:
             with (tmp_path / "errors.log").open("w") as err:
@@ -7630,7 +7630,7 @@ class TestLogHandlersDuringTheBar:
         direct ``sys.stderr.write`` would come out on the bar's screen and the
         file the operator named would stay empty. Measured against rich 15.0.0.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         with (tmp_path / "build.log").open("w") as out:
             with (tmp_path / "errors.log").open("w") as err:
@@ -7649,7 +7649,7 @@ class TestLogHandlersDuringTheBar:
         """
         from rich.file_proxy import FileProxy
 
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         log = tmp_path / "build.log"
         with log.open("w") as out, log.open("a") as err:
@@ -7669,7 +7669,7 @@ class TestLogHandlersDuringTheBar:
         destination, and the stream captured on the way in may have been closed
         along with the configuration that held it.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         self._terminal(monkeypatch)
 
@@ -7700,7 +7700,7 @@ class TestLogHandlersDuringTheBar:
         is a terminal is the plain-line case; raising would take the whole
         browser install with it.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         class _DetachedTerminal(io.StringIO):
             def isatty(self) -> bool:
@@ -7724,7 +7724,7 @@ class TestLogHandlersDuringTheBar:
         is decided here and nowhere else: a handler writing where the bar is
         not must keep its own file, whichever of the two streams it holds.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         with (tmp_path / "bar.log").open("w") as drawn_on:
             with (tmp_path / "records.log").open("w") as elsewhere:
@@ -7743,7 +7743,7 @@ class TestLogHandlersDuringTheBar:
 
     def test_a_file_handler_is_left_alone(self, monkeypatch, tmp_path):
         """Only handlers on the real streams move; the trace file keeps its own."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         self._terminal(monkeypatch)
         handler = logging.FileHandler(tmp_path / "server.log")
@@ -7765,7 +7765,7 @@ class TestProgressWithoutPercentages:
 
         from rich.progress import Progress
 
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         buffer = _io.StringIO()
         built: list = [buffer]
@@ -7798,7 +7798,7 @@ class TestProgressWithoutPercentages:
         for up to ten minutes in silence. A bar created on the first
         recognised line leaves every one of those blank.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         built = self._terminal(monkeypatch)
         with bootstrap._cli_progress():
@@ -7811,7 +7811,7 @@ class TestProgressWithoutPercentages:
 
     def test_the_first_announcement_names_the_waiting_bar(self, monkeypatch):
         """Rather than leaving an unnamed one behind and starting a second."""
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         built = self._terminal(monkeypatch)
         with bootstrap._cli_progress() as report:
@@ -7828,7 +7828,7 @@ class TestProgressWithoutPercentages:
         created on the first percentage would never be created at all, and the
         download would run behind exactly the silence #533 is about.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         built = self._terminal(monkeypatch)
         with bootstrap._cli_progress() as report:
@@ -7840,7 +7840,7 @@ class TestProgressWithoutPercentages:
             assert built[1].tasks[0].finished, "the archive is in place"
 
     def test_a_percentage_fills_in_the_size_afterwards(self, monkeypatch):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         built = self._terminal(monkeypatch)
         with bootstrap._cli_progress() as report:
@@ -7858,7 +7858,7 @@ class TestProgressWithoutPercentages:
         on the way out. Sending a dumb terminal down the bar would show nothing
         for the whole download.
         """
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         self._terminal(monkeypatch, term=term)
         with bootstrap._cli_progress() as report:
@@ -7875,7 +7875,7 @@ class TestInstallerLinesAgainstARealPipe:
     """
 
     async def _collect(self, script: str) -> list[str]:
-        from linkedin_mcp_server.bootstrap import _installer_lines
+        from linkedin_scraper_mcp.bootstrap import _installer_lines
 
         proc = await asyncio.create_subprocess_exec(
             sys.executable,
@@ -7921,7 +7921,7 @@ class TestInstallCallbackThreading:
     """Only the CLI path prints; the background path stays silent."""
 
     def _capture_install(self, monkeypatch) -> dict[str, object]:
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         seen: dict[str, object] = {}
 
@@ -7938,7 +7938,7 @@ class TestInstallCallbackThreading:
     async def test_background_setup_forwards_no_callback(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         _patch_targets_and_version(monkeypatch)
         seen = self._capture_install(monkeypatch)
@@ -7950,7 +7950,7 @@ class TestInstallCallbackThreading:
     async def test_setup_forwards_an_explicit_callback(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         _patch_targets_and_version(monkeypatch)
         seen = self._capture_install(monkeypatch)
@@ -7965,7 +7965,7 @@ class TestInstallCallbackThreading:
     def test_cli_install_passes_a_flushing_print(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         _patch_targets_and_version(monkeypatch)
         monkeypatch.setattr(bootstrap, "_uses_custom_chrome", lambda: False)
@@ -7988,12 +7988,12 @@ class TestInstallCallbackThreading:
     async def test_setup_logs_the_download_duration(
         self, isolate_profile_dir, monkeypatch, caplog
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         _patch_targets_and_version(monkeypatch)
         self._capture_install(monkeypatch)
 
-        with caplog.at_level(logging.INFO, logger="linkedin_mcp_server.bootstrap"):
+        with caplog.at_level(logging.INFO, logger="linkedin_scraper_mcp.bootstrap"):
             await bootstrap._run_browser_setup()
 
         assert any(
@@ -8015,10 +8015,10 @@ class TestEnsureBrowserInstalledSkipsCustomChrome:
     def test_custom_chrome_skips_the_download(self, isolate_profile_dir, monkeypatch):
         _patch_targets_and_version(monkeypatch)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._uses_custom_chrome", lambda: True
+            "linkedin_scraper_mcp.bootstrap._uses_custom_chrome", lambda: True
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_ready", lambda: False
+            "linkedin_scraper_mcp.bootstrap.browser_ready", lambda: False
         )
 
         called = {"value": 0}
@@ -8027,7 +8027,7 @@ class TestEnsureBrowserInstalledSkipsCustomChrome:
             called["value"] += 1
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._ensure_browser_installed", fake_install
+            "linkedin_scraper_mcp.bootstrap._ensure_browser_installed", fake_install
         )
 
         ensure_browser_installed()
@@ -8038,10 +8038,10 @@ class TestEnsureBrowserInstalledSkipsCustomChrome:
         """The short circuit must be about the custom path, not about skipping."""
         _patch_targets_and_version(monkeypatch)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._uses_custom_chrome", lambda: False
+            "linkedin_scraper_mcp.bootstrap._uses_custom_chrome", lambda: False
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_ready", lambda: False
+            "linkedin_scraper_mcp.bootstrap.browser_ready", lambda: False
         )
 
         called = {"value": 0}
@@ -8050,7 +8050,7 @@ class TestEnsureBrowserInstalledSkipsCustomChrome:
             called["value"] += 1
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._ensure_browser_installed", fake_install
+            "linkedin_scraper_mcp.bootstrap._ensure_browser_installed", fake_install
         )
 
         ensure_browser_installed()
@@ -8070,7 +8070,7 @@ class TestEnsureBrowserInstalled:
         its own.
         """
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._uses_custom_chrome", lambda: False
+            "linkedin_scraper_mcp.bootstrap._uses_custom_chrome", lambda: False
         )
 
     def _stub(self, monkeypatch):
@@ -8080,15 +8080,15 @@ class TestEnsureBrowserInstalled:
             calls["value"] += 1
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._ensure_browser_installed", fake_install
+            "linkedin_scraper_mcp.bootstrap._ensure_browser_installed", fake_install
         )
         return calls
 
     def test_refuses_unclaimed_root_before_readiness_or_install(
         self, tmp_path, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import ProfileRootRefusedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import ProfileRootRefusedError
 
         profile = tmp_path / "unclaimed-cli" / "profile"
         unrelated = profile.parent / "patchright-browsers" / "keep.txt"
@@ -8109,7 +8109,7 @@ class TestEnsureBrowserInstalled:
     def test_installs_when_absent(self, isolate_profile_dir, monkeypatch):
         _patch_targets_and_version(monkeypatch)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_ready", lambda: False
+            "linkedin_scraper_mcp.bootstrap.browser_ready", lambda: False
         )
         calls = self._stub(monkeypatch)
 
@@ -8118,7 +8118,7 @@ class TestEnsureBrowserInstalled:
         assert calls["value"] == 1
 
     def test_noop_when_present(self, isolate_profile_dir, monkeypatch):
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.browser_ready", lambda: True)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.browser_ready", lambda: True)
         calls = self._stub(monkeypatch)
 
         ensure_browser_installed()
@@ -8160,7 +8160,7 @@ class TestEnsureBrowserInstalled:
             pytest.skip("Windows has no job control")
         _patch_targets_and_version(monkeypatch)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_ready", lambda: False
+            "linkedin_scraper_mcp.bootstrap.browser_ready", lambda: False
         )
         self._stub(monkeypatch)
         self._terminal(monkeypatch, on=on, foreground=foreground)
@@ -8180,7 +8180,7 @@ class TestEnsureBrowserInstalled:
     ):
         if os.name == "nt":
             pytest.skip("Windows has no job control")
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.browser_ready", lambda: True)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.browser_ready", lambda: True)
         self._stub(monkeypatch)
         self._terminal(monkeypatch, on=(0, 1, 2), foreground=True)
 
@@ -8217,7 +8217,7 @@ class TestEnsureBrowserInstalled:
         """
         _patch_targets_and_version(monkeypatch)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_ready", lambda: False
+            "linkedin_scraper_mcp.bootstrap.browser_ready", lambda: False
         )
         calls = self._stub(monkeypatch)
         monkeypatch.setattr("sys.stdout", _StdoutThatIsGone())
@@ -8236,16 +8236,16 @@ class TestEnsureBrowserInstalled:
         """
         _patch_targets_and_version(monkeypatch)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_ready", lambda: False
+            "linkedin_scraper_mcp.bootstrap.browser_ready", lambda: False
         )
 
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         async def fake_install(**_kwargs: object) -> None:
             raise BrowserSetupFailedError("the mirror refused")
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._ensure_browser_installed", fake_install
+            "linkedin_scraper_mcp.bootstrap._ensure_browser_installed", fake_install
         )
         monkeypatch.setattr("sys.stdout", _StdoutThatIsGone())
 
@@ -8267,16 +8267,16 @@ class TestLoginInstallBackstop:
             return True
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._uses_custom_chrome", lambda: custom_chrome
+            "linkedin_scraper_mcp.bootstrap._uses_custom_chrome", lambda: custom_chrome
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._ensure_browser_installed", fake_full
+            "linkedin_scraper_mcp.bootstrap._ensure_browser_installed", fake_full
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.interactive_login", fake_login
+            "linkedin_scraper_mcp.bootstrap.interactive_login", fake_login
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.get_profile_dir",
+            "linkedin_scraper_mcp.bootstrap.get_profile_dir",
             lambda: Path("/tmp/profile"),
         )
         return order
@@ -8284,7 +8284,7 @@ class TestLoginInstallBackstop:
     async def test_installs_the_browser_before_the_login_launch(self, monkeypatch):
         order = self._stub(monkeypatch, custom_chrome=False)
 
-        from linkedin_mcp_server.bootstrap import _run_login_flow
+        from linkedin_scraper_mcp.bootstrap import _run_login_flow
 
         await _run_login_flow()
 
@@ -8293,7 +8293,7 @@ class TestLoginInstallBackstop:
     async def test_skips_the_install_for_a_custom_chrome(self, monkeypatch):
         order = self._stub(monkeypatch, custom_chrome=True)
 
-        from linkedin_mcp_server.bootstrap import _run_login_flow
+        from linkedin_scraper_mcp.bootstrap import _run_login_flow
 
         await _run_login_flow()
 
@@ -8513,7 +8513,7 @@ class TestPatchrightCommandTargetContract:
         self._assert_is_an_ffmpeg_directory(measured[1])
 
     def test_the_measured_command_targets_are_all_accounted_for(self, tmp_path):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         cache = tmp_path / "browsers"
         environment = {"PLAYWRIGHT_BROWSERS_PATH": str(cache)}
@@ -8600,7 +8600,7 @@ class TestInstallerAuxiliaryAccounting:
     ]
 
     def _paths(self, cache, extra_arg="--no-shell"):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         return {
             path.name
@@ -8641,8 +8641,8 @@ class TestInstallerAuxiliaryAccounting:
         assert "winldd-1007" in self._paths(tmp_path / "windows")
 
     def test_an_oversized_ffmpeg_is_refused(self, monkeypatch, tmp_path):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         self._stub_registry(monkeypatch, tmp_path, self._BROWSERS)
         monkeypatch.setattr(bootstrap, "_INSTALLER_MAX_WRITTEN_BYTES", 1024)
@@ -8662,8 +8662,8 @@ class TestInstallerAuxiliaryAccounting:
             bootstrap._refuse_oversized_install(snapshot)
 
     def test_an_oversized_winldd_is_refused_on_windows(self, monkeypatch, tmp_path):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import BrowserSetupFailedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import BrowserSetupFailedError
 
         self._stub_registry(monkeypatch, tmp_path, self._BROWSERS)
         monkeypatch.setattr(bootstrap, "_INSTALLER_MAX_WRITTEN_BYTES", 1024)
@@ -8693,7 +8693,7 @@ class TestInstallerAuxiliaryAccounting:
     def test_an_oversized_unrelated_browser_is_not_this_installs_to_refuse(
         self, monkeypatch, tmp_path
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         self._stub_registry(monkeypatch, tmp_path, self._BROWSERS)
         monkeypatch.setattr(bootstrap, "_INSTALLER_MAX_WRITTEN_BYTES", 1024)
@@ -8717,7 +8717,7 @@ class TestInstallerAuxiliaryAccounting:
     def test_readiness_metadata_ignores_the_auxiliary_targets(
         self, monkeypatch, tmp_path
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         self._stub_registry(monkeypatch, tmp_path, self._BROWSERS)
         monkeypatch.setattr(sys, "platform", "win32")
@@ -8750,7 +8750,7 @@ class TestInvalidateBrowserSetup:
     def test_refuses_to_delete_metadata_under_an_unclaimed_root(
         self, tmp_path, monkeypatch, caplog
     ):
-        from linkedin_mcp_server import bootstrap
+        from linkedin_scraper_mcp import bootstrap
 
         profile = tmp_path / "unclaimed" / "profile"
         metadata = profile.parent / "browser-install.json"
@@ -8761,7 +8761,7 @@ class TestInvalidateBrowserSetup:
         initialize_bootstrap("managed")
         state = get_bootstrap_state()
         state.setup_state = SetupState.READY
-        with caplog.at_level(logging.WARNING, logger="linkedin_mcp_server.bootstrap"):
+        with caplog.at_level(logging.WARNING, logger="linkedin_scraper_mcp.bootstrap"):
             invalidate_browser_setup()
 
         assert metadata.read_text() == "unrelated"
@@ -8771,8 +8771,8 @@ class TestInvalidateBrowserSetup:
     def test_refuses_to_overwrite_metadata_under_an_unclaimed_root(
         self, tmp_path, monkeypatch
     ):
-        from linkedin_mcp_server import bootstrap
-        from linkedin_mcp_server.exceptions import ProfileRootRefusedError
+        from linkedin_scraper_mcp import bootstrap
+        from linkedin_scraper_mcp.exceptions import ProfileRootRefusedError
 
         profile = tmp_path / "unclaimed-write" / "profile"
         metadata = profile.parent / "browser-install.json"
@@ -8817,10 +8817,10 @@ class TestEnsureToolReadyInvalidatesStaleReady:
         _patch_inline_wait(monkeypatch, 0)
         # Disk says not-ready, in-memory state cached READY.
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_setup_ready", lambda: False
+            "linkedin_scraper_mcp.bootstrap.browser_setup_ready", lambda: False
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_browser_setup", fake_setup
+            "linkedin_scraper_mcp.bootstrap._run_browser_setup", fake_setup
         )
 
         # Pre-existing stale metadata file the invalidator should drop.
@@ -8910,7 +8910,7 @@ class TestInlineLoginWait:
     ):
         """A login that finishes within the budget resumes the same call (ready)."""
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_setup_ready", lambda: True
+            "linkedin_scraper_mcp.bootstrap.browser_setup_ready", lambda: True
         )
 
         # _auth_ready() flips True only after the fake login flow materializes
@@ -8919,7 +8919,7 @@ class TestInlineLoginWait:
             _make_auth_ready(isolate_profile_dir)
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", fake_login_flow
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", fake_login_flow
         )
         _patch_inline_wait(monkeypatch, 0.5)
 
@@ -8942,9 +8942,9 @@ class TestInlineLoginWait:
         still be running (not cancelled, not done) after the wait elapses.
         """
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_setup_ready", lambda: True
+            "linkedin_scraper_mcp.bootstrap.browser_setup_ready", lambda: True
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._auth_ready", lambda: False)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._auth_ready", lambda: False)
 
         never_done = asyncio.Event()
 
@@ -8952,7 +8952,7 @@ class TestInlineLoginWait:
             await never_done.wait()
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", fake_login_flow
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", fake_login_flow
         )
         _patch_inline_wait(monkeypatch, 0.05)
 
@@ -8981,9 +8981,9 @@ class TestInlineLoginWait:
     ):
         """login_inline_wait_seconds == 0 raises without awaiting the task."""
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_setup_ready", lambda: True
+            "linkedin_scraper_mcp.bootstrap.browser_setup_ready", lambda: True
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._auth_ready", lambda: False)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._auth_ready", lambda: False)
 
         never_done = asyncio.Event()
         wait_called = {"value": False}
@@ -8998,9 +8998,9 @@ class TestInlineLoginWait:
             return await real_wait(*args, **kwargs)
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", fake_login_flow
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", fake_login_flow
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.asyncio.wait", tracking_wait)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.asyncio.wait", tracking_wait)
         _patch_inline_wait(monkeypatch, 0)
 
         initialize_bootstrap("managed")
@@ -9024,9 +9024,9 @@ class TestInlineLoginWait:
     ):
         """A prior failed attempt is mentioned when a fresh login is spawned."""
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_setup_ready", lambda: True
+            "linkedin_scraper_mcp.bootstrap.browser_setup_ready", lambda: True
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._auth_ready", lambda: False)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._auth_ready", lambda: False)
 
         never_done = asyncio.Event()
 
@@ -9034,7 +9034,7 @@ class TestInlineLoginWait:
             await never_done.wait()
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", fake_login_flow
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", fake_login_flow
         )
         _patch_inline_wait(monkeypatch, 0.05)
 
@@ -9065,9 +9065,9 @@ class TestInlineLoginWait:
     ):
         """Concurrent callers share ONE login task; the flow spawns once."""
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_setup_ready", lambda: True
+            "linkedin_scraper_mcp.bootstrap.browser_setup_ready", lambda: True
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._auth_ready", lambda: False)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._auth_ready", lambda: False)
 
         never_done = asyncio.Event()
         spawn_count = {"value": 0}
@@ -9077,7 +9077,7 @@ class TestInlineLoginWait:
             await never_done.wait()
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", fake_login_flow
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", fake_login_flow
         )
         _patch_inline_wait(monkeypatch, 0.05)
 
@@ -9101,13 +9101,13 @@ class TestInlineLoginWait:
         self, isolate_profile_dir, monkeypatch
     ):
         """Docker raises host-login required without ever entering the wait."""
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._auth_ready", lambda: False)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._auth_ready", lambda: False)
 
         async def fail_if_called(*args, **kwargs):
             raise AssertionError("asyncio.wait must not run under Docker")
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.asyncio.wait", fail_if_called
+            "linkedin_scraper_mcp.bootstrap.asyncio.wait", fail_if_called
         )
         # A large budget would matter only if the wait were reachable.
         _patch_inline_wait(monkeypatch, 30)
@@ -9119,7 +9119,7 @@ class TestInlineLoginWait:
 
 
 _IMPORT_TARGET = (
-    "linkedin_mcp_server.browser_import.orchestrate.import_session_from_browser"
+    "linkedin_scraper_mcp.browser_import.orchestrate.import_session_from_browser"
 )
 
 
@@ -9127,17 +9127,17 @@ _IMPORT_TARGET = (
 def _stub_import_env(monkeypatch):
     """Stub the import side-effects and force the gate open for auto-login tests."""
     monkeypatch.setattr(
-        "linkedin_mcp_server.bootstrap.browser_setup_ready", lambda: True
+        "linkedin_scraper_mcp.bootstrap.browser_setup_ready", lambda: True
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.bootstrap.close_browser", AsyncMock(return_value=None)
+        "linkedin_scraper_mcp.bootstrap.close_browser", AsyncMock(return_value=None)
     )
-    monkeypatch.setattr("linkedin_mcp_server.bootstrap.set_headless", lambda _x: None)
-    monkeypatch.setattr("linkedin_mcp_server.bootstrap.current_headless", lambda: True)
+    monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.set_headless", lambda _x: None)
+    monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.current_headless", lambda: True)
     monkeypatch.setattr(
-        "linkedin_mcp_server.bootstrap._auto_import_allowed", lambda: True
+        "linkedin_scraper_mcp.bootstrap._auto_import_allowed", lambda: True
     )
-    monkeypatch.setattr("linkedin_mcp_server.bootstrap._auth_ready", lambda: False)
+    monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._auth_ready", lambda: False)
 
 
 def _auto_import_config(
@@ -9171,11 +9171,11 @@ class TestAutoLogin:
 
         # _auth_ready flips True once the import materializes the files on disk.
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._auth_ready",
+            "linkedin_scraper_mcp.bootstrap._auth_ready",
             lambda: portable_cookie_path(isolate_profile_dir).exists(),
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", fake_run_login_flow
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", fake_run_login_flow
         )
         import_mock = AsyncMock(side_effect=fake_import)
         monkeypatch.setattr(_IMPORT_TARGET, import_mock)
@@ -9212,7 +9212,7 @@ class TestAutoLogin:
             await never_done.wait()
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", fake_login_flow
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", fake_login_flow
         )
         monkeypatch.setattr(_IMPORT_TARGET, import_outcome)
         _patch_inline_wait(monkeypatch, 0.05, auto_import=True)
@@ -9256,7 +9256,7 @@ class TestAutoLogin:
         import_mock = AsyncMock(side_effect=fake_import)
         monkeypatch.setattr(_IMPORT_TARGET, import_mock)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", fake_login_flow
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", fake_login_flow
         )
         _patch_inline_wait(monkeypatch, 0.05, auto_import=True)
 
@@ -9288,7 +9288,7 @@ class TestAutoLogin:
 
     async def test_docker_never_imports(self, isolate_profile_dir, monkeypatch):
         """Docker raises host-login required without ever attempting an import."""
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._auth_ready", lambda: False)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._auth_ready", lambda: False)
         import_mock = AsyncMock(return_value=False)
         monkeypatch.setattr(_IMPORT_TARGET, import_mock)
         _patch_inline_wait(monkeypatch, 30, auto_import=True)
@@ -9302,9 +9302,9 @@ class TestAutoLogin:
     async def test_config_disabled_skips_import(self, isolate_profile_dir, monkeypatch):
         """auto_import False -> the real predicate gates it off, manual login only."""
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_setup_ready", lambda: True
+            "linkedin_scraper_mcp.bootstrap.browser_setup_ready", lambda: True
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._auth_ready", lambda: False)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._auth_ready", lambda: False)
 
         never_done = asyncio.Event()
 
@@ -9314,7 +9314,7 @@ class TestAutoLogin:
         import_mock = AsyncMock(return_value=False)
         monkeypatch.setattr(_IMPORT_TARGET, import_mock)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", fake_login_flow
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", fake_login_flow
         )
         # Do NOT patch _auto_import_allowed: let the real predicate see the flag.
         _patch_inline_wait(monkeypatch, 0.05, auto_import=False)
@@ -9334,14 +9334,14 @@ class TestAutoLogin:
 
     def test_predicate_flag_false(self, monkeypatch):
         config = _auto_import_config(flag=False)
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
         assert _auto_import_allowed() is False
 
     def test_predicate_docker(self, monkeypatch):
         config = _auto_import_config(flag=True, is_interactive=True)
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.get_runtime_policy",
+            "linkedin_scraper_mcp.bootstrap.get_runtime_policy",
             lambda: RuntimePolicy.DOCKER,
         )
         assert _auto_import_allowed() is False
@@ -9361,9 +9361,9 @@ class TestAutoLogin:
             host="0.0.0.0",
             is_interactive=True,
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.get_runtime_policy",
+            "linkedin_scraper_mcp.bootstrap.get_runtime_policy",
             lambda: RuntimePolicy.MANAGED,
         )
         assert _auto_import_allowed() is False
@@ -9379,9 +9379,9 @@ class TestAutoLogin:
             host="0.0.0.0",
             is_interactive=True,
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.get_runtime_policy",
+            "linkedin_scraper_mcp.bootstrap.get_runtime_policy",
             lambda: RuntimePolicy.MANAGED,
         )
         assert _auto_import_allowed() is False
@@ -9394,18 +9394,18 @@ class TestAutoLogin:
             host=host,
             is_interactive=True,
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.get_runtime_policy",
+            "linkedin_scraper_mcp.bootstrap.get_runtime_policy",
             lambda: RuntimePolicy.MANAGED,
         )
         assert _auto_import_allowed() is True
 
     def test_predicate_auto_interactive_allowed(self, monkeypatch):
         config = _auto_import_config(flag=None, is_interactive=True)
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.get_runtime_policy",
+            "linkedin_scraper_mcp.bootstrap.get_runtime_policy",
             lambda: RuntimePolicy.MANAGED,
         )
         assert _auto_import_allowed() is True
@@ -9414,9 +9414,9 @@ class TestAutoLogin:
         # Default-on headline case: flag None (auto), non-interactive stdio
         # Desktop child -> ON. No TTY or GUI signal gates it any more.
         config = _auto_import_config(flag=None, is_interactive=False)
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.get_runtime_policy",
+            "linkedin_scraper_mcp.bootstrap.get_runtime_policy",
             lambda: RuntimePolicy.MANAGED,
         )
         assert _auto_import_allowed() is True
@@ -9427,9 +9427,9 @@ class TestAutoLogin:
         # test_predicate_auto_interactive_allowed this pins that neither `flag`
         # (None vs True) nor `is_interactive` changes the answer any more.
         config = _auto_import_config(flag=True, is_interactive=False)
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.get_runtime_policy",
+            "linkedin_scraper_mcp.bootstrap.get_runtime_policy",
             lambda: RuntimePolicy.MANAGED,
         )
         assert _auto_import_allowed() is True
@@ -9444,7 +9444,7 @@ class TestAutoLogin:
             await never_done.wait()
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", fake_login_flow
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", fake_login_flow
         )
 
         state = get_bootstrap_state()
@@ -9466,12 +9466,12 @@ class TestAutoLogin:
     ):
         """close_browser() runs before the import; the prior headless mode is restored."""
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_setup_ready", lambda: True
+            "linkedin_scraper_mcp.bootstrap.browser_setup_ready", lambda: True
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._auto_import_allowed", lambda: True
+            "linkedin_scraper_mcp.bootstrap._auto_import_allowed", lambda: True
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._auth_ready", lambda: False)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._auth_ready", lambda: False)
 
         order: list[str] = []
         headless_calls: list[bool] = []
@@ -9487,16 +9487,16 @@ class TestAutoLogin:
         # current_headless() reports the operator's --no-headless read mode; the
         # restore in finally must put exactly that value back.
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.close_browser", spy_close_browser
+            "linkedin_scraper_mcp.bootstrap.close_browser", spy_close_browser
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.current_headless", lambda: False
+            "linkedin_scraper_mcp.bootstrap.current_headless", lambda: False
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.set_headless", headless_calls.append
+            "linkedin_scraper_mcp.bootstrap.set_headless", headless_calls.append
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._auth_ready",
+            "linkedin_scraper_mcp.bootstrap._auth_ready",
             lambda: portable_cookie_path(isolate_profile_dir).exists(),
         )
         monkeypatch.setattr(_IMPORT_TARGET, AsyncMock(side_effect=fake_import))
@@ -9524,7 +9524,7 @@ class TestAutoLogin:
         import_mock = AsyncMock(side_effect=fake_import)
         monkeypatch.setattr(_IMPORT_TARGET, import_mock)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", fake_login_flow
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", fake_login_flow
         )
         _patch_inline_wait(monkeypatch, 0.01, auto_import=True)
 
@@ -9569,7 +9569,7 @@ class TestAutoLogin:
             await never_done.wait()
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", fake_login_flow
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", fake_login_flow
         )
         monkeypatch.setattr(_IMPORT_TARGET, AsyncMock(return_value=False))
         _patch_inline_wait(monkeypatch, 0.05, auto_import=True)
@@ -9577,7 +9577,7 @@ class TestAutoLogin:
         initialize_bootstrap("managed")
 
         try:
-            with caplog.at_level(logging.INFO, logger="linkedin_mcp_server.bootstrap"):
+            with caplog.at_level(logging.INFO, logger="linkedin_scraper_mcp.bootstrap"):
                 with pytest.raises(AuthenticationInProgressError):
                     await ensure_tool_ready_or_raise("get_person_profile")
             assert "found no usable browser session" in caplog.text
@@ -9597,7 +9597,7 @@ class TestAutoLogin:
             await never_done.wait()
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", fake_login_flow
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", fake_login_flow
         )
         # Exercise the except TimeoutError branch deterministically: no real wait.
         monkeypatch.setattr(_IMPORT_TARGET, AsyncMock(side_effect=TimeoutError()))
@@ -9606,7 +9606,7 @@ class TestAutoLogin:
         initialize_bootstrap("managed")
 
         try:
-            with caplog.at_level(logging.INFO, logger="linkedin_mcp_server.bootstrap"):
+            with caplog.at_level(logging.INFO, logger="linkedin_scraper_mcp.bootstrap"):
                 with pytest.raises(AuthenticationInProgressError):
                     await ensure_tool_ready_or_raise("get_person_profile")
             assert "Auto-import timed out" in caplog.text
@@ -9621,7 +9621,7 @@ class TestAutoLogin:
 def test_move_auth_state_aside_reports_a_held_profile(monkeypatch):
     """Swallowing this would open a login browser whose own rotation fails at
     the same point, after telling the user the browser had opened."""
-    from linkedin_mcp_server import bootstrap
+    from linkedin_scraper_mcp import bootstrap
 
     monkeypatch.setattr(
         bootstrap,
@@ -9646,12 +9646,12 @@ class TestAutoImportSkippedForProxy:
     def test_predicate_skips_when_a_proxy_is_configured(self, monkeypatch):
         config = _auto_import_config(flag=True, is_interactive=True)
         config.browser.proxy_server = "http://gate.example:7000"
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
         assert _auto_import_allowed() is False
 
     def test_predicate_still_allows_it_without_a_proxy(self, monkeypatch):
         config = _auto_import_config(flag=True, is_interactive=True)
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
         assert _auto_import_allowed() is True
 
 
@@ -9667,17 +9667,17 @@ class TestProxyErrorSurvivesTheImportTask:
     async def test_proxy_error_propagates_out_of_the_awaited_task(
         self, isolate_profile_dir, monkeypatch, _stub_import_env
     ):
-        from linkedin_mcp_server.core.exceptions import ProxyConnectionError
+        from linkedin_scraper_mcp.core.exceptions import ProxyConnectionError
 
         config = _auto_import_config(flag=True, is_interactive=True)
         config.browser.proxy_server = "http://gate.example:7000"
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
 
         async def failing_import(_ctx=None):
             raise ProxyConnectionError("proxy gate.example:7000 is unreachable")
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._try_auto_import_session", failing_import
+            "linkedin_scraper_mcp.bootstrap._try_auto_import_session", failing_import
         )
 
         with pytest.raises(ProxyConnectionError, match="gate.example"):
@@ -9699,8 +9699,8 @@ class TestAPortalDuringImportOpensNoLogin:
     async def test_the_refusal_reaches_the_caller_and_starts_no_login(
         self, isolate_profile_dir, monkeypatch, _stub_import_env
     ):
-        from linkedin_mcp_server.core.destination import raise_if_off_linkedin
-        from linkedin_mcp_server.core.exceptions import OffLinkedInLandingError
+        from linkedin_scraper_mcp.core.destination import raise_if_off_linkedin
+        from linkedin_scraper_mcp.core.exceptions import OffLinkedInLandingError
 
         started: list[int] = []
 
@@ -9711,7 +9711,7 @@ class TestAPortalDuringImportOpensNoLogin:
             raise_if_off_linkedin("https://portal.invalid/interstitial")
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", fake_login_flow
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", fake_login_flow
         )
         # The real import wrapper runs, so its own handler is part of the path.
         monkeypatch.setattr(_IMPORT_TARGET, landing_on_a_portal)
@@ -9735,9 +9735,9 @@ class TestARestrictedAccountOpensNoLoginWindow:
     @pytest.fixture(autouse=True)
     def _no_session(self, isolate_profile_dir, monkeypatch):
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.browser_setup_ready", lambda: True
+            "linkedin_scraper_mcp.bootstrap.browser_setup_ready", lambda: True
         )
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._auth_ready", lambda: False)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._auth_ready", lambda: False)
         initialize_bootstrap("managed")
 
     def _restricted_login(self, monkeypatch) -> list[int]:
@@ -9748,7 +9748,7 @@ class TestARestrictedAccountOpensNoLoginWindow:
             raise AccountRestrictedError()
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", fake_login_flow
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", fake_login_flow
         )
         return started
 
@@ -9789,7 +9789,7 @@ class TestARestrictedAccountOpensNoLoginWindow:
             raise AccountRestrictedError()
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._try_auto_import_session",
+            "linkedin_scraper_mcp.bootstrap._try_auto_import_session",
             restricted_import,
         )
 
@@ -9815,7 +9815,7 @@ class TestARestrictedAccountOpensNoLoginWindow:
             raise AccountRestrictedError()
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._try_auto_import_session",
+            "linkedin_scraper_mcp.bootstrap._try_auto_import_session",
             restricted_import,
         )
 
@@ -9844,7 +9844,7 @@ class TestARestrictedAccountOpensNoLoginWindow:
             raise AccountRestrictedError()
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._try_auto_import_session",
+            "linkedin_scraper_mcp.bootstrap._try_auto_import_session",
             restricted_import,
         )
 
@@ -9880,10 +9880,10 @@ class TestARestrictedAccountOpensNoLoginWindow:
             await never_done.wait()
 
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", pending_login
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", pending_login
         )
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._force_move_auth_state_aside",
+            "linkedin_scraper_mcp.bootstrap._force_move_auth_state_aside",
             lambda *_args: None,
         )
         _patch_inline_wait(monkeypatch, 0)
@@ -9910,14 +9910,14 @@ class TestAnOwnerNeverSignsInItself:
     """
 
     def _as_owner(self, monkeypatch):
-        from linkedin_mcp_server.server_role import ServerRole, set_process_role
+        from linkedin_scraper_mcp.server_role import ServerRole, set_process_role
 
         set_process_role(ServerRole.OWNER)
 
     async def test_a_missing_session_is_reported_not_repaired(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server.exceptions import AuthMissingOnOwnerError
+        from linkedin_scraper_mcp.exceptions import AuthMissingOnOwnerError
 
         self._as_owner(monkeypatch)
         # Both of the things the owner must not do, watched rather than assumed.
@@ -9926,11 +9926,11 @@ class TestAnOwnerNeverSignsInItself:
         # a reference nothing calls and pass however the gate behaved.
         started_login = MagicMock()
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.interactive_login", started_login
+            "linkedin_scraper_mcp.bootstrap.interactive_login", started_login
         )
         imported = MagicMock()
         monkeypatch.setattr(
-            "linkedin_mcp_server.browser_import.orchestrate.import_session_from_browser",
+            "linkedin_scraper_mcp.browser_import.orchestrate.import_session_from_browser",
             imported,
         )
 
@@ -9945,16 +9945,16 @@ class TestAnOwnerNeverSignsInItself:
     async def test_a_stale_session_is_reported_without_rotating_the_profile(
         self, isolate_profile_dir, monkeypatch
     ):
-        from linkedin_mcp_server.exceptions import AuthStaleOnOwnerError
+        from linkedin_scraper_mcp.exceptions import AuthStaleOnOwnerError
 
         self._as_owner(monkeypatch)
         rotated = MagicMock()
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.rotate_source_profile", rotated
+            "linkedin_scraper_mcp.bootstrap.rotate_source_profile", rotated
         )
         started_login = MagicMock()
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap.interactive_login", started_login
+            "linkedin_scraper_mcp.bootstrap.interactive_login", started_login
         )
 
         with pytest.raises(AuthStaleOnOwnerError, match="cannot sign in by itself"):
@@ -9969,7 +9969,7 @@ class TestAnOwnerNeverSignsInItself:
         # As a predicate test beside the Docker and proxy ones, because gating
         # only the call site would leave the next caller free to reopen the hole.
         config = _auto_import_config(flag=True, is_interactive=True)
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
 
         assert _auto_import_allowed() is True  # the same config, as a DIRECT server
         self._as_owner(monkeypatch)
@@ -9983,13 +9983,13 @@ class TestAnOwnerNeverSignsInItself:
         # predicate would look correct in every owner test and break every user.
 
         config = _auto_import_config(flag=False, is_interactive=True)
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._move_invalid_auth_state_aside",
+            "linkedin_scraper_mcp.bootstrap._move_invalid_auth_state_aside",
             MagicMock(),
         )
         login_flow = AsyncMock()
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._run_login_flow", login_flow)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._run_login_flow", login_flow)
 
         # Reaches the login path rather than the owner refusal, and actually
         # starts one: asserting only that an AuthenticationInProgressError came
@@ -10011,13 +10011,13 @@ class TestTheOwnerStaysQuiescentUntilANewSessionLands:
     """
 
     def _quiescent_on(self, generation):
-        import linkedin_mcp_server.bootstrap as bootstrap
+        import linkedin_scraper_mcp.bootstrap as bootstrap
 
         bootstrap.go_auth_quiescent(generation)
 
     def _still_latched(self) -> bool:
-        import linkedin_mcp_server.bootstrap as bootstrap
-        from linkedin_mcp_server.exceptions import AuthStaleOnOwnerError
+        import linkedin_scraper_mcp.bootstrap as bootstrap
+        from linkedin_scraper_mcp.exceptions import AuthStaleOnOwnerError
 
         try:
             bootstrap._raise_if_auth_quiescent()
@@ -10026,7 +10026,7 @@ class TestTheOwnerStaysQuiescentUntilANewSessionLands:
         return False
 
     def _write_session(self, profile_dir):
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.session_state import (
             portable_cookie_path,
             write_source_state,
         )
@@ -10039,7 +10039,7 @@ class TestTheOwnerStaysQuiescentUntilANewSessionLands:
     async def test_the_broken_session_alone_never_lifts_it(
         self, isolate_profile_dir, monkeypatch
     ):
-        import linkedin_mcp_server.bootstrap as bootstrap
+        import linkedin_scraper_mcp.bootstrap as bootstrap
 
         self._write_session(isolate_profile_dir)
         self._quiescent_on(bootstrap.current_login_generation())
@@ -10052,8 +10052,8 @@ class TestTheOwnerStaysQuiescentUntilANewSessionLands:
     async def test_an_abandoned_login_leaves_it_latched(
         self, isolate_profile_dir, monkeypatch
     ):
-        import linkedin_mcp_server.bootstrap as bootstrap
-        from linkedin_mcp_server.session_state import rotate_source_profile
+        import linkedin_scraper_mcp.bootstrap as bootstrap
+        from linkedin_scraper_mcp.session_state import rotate_source_profile
 
         self._write_session(isolate_profile_dir)
         self._quiescent_on(bootstrap.current_login_generation())
@@ -10069,8 +10069,8 @@ class TestTheOwnerStaysQuiescentUntilANewSessionLands:
         assert self._still_latched() is True
 
     async def test_a_real_new_session_lifts_it(self, isolate_profile_dir, monkeypatch):
-        import linkedin_mcp_server.bootstrap as bootstrap
-        from linkedin_mcp_server.session_state import rotate_source_profile
+        import linkedin_scraper_mcp.bootstrap as bootstrap
+        from linkedin_scraper_mcp.session_state import rotate_source_profile
 
         self._write_session(isolate_profile_dir)
         self._quiescent_on(bootstrap.current_login_generation())
@@ -10093,8 +10093,8 @@ class TestTheOwnerStaysQuiescentUntilANewSessionLands:
     async def test_the_gate_refuses_before_it_can_reach_a_browser(
         self, isolate_profile_dir, monkeypatch
     ):
-        import linkedin_mcp_server.bootstrap as bootstrap
-        from linkedin_mcp_server.exceptions import AuthStaleOnOwnerError
+        import linkedin_scraper_mcp.bootstrap as bootstrap
+        from linkedin_scraper_mcp.exceptions import AuthStaleOnOwnerError
 
         self._write_session(isolate_profile_dir)
         self._quiescent_on(bootstrap.current_login_generation())
@@ -10114,8 +10114,8 @@ class TestTheOwnerStaysQuiescentUntilANewSessionLands:
         marker with nothing to compare against. That client then repairs
         unguarded, and rotates away the session the first one is signing in for.
         """
-        import linkedin_mcp_server.bootstrap as bootstrap
-        from linkedin_mcp_server.exceptions import AuthStaleOnOwnerError
+        import linkedin_scraper_mcp.bootstrap as bootstrap
+        from linkedin_scraper_mcp.exceptions import AuthStaleOnOwnerError
 
         self._write_session(isolate_profile_dir)
         broken = bootstrap.current_login_generation()
@@ -10136,7 +10136,7 @@ class TestTwoClientsMeetingOneDeadSession:
     """
 
     def _write_session(self, profile_dir):
-        from linkedin_mcp_server.session_state import (
+        from linkedin_scraper_mcp.session_state import (
             portable_cookie_path,
             write_source_state,
         )
@@ -10155,12 +10155,12 @@ class TestTwoClientsMeetingOneDeadSession:
         against a *concurrent* login, because it takes the profile lease, but
         nothing stops a client that arrives after one has finished.
         """
-        import linkedin_mcp_server.bootstrap as bootstrap
-        from linkedin_mcp_server.session_state import load_source_state
+        import linkedin_scraper_mcp.bootstrap as bootstrap
+        from linkedin_scraper_mcp.session_state import load_source_state
 
         self._write_session(isolate_profile_dir)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", AsyncMock()
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", AsyncMock()
         )
 
         # A finishes a login: a fresh session, and a generation to go with it.
@@ -10179,14 +10179,14 @@ class TestTwoClientsMeetingOneDeadSession:
     async def test_the_generation_stops_the_second_client(
         self, isolate_profile_dir, monkeypatch
     ):
-        import linkedin_mcp_server.bootstrap as bootstrap
-        from linkedin_mcp_server.session_state import load_source_state
+        import linkedin_scraper_mcp.bootstrap as bootstrap
+        from linkedin_scraper_mcp.session_state import load_source_state
 
         self._write_session(isolate_profile_dir)
         stale = bootstrap.current_login_generation()
 
         login = AsyncMock()
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._run_login_flow", login)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._run_login_flow", login)
 
         # A finishes its login, writing a different generation.
         self._write_session(isolate_profile_dir)
@@ -10210,13 +10210,13 @@ class TestTwoClientsMeetingOneDeadSession:
     ):
         # The guard must not stop the client that is actually right about the
         # session being dead, which is every ordinary case.
-        import linkedin_mcp_server.bootstrap as bootstrap
-        from linkedin_mcp_server.session_state import load_source_state
+        import linkedin_scraper_mcp.bootstrap as bootstrap
+        from linkedin_scraper_mcp.session_state import load_source_state
 
         self._write_session(isolate_profile_dir)
         stale = bootstrap.current_login_generation()
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", AsyncMock()
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", AsyncMock()
         )
 
         with pytest.raises(AuthenticationStartedError):
@@ -10235,13 +10235,13 @@ class TestTwoClientsMeetingOneDeadSession:
         the next client "another client already signed in" and never start the login
         it is asking for. Measured, that is exactly what the half-guard does.
         """
-        import linkedin_mcp_server.bootstrap as bootstrap
-        from linkedin_mcp_server.session_state import rotate_source_profile
+        import linkedin_scraper_mcp.bootstrap as bootstrap
+        from linkedin_scraper_mcp.session_state import rotate_source_profile
 
         self._write_session(isolate_profile_dir)
         stale = bootstrap.current_login_generation()
         login = AsyncMock()
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap._run_login_flow", login)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap._run_login_flow", login)
 
         # A starts a login and the user closes the window: rotated, nothing new.
         rotate_source_profile(isolate_profile_dir)
@@ -10265,15 +10265,15 @@ class TestTheAutoImportInheritsTheGuard:
     async def test_the_generation_reaches_the_import(
         self, isolate_profile_dir, monkeypatch, _stub_import_env
     ):
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.config.schema import AppConfig
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.config.schema import AppConfig
 
         # Installed because the import path reads process-global config and this
         # test needs auto-import enabled there.
         config = AppConfig()
         config.browser.auto_import_from_browser = True
         set_config(config)
-        monkeypatch.setattr("linkedin_mcp_server.bootstrap.get_config", lambda: config)
+        monkeypatch.setattr("linkedin_scraper_mcp.bootstrap.get_config", lambda: config)
 
         seen: dict[str, object] = {}
 
@@ -10283,7 +10283,7 @@ class TestTheAutoImportInheritsTheGuard:
 
         monkeypatch.setattr(_IMPORT_TARGET, fake_import)
         monkeypatch.setattr(
-            "linkedin_mcp_server.bootstrap._run_login_flow", AsyncMock()
+            "linkedin_scraper_mcp.bootstrap._run_login_flow", AsyncMock()
         )
 
         with pytest.raises(AuthenticationInProgressError):
@@ -10304,8 +10304,8 @@ class TestTheAutomaticPathCarriesWhatItObserved:
     async def test_the_gate_hands_on_the_generation_it_just_read(
         self, isolate_profile_dir, monkeypatch
     ):
-        import linkedin_mcp_server.bootstrap as bootstrap
-        from linkedin_mcp_server.session_state import (
+        import linkedin_scraper_mcp.bootstrap as bootstrap
+        from linkedin_scraper_mcp.session_state import (
             portable_cookie_path,
             write_source_state,
         )
@@ -10317,8 +10317,8 @@ class TestTheAutomaticPathCarriesWhatItObserved:
         portable_cookie_path(isolate_profile_dir).write_text("[]")
         observed = write_source_state(isolate_profile_dir).login_generation
 
-        from linkedin_mcp_server.config import set_config
-        from linkedin_mcp_server.config.schema import AppConfig
+        from linkedin_scraper_mcp.config import set_config
+        from linkedin_scraper_mcp.config.schema import AppConfig
 
         # Installed because the gate reads process-global config and this test
         # needs the isolated profile path there.
@@ -10354,7 +10354,7 @@ class TestTheAutomaticPathCarriesWhatItObserved:
         # driving a browser: the default is the contract.
         import inspect
 
-        from linkedin_mcp_server.setup import UNGUARDED, interactive_login
+        from linkedin_scraper_mcp.setup import UNGUARDED, interactive_login
 
         default = inspect.signature(interactive_login).parameters["superseded_by"]
 

@@ -16,7 +16,7 @@ from unittest import mock
 
 import pytest
 
-from linkedin_mcp_server.browser_downgrade import (
+from linkedin_scraper_mcp.browser_downgrade import (
     LAST_VERSION_FILE,
     BrowserBuild,
     a_version_can_be_asked_for,
@@ -27,8 +27,8 @@ from linkedin_mcp_server.browser_downgrade import (
     refuse_a_downgrade,
     version_of,
 )
-from linkedin_mcp_server.core.browser import BrowserManager
-from linkedin_mcp_server.exceptions import BrowserDowngradeError
+from linkedin_scraper_mcp.core.browser import BrowserManager
+from linkedin_scraper_mcp.exceptions import BrowserDowngradeError
 
 
 def _shell_wrapper(tmp_path: Path, body: str) -> Path:
@@ -226,7 +226,7 @@ class TestWhichProductsCompare:
         profile = _profile_last_opened_by(tmp_path, "151.0.7922.76")
 
         with mock.patch(
-            "linkedin_mcp_server.browser_downgrade.version_of",
+            "linkedin_scraper_mcp.browser_downgrade.version_of",
             return_value=BrowserBuild("Google Chrome", (149, 0, 7827, 55)),
         ):
             with pytest.raises(BrowserDowngradeError) as raised:
@@ -270,7 +270,7 @@ class TestWhichProductsCompare:
         profile = _profile_last_opened_by(tmp_path, "148.0.7778.96")
 
         with mock.patch(
-            "linkedin_mcp_server.browser_downgrade.version_of", return_value=build
+            "linkedin_scraper_mcp.browser_downgrade.version_of", return_value=build
         ):
             refuse_a_downgrade(profile, "/browser")
 
@@ -287,7 +287,7 @@ class TestWhichProductsCompare:
         profile = _profile_last_opened_by(tmp_path, "151.1.93.129")
 
         with mock.patch(
-            "linkedin_mcp_server.browser_downgrade.version_of",
+            "linkedin_scraper_mcp.browser_downgrade.version_of",
             return_value=BrowserBuild("Google Chrome for Testing", (151, 0, 7922, 34)),
         ):
             with pytest.raises(BrowserDowngradeError):
@@ -341,7 +341,7 @@ class TestAskingTheBinary:
 
     def test_output_without_a_version_says_nothing(self):
         with mock.patch(
-            "linkedin_mcp_server.browser_downgrade.subprocess.run",
+            "linkedin_scraper_mcp.browser_downgrade.subprocess.run",
             return_value=mock.Mock(stdout="chrome: command not found\n"),
         ):
             assert version_of("/anything") is None
@@ -419,7 +419,7 @@ class TestWhichWayTheVersionsHaveToGo:
         profile = _profile_last_opened_by(tmp_path, "148.0.7778.96")
 
         with mock.patch(
-            "linkedin_mcp_server.browser_downgrade.version_of",
+            "linkedin_scraper_mcp.browser_downgrade.version_of",
             return_value=BrowserBuild("Chromium", (149, 0, 7827, 55)),
         ):
             refuse_a_downgrade(profile, "/browser")
@@ -428,7 +428,7 @@ class TestWhichWayTheVersionsHaveToGo:
         profile = _profile_last_opened_by(tmp_path, "148.0.7778.96")
 
         with mock.patch(
-            "linkedin_mcp_server.browser_downgrade.version_of",
+            "linkedin_scraper_mcp.browser_downgrade.version_of",
             return_value=BrowserBuild("Chromium", (148, 0, 7778, 96)),
         ):
             refuse_a_downgrade(profile, "/browser")
@@ -437,7 +437,7 @@ class TestWhichWayTheVersionsHaveToGo:
         profile = _profile_last_opened_by(tmp_path, "150.0.7871.187")
 
         with mock.patch(
-            "linkedin_mcp_server.browser_downgrade.version_of",
+            "linkedin_scraper_mcp.browser_downgrade.version_of",
             return_value=BrowserBuild("Chromium", (148, 0, 7778, 96)),
         ):
             with pytest.raises(BrowserDowngradeError) as raised:
@@ -461,7 +461,7 @@ class TestWhichWayTheVersionsHaveToGo:
         profile = _profile_last_opened_by(tmp_path, "148.0.7778.96")
 
         with mock.patch(
-            "linkedin_mcp_server.browser_downgrade.version_of",
+            "linkedin_scraper_mcp.browser_downgrade.version_of",
             return_value=BrowserBuild("Chromium", (148, 0, 7778, 95)),
         ):
             with pytest.raises(BrowserDowngradeError):
@@ -487,11 +487,11 @@ class TestThePlatformWhereAskingWouldStartABrowser:
 
     def test_no_binary_is_ever_run_there(self, tmp_path, monkeypatch):
         monkeypatch.setattr(
-            "linkedin_mcp_server.browser_downgrade.a_version_can_be_asked_for",
+            "linkedin_scraper_mcp.browser_downgrade.a_version_can_be_asked_for",
             lambda: False,
         )
         with mock.patch(
-            "linkedin_mcp_server.browser_downgrade.subprocess.run"
+            "linkedin_scraper_mcp.browser_downgrade.subprocess.run"
         ) as spawned:
             assert version_of("/anything") is None
 
@@ -502,11 +502,11 @@ class TestThePlatformWhereAskingWouldStartABrowser:
         on every start about a check it can never perform."""
         profile = _profile_last_opened_by(tmp_path, "150.0.7871.187")
         monkeypatch.setattr(
-            "linkedin_mcp_server.browser_downgrade.a_version_can_be_asked_for",
+            "linkedin_scraper_mcp.browser_downgrade.a_version_can_be_asked_for",
             lambda: False,
         )
 
-        with mock.patch("linkedin_mcp_server.browser_downgrade.version_of") as asked:
+        with mock.patch("linkedin_scraper_mcp.browser_downgrade.version_of") as asked:
             refuse_a_downgrade(profile, "/browser")
 
         assert asked.call_count == 0
@@ -519,7 +519,7 @@ class TestThePlatformWhereAskingWouldStartABrowser:
         a check the platform can never perform."""
         profile = _profile_last_opened_by(tmp_path, "not a version")
         monkeypatch.setattr(
-            "linkedin_mcp_server.browser_downgrade.a_version_can_be_asked_for",
+            "linkedin_scraper_mcp.browser_downgrade.a_version_can_be_asked_for",
             lambda: False,
         )
 
@@ -554,7 +554,7 @@ class TestWhatTheUserIsToldWhenItGivesUp:
 
         with caplog.at_level(logging.WARNING):
             with mock.patch(
-                "linkedin_mcp_server.browser_downgrade.version_of", return_value=None
+                "linkedin_scraper_mcp.browser_downgrade.version_of", return_value=None
             ):
                 refuse_a_downgrade(profile, "/browser")
 
@@ -572,7 +572,7 @@ class TestWhatTheUserIsToldWhenItGivesUp:
 
         with caplog.at_level(logging.DEBUG):
             with mock.patch(
-                "linkedin_mcp_server.browser_downgrade.version_of",
+                "linkedin_scraper_mcp.browser_downgrade.version_of",
                 return_value=BrowserBuild("Vivaldi", (7, 5, 3735, 54)),
             ):
                 refuse_a_downgrade(profile, "/browser")
@@ -592,7 +592,7 @@ class TestWhereItFailsOpen:
     def test_an_unnameable_binary_is_allowed(self, tmp_path):
         profile = _profile_last_opened_by(tmp_path, "150.0.7871.187")
 
-        with mock.patch("linkedin_mcp_server.browser_downgrade.version_of") as asked:
+        with mock.patch("linkedin_scraper_mcp.browser_downgrade.version_of") as asked:
             refuse_a_downgrade(profile, None)
 
         assert asked.call_count == 0
@@ -601,7 +601,7 @@ class TestWhereItFailsOpen:
         profile = _profile_last_opened_by(tmp_path, "150.0.7871.187")
 
         with mock.patch(
-            "linkedin_mcp_server.browser_downgrade.version_of", return_value=None
+            "linkedin_scraper_mcp.browser_downgrade.version_of", return_value=None
         ):
             refuse_a_downgrade(profile, "/browser")
 
@@ -616,7 +616,7 @@ class TestWhereItFailsOpen:
         fresh = tmp_path / "profile"
         fresh.mkdir()
 
-        with mock.patch("linkedin_mcp_server.browser_downgrade.version_of") as asked:
+        with mock.patch("linkedin_scraper_mcp.browser_downgrade.version_of") as asked:
             refuse_a_downgrade(fresh, "/browser")
 
         assert asked.call_count == 0
@@ -685,11 +685,11 @@ class TestWhatTheLaunchDoes:
         self, manager: BrowserManager, recorder: dict, **fake_kwargs
     ):
         with mock.patch(
-            "linkedin_mcp_server.core.browser.hidden_target_is_supported",
+            "linkedin_scraper_mcp.core.browser.hidden_target_is_supported",
             return_value=False,
         ):
             with mock.patch(
-                "linkedin_mcp_server.core.browser.async_playwright"
+                "linkedin_scraper_mcp.core.browser.async_playwright"
             ) as playwright:
                 playwright.return_value.start = _fake_playwright(
                     recorder, **fake_kwargs
@@ -704,7 +704,7 @@ class TestWhatTheLaunchDoes:
         manager = self._manager(profile, executable_path="/browser")
 
         with mock.patch(
-            "linkedin_mcp_server.browser_downgrade.version_of",
+            "linkedin_scraper_mcp.browser_downgrade.version_of",
             return_value=BrowserBuild("Chromium", (148, 0, 7778, 96)),
         ):
             with pytest.raises(BrowserDowngradeError):
@@ -726,12 +726,12 @@ class TestWhatTheLaunchDoes:
         manager = self._manager(profile, executable_path="/browser")
 
         with (
-            mock.patch("linkedin_mcp_server.core.browser.secure_mkdir") as made,
+            mock.patch("linkedin_scraper_mcp.core.browser.secure_mkdir") as made,
             mock.patch(
-                "linkedin_mcp_server.core.browser.harden_linkedin_tree"
+                "linkedin_scraper_mcp.core.browser.harden_linkedin_tree"
             ) as hardened,
             mock.patch(
-                "linkedin_mcp_server.browser_downgrade.version_of",
+                "linkedin_scraper_mcp.browser_downgrade.version_of",
                 return_value=BrowserBuild("Chromium", (148, 0, 7778, 96)),
             ),
         ):
@@ -757,7 +757,7 @@ class TestWhatTheLaunchDoes:
         manager = self._manager(profile, executable_path="/browser")
 
         with mock.patch(
-            "linkedin_mcp_server.browser_downgrade.version_of",
+            "linkedin_scraper_mcp.browser_downgrade.version_of",
             return_value=BrowserBuild("Chromium", (148, 0, 7778, 96)),
         ):
             with pytest.raises(BrowserDowngradeError) as raised:
@@ -784,10 +784,10 @@ class TestWhatTheLaunchDoes:
 
         with (
             mock.patch(
-                "linkedin_mcp_server.core.browser._CLEANUP_TIMEOUT_SECONDS", 0.05
+                "linkedin_scraper_mcp.core.browser._CLEANUP_TIMEOUT_SECONDS", 0.05
             ),
             mock.patch(
-                "linkedin_mcp_server.browser_downgrade.version_of",
+                "linkedin_scraper_mcp.browser_downgrade.version_of",
                 return_value=BrowserBuild("Chromium", (148, 0, 7778, 96)),
             ),
         ):
@@ -802,7 +802,7 @@ class TestWhatTheLaunchDoes:
         manager = self._manager(profile, executable_path="/browser")
 
         with mock.patch(
-            "linkedin_mcp_server.browser_downgrade.version_of",
+            "linkedin_scraper_mcp.browser_downgrade.version_of",
             return_value=BrowserBuild("Chromium", (148, 0, 7778, 96)),
         ):
             await self._start_against(manager, recorder)
@@ -818,7 +818,7 @@ class TestWhatTheLaunchDoes:
         manager = self._manager(profile)
 
         with mock.patch(
-            "linkedin_mcp_server.browser_downgrade.version_of",
+            "linkedin_scraper_mcp.browser_downgrade.version_of",
             return_value=BrowserBuild("Chromium", (148, 0, 7778, 96)),
         ) as asked:
             with pytest.raises(BrowserDowngradeError):
@@ -888,8 +888,8 @@ class TestWhereARefusalIsRecoverableOnItsOwn:
         """Enough state for ``_create_browser_locked`` to choose the stored
         derived profile: a source session, a matching generation, and both the
         profile and its storage snapshot on disk."""
-        from linkedin_mcp_server import session_state
-        from linkedin_mcp_server.drivers import browser as drv
+        from linkedin_scraper_mcp import session_state
+        from linkedin_scraper_mcp.drivers import browser as drv
 
         source = tmp_path / "source" / "profile"
         source.mkdir(parents=True)
@@ -964,9 +964,9 @@ class TestWhereARefusalIsRecoverableOnItsOwn:
         that moved the clear below the launch -- the caught downgrade would
         simply be raised again, uncaught, and every test would still pass.
         """
-        from linkedin_mcp_server import session_state
-        from linkedin_mcp_server.drivers import browser as drv
-        from linkedin_mcp_server.profile_claim import ensure_profile_claim
+        from linkedin_scraper_mcp import session_state
+        from linkedin_scraper_mcp.drivers import browser as drv
+        from linkedin_scraper_mcp.profile_claim import ensure_profile_claim
 
         source = tmp_path / "source" / "profile"
         source.mkdir(parents=True)
@@ -1003,8 +1003,8 @@ class TestWhereARefusalIsRecoverableOnItsOwn:
     async def test_the_source_profile_still_refuses(self, monkeypatch, tmp_path):
         """Same failure, opposite answer, because the source profile is the
         session itself. Nothing downstream may quietly rebuild it."""
-        from linkedin_mcp_server import session_state
-        from linkedin_mcp_server.drivers import browser as drv
+        from linkedin_scraper_mcp import session_state
+        from linkedin_scraper_mcp.drivers import browser as drv
 
         source = tmp_path / "source" / "profile"
         source.mkdir(parents=True)

@@ -11,34 +11,30 @@ import pytest
 from patchright.async_api import Error as PatchrightError
 from patchright.async_api import TimeoutError as PlaywrightTimeoutError
 
-from linkedin_mcp_server.core.exceptions import (
+from linkedin_scraper_mcp.core.exceptions import (
     AuthenticationError,
-    LinkedInOperationError,
 )
-from linkedin_mcp_server.linkedin import jobs as jobs_module
-from linkedin_mcp_server.linkedin.capture import (
+from linkedin_scraper_mcp.linkedin import jobs as jobs_module
+from linkedin_scraper_mcp.linkedin.capture import (
     CaptureMode,
     CapturePlan,
     SectionCapture,
 )
-from linkedin_mcp_server.linkedin.content import PageContentReader
-from linkedin_mcp_server.linkedin.contracts import (
+from linkedin_scraper_mcp.linkedin.content import PageContentReader
+from linkedin_scraper_mcp.linkedin.contracts import (
     RATE_LIMITED_SECTION_TEXT,
     ExtractedSection,
 )
-from linkedin_mcp_server.linkedin.job_pages import (
-    EasyApplyDraftLeftError,
-    EasyApplyFormRead,
+from linkedin_scraper_mcp.linkedin.job_pages import (
     JobApplyRead,
     JobPageCapture,
     JobPageReader,
 )
-from linkedin_mcp_server.linkedin.job_policy import easy_apply_draft_section_error
-from linkedin_mcp_server.linkedin.jobs import JobReader
-from linkedin_mcp_server.linkedin.link_metadata import Reference
-from linkedin_mcp_server.linkedin.navigation import PageNavigator
-from linkedin_mcp_server.linkedin.session import PageSession
-from linkedin_mcp_server.linkedin.text import JOB_APPLY_EN_US
+from linkedin_scraper_mcp.linkedin.jobs import JobReader
+from linkedin_scraper_mcp.linkedin.link_metadata import Reference
+from linkedin_scraper_mcp.linkedin.navigation import PageNavigator
+from linkedin_scraper_mcp.linkedin.session import PageSession
+from linkedin_scraper_mcp.linkedin.text import JOB_APPLY_EN_US
 from linkedin.support.navigation import navigate
 
 
@@ -297,74 +293,6 @@ class TestGetJobApplyUrl:
                 await reader.get_job_apply_url("12345")
 
 
-class TestGetEasyApplyForm:
-    URL = "https://www.linkedin.com/jobs/view/12345/"
-    STEP = {
-        "heading": "Contact info",
-        "progress": 0,
-        "fields": [{"label": "First name", "type": "text", "required": True}],
-    }
-
-    @staticmethod
-    def _reading(reader, **kwargs):
-        return patch.object(
-            reader._pages, "read_easy_apply_form", new_callable=AsyncMock, **kwargs
-        )
-
-    async def test_an_easy_apply_posting_answers_with_its_steps(self, mock_page):
-        reader = _reader(mock_page)
-        read = EasyApplyFormRead("easy_apply", (self.STEP,), complete=False)
-        with self._reading(reader, return_value=read) as read_form:
-            result = await reader.get_easy_apply_form("12345")
-
-        read_form.assert_awaited_once_with(self.URL, "12345", JOB_APPLY_EN_US)
-        assert result == {
-            "url": self.URL,
-            "apply": {"type": "easy_apply"},
-            "form": {"steps": [self.STEP], "complete": False},
-        }
-
-    async def test_any_other_posting_carries_its_type_alone(self, mock_page):
-        reader = _reader(mock_page)
-        with self._reading(reader, return_value=EasyApplyFormRead("closed")):
-            result = await reader.get_easy_apply_form("12345")
-
-        assert result == {"url": self.URL, "apply": {"type": "closed"}}
-
-    async def test_a_draft_left_behind_is_reported_beside_the_form(self, mock_page):
-        reader = _reader(mock_page)
-        read = EasyApplyFormRead("easy_apply", (self.STEP,), True, discarded=False)
-        with self._reading(reader, return_value=read):
-            result = await reader.get_easy_apply_form("12345")
-
-        assert result["form"]["steps"] == [self.STEP]
-        assert result["section_errors"]["form"]["error_type"] == "easy_apply_draft_left"
-
-    async def test_a_failed_read_is_a_section_error_and_no_form(self, mock_page):
-        reader = _reader(mock_page)
-        with self._reading(reader, side_effect=RuntimeError("dialog did not open")):
-            result = await reader.get_easy_apply_form("12345")
-
-        assert "form" not in result and "apply" not in result
-        assert "form" in result["section_errors"]
-
-    async def test_a_failed_read_that_leaves_a_draft_says_so(self, mock_page):
-        reader = _reader(mock_page)
-        error = EasyApplyDraftLeftError("draft left")
-        error.__cause__ = RuntimeError("dialog closed while it was read")
-        with self._reading(reader, side_effect=error):
-            result = await reader.get_easy_apply_form("12345")
-
-        assert "form" not in result and "apply" not in result
-        assert result["section_errors"] == {"form": easy_apply_draft_section_error()}
-
-    async def test_an_expired_session_reaches_the_relogin_path(self, mock_page):
-        reader = _reader(mock_page)
-        with self._reading(reader, side_effect=AuthenticationError("expired")):
-            with pytest.raises(AuthenticationError):
-                await reader.get_easy_apply_form("12345")
-
-
 class TestSearchJobs:
     """Tests for search_jobs with job ID extraction and pagination."""
 
@@ -420,7 +348,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -457,7 +385,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -504,7 +432,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -585,16 +513,16 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -682,7 +610,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -719,7 +647,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -766,7 +694,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -845,21 +773,21 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -901,7 +829,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -944,7 +872,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -996,7 +924,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1061,7 +989,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1108,7 +1036,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1158,7 +1086,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1204,7 +1132,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1251,7 +1179,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1300,7 +1228,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1380,7 +1308,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1437,7 +1365,7 @@ class TestSearchJobs:
                 return_value=1,
             ) as mock_total_pages,
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1506,7 +1434,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 side_effect=sleep,
             ),
         ):
@@ -1564,7 +1492,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 side_effect=sleep,
             ),
         ):
@@ -1628,7 +1556,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 side_effect=sleep,
             ),
         ):
@@ -1693,7 +1621,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 side_effect=sleep,
             ),
         ):
@@ -1747,7 +1675,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1779,7 +1707,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1816,7 +1744,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1864,7 +1792,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1897,7 +1825,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1945,7 +1873,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1986,7 +1914,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2040,7 +1968,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2079,7 +2007,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2119,7 +2047,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2184,7 +2112,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2256,7 +2184,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2317,7 +2245,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2359,7 +2287,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2389,7 +2317,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2427,7 +2355,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2464,7 +2392,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2500,7 +2428,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2548,7 +2476,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2584,7 +2512,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2625,7 +2553,7 @@ class TestSearchJobs:
                 reader._navigator, "_raise_if_auth_barrier", new_callable=AsyncMock
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2669,7 +2597,7 @@ class TestSearchJobs:
                 reader._navigator, "_raise_if_auth_barrier", new_callable=AsyncMock
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2722,7 +2650,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2773,7 +2701,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2809,7 +2737,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2841,7 +2769,7 @@ class TestSearchJobs:
                 return_value=["100"],
             ) as mock_ids,
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2876,7 +2804,7 @@ class TestSearchJobs:
                 return_value=["100"],
             ) as mock_ids,
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2923,7 +2851,7 @@ class TestSearchJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -2991,7 +2919,7 @@ class TestGetSavedJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3031,7 +2959,7 @@ class TestGetSavedJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3072,7 +3000,7 @@ class TestGetSavedJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3107,7 +3035,7 @@ class TestGetSavedJobs:
                 return_value=2,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3144,7 +3072,7 @@ class TestGetSavedJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3179,7 +3107,7 @@ class TestGetSavedJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3205,16 +3133,16 @@ class TestGetSavedJobs:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier",
                 new_callable=AsyncMock,
                 return_value="account picker: #rememberme-div",
             ),
@@ -3254,16 +3182,16 @@ class TestGetSavedJobs:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_to_bottom",
                 side_effect=redirect,
             ),
             pytest.raises(AuthenticationError, match="--login"),
@@ -3294,7 +3222,7 @@ class TestGetSavedJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3321,7 +3249,7 @@ class TestGetSavedJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3363,7 +3291,7 @@ class TestGetSavedJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3401,7 +3329,7 @@ class TestGetSavedJobs:
                 return_value=2,
             ) as mock_total_pages,
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3442,7 +3370,7 @@ class TestGetSavedJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3481,7 +3409,7 @@ class TestGetSavedJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3519,7 +3447,7 @@ class TestGetSavedJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3560,7 +3488,7 @@ class TestGetSavedJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3614,7 +3542,7 @@ class TestGetSavedJobs:
                 side_effect=count_pages_and_drift,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3674,7 +3602,7 @@ class TestGetSavedJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3729,7 +3657,7 @@ class TestGetSavedJobs:
                 return_value=None,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.jobs.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.jobs.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -3744,116 +3672,3 @@ class TestGetSavedJobs:
             },
             {"kind": "job", "url": "/jobs/view/200/", "text": "Two"},
         ]
-
-
-class TestDismissJob:
-    """dismiss_job, over a stubbed posting and search page reader."""
-
-    URL = (
-        "https://www.linkedin.com/jobs/search/"
-        "?keywords=Applied+AI+Engineer+Acme&geoId=92000000"
-    )
-
-    @staticmethod
-    def _stub(reader, outcome, *listed, posting=("Applied AI Engineer", "Acme")):
-        title = patch.object(
-            reader._pages,
-            "read_posting_title",
-            new_callable=AsyncMock,
-            return_value=posting,
-        )
-        act = patch.object(
-            reader._pages,
-            "dismiss_search_card",
-            new_callable=AsyncMock,
-            return_value=(outcome, 25),
-        )
-        read = patch.object(
-            reader._pages,
-            "search_lists_job",
-            new_callable=AsyncMock,
-            side_effect=list(listed),
-        )
-        sleep = patch(
-            "linkedin_mcp_server.linkedin.jobs.asyncio.sleep", new_callable=AsyncMock
-        )
-        return title, act, read, sleep
-
-    async def test_dismisses_from_a_worldwide_search_for_the_posting_and_rechecks(
-        self, mock_page
-    ):
-        reader = _reader(mock_page)
-        title, act, read, sleep = self._stub(reader, "dismissed", False)
-        with title as titling, act as acting, read as reading, sleep:
-            result = await reader.dismiss_job("/jobs/view/4400000201/")
-
-        titling.assert_awaited_once_with("4400000201")
-        acting.assert_awaited_once_with(self.URL, "4400000201")
-        reading.assert_awaited_once_with(self.URL, "4400000201", 24)
-        assert result == {
-            "url": self.URL,
-            "job_id": "4400000201",
-            "keywords": "Applied AI Engineer Acme",
-            "dismissed": True,
-            "already_dismissed": False,
-        }
-
-    async def test_a_card_already_in_its_undo_state_is_already_dismissed(
-        self, mock_page
-    ):
-        reader = _reader(mock_page)
-        title, act, read, sleep = self._stub(reader, "already_dismissed")
-        with title, act, read as reading, sleep:
-            result = await reader.dismiss_job("123")
-
-        reading.assert_not_awaited()
-        assert result["already_dismissed"] is True
-
-    async def test_a_job_back_after_a_reload_is_an_error(self, mock_page):
-        reader = _reader(mock_page)
-        title, act, read, sleep = self._stub(reader, "dismissed", True)
-        with title, act, read, sleep:
-            with pytest.raises(LinkedInOperationError, match="back in the search"):
-                await reader.dismiss_job("123")
-
-    async def test_an_absent_job_names_the_search_it_ran(self, mock_page):
-        reader = _reader(mock_page)
-        title, act, read, sleep = self._stub(
-            reader, "absent", posting=("Backend Engineer", "Globex")
-        )
-        with title, act, read, sleep:
-            with pytest.raises(LinkedInOperationError) as raised:
-                await reader.dismiss_job("4400000202")
-
-        message = str(raised.value)
-        assert "worldwide search for 'Backend Engineer Globex'" in message
-        assert "already dismissed" in message
-        assert "first page" in message
-
-    @pytest.mark.parametrize(
-        ("outcome", "message"),
-        [
-            ("no_button", "dismiss button could not be found"),
-            ("not_dismissed", "did not change"),
-        ],
-    )
-    async def test_a_dismissal_that_did_not_happen_is_an_error(
-        self, mock_page, outcome, message
-    ):
-        reader = _reader(mock_page)
-        title, act, read, sleep = self._stub(reader, outcome)
-        with title, act, read as reading, sleep:
-            with pytest.raises(LinkedInOperationError, match=message):
-                await reader.dismiss_job("123")
-
-        reading.assert_not_awaited()
-
-    async def test_an_unreadable_posting_stops_before_any_search(self, mock_page):
-        reader = _reader(mock_page)
-        title, act, read, sleep = self._stub(reader, "dismissed", False)
-        with title as titling, act as acting, read, sleep:
-            titling.side_effect = LinkedInOperationError("never named")
-            with pytest.raises(LinkedInOperationError, match="never named"):
-                await reader.dismiss_job("123")
-
-        acting.assert_not_awaited()

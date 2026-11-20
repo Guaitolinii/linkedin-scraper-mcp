@@ -5,28 +5,24 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 import asyncio
-import time
 
-import anyio
 import pytest
 from patchright.async_api import TimeoutError as PlaywrightTimeoutError
 
-from linkedin_mcp_server.core.exceptions import AuthenticationError
-from linkedin_mcp_server.linkedin import job_pages as job_pages_module
-from linkedin_mcp_server.linkedin.content import PageContentReader
-from linkedin_mcp_server.linkedin.contracts import (
+from linkedin_scraper_mcp.core.exceptions import AuthenticationError
+from linkedin_scraper_mcp.linkedin import job_pages as job_pages_module
+from linkedin_scraper_mcp.linkedin.content import PageContentReader
+from linkedin_scraper_mcp.linkedin.contracts import (
     RATE_LIMITED_SECTION_TEXT,
     ExtractedSection,
 )
-from linkedin_mcp_server.linkedin.job_pages import (
-    EasyApplyDraftLeftError,
+from linkedin_scraper_mcp.linkedin.job_pages import (
     JobPageReader,
     _ScrollCharge,
 )
-from linkedin_mcp_server.linkedin.text import JOB_APPLY_EN_US
-from linkedin_mcp_server.linkedin.link_metadata import Reference
-from linkedin_mcp_server.linkedin.navigation import PageNavigator
-from linkedin_mcp_server.linkedin.session import PageSession
+from linkedin_scraper_mcp.linkedin.link_metadata import Reference
+from linkedin_scraper_mcp.linkedin.navigation import PageNavigator
+from linkedin_scraper_mcp.linkedin.session import PageSession
 from linkedin.support.navigation import navigate
 
 
@@ -97,16 +93,16 @@ class TestExtractSearchPage:
                 side_effect=redirect_to_the_redesign,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -141,16 +137,16 @@ class TestExtractSearchPage:
                 side_effect=redirect_to_the_feed,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -192,12 +188,12 @@ class TestExtractSearchPage:
                 side_effect=AuthenticationError("Run with --login"),
             ) as check_auth,
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             pytest.raises(AuthenticationError, match="--login"),
@@ -244,16 +240,16 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 new_callable=AsyncMock,
                 side_effect=navigate_away,
             ),
@@ -285,16 +281,16 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 new_callable=AsyncMock,
                 side_effect=navigate_away,
             ),
@@ -334,20 +330,20 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 side_effect=reload_in_place,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier",
                 side_effect=barrier,
             ),
             pytest.raises(AuthenticationError, match="--login"),
@@ -375,21 +371,21 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 new_callable=AsyncMock,
                 return_value=False,
             ) as scroll,
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier",
                 new_callable=AsyncMock,
                 return_value="auth barrier text: welcome back + join now",
             ),
@@ -416,21 +412,21 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
-                new_callable=AsyncMock,
-                return_value=False,
-            ),
-            patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
+                new_callable=AsyncMock,
+                return_value=False,
+            ),
+            patch(
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
@@ -463,20 +459,20 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 side_effect=scroll_then_reload,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier",
                 new_callable=AsyncMock,
                 return_value="account picker: #rememberme-div",
             ),
@@ -511,20 +507,20 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 side_effect=scroll_then_name_a_job,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier",
                 barrier,
             ),
         ):
@@ -574,16 +570,16 @@ class TestExtractSearchPage:
             patch.object(job_pages_module, "time", clock),
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 side_effect=scroll,
             ),
         ):
@@ -620,16 +616,16 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -639,7 +635,7 @@ class TestExtractSearchPage:
                 side_effect=reload_at_read,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier",
                 side_effect=barrier,
             ),
             pytest.raises(AuthenticationError, match="--login"),
@@ -673,16 +669,16 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 side_effect=hop_twice,
             ),
             pytest.raises(AuthenticationError, match="--login"),
@@ -715,16 +711,16 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 side_effect=hop_slowly,
             ),
             pytest.raises(AuthenticationError, match="--login"),
@@ -760,16 +756,16 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 side_effect=hop_late,
             ),
             pytest.raises(AuthenticationError, match="--login"),
@@ -798,11 +794,11 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -841,16 +837,16 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 new_callable=AsyncMock,
                 side_effect=navigate_away,
             ),
@@ -888,16 +884,16 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 new_callable=AsyncMock,
                 side_effect=add_current_job,
             ),
@@ -922,16 +918,16 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -968,16 +964,16 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 side_effect=scroll_then_publish,
             ),
             pytest.raises(AuthenticationError, match="--login"),
@@ -1036,16 +1032,16 @@ class TestExtractSearchPage:
                 job_pages_module.asyncio, "sleep", new_callable=AsyncMock
             ) as backoff,
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 side_effect=scroll,
             ),
             patch.object(
@@ -1095,16 +1091,16 @@ class TestExtractSearchPage:
             patch.object(job_pages_module, "time", clock),
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 side_effect=scroll,
             ),
             patch.object(
@@ -1162,16 +1158,16 @@ class TestExtractSearchPage:
             patch.object(job_pages_module, "time", clock),
             patch.object(PageNavigator, "_navigate_to_page", side_effect=goto),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 side_effect=scroll,
             ),
             patch.object(
@@ -1267,16 +1263,16 @@ class TestExtractSearchPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_job_sidebar",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_job_sidebar",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -1313,16 +1309,16 @@ class TestExtractSavedJobsPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch.object(
@@ -1331,7 +1327,7 @@ class TestExtractSavedJobsPage:
                 side_effect=reload_at_read,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier",
                 side_effect=barrier,
             ),
             pytest.raises(AuthenticationError, match="--login"),
@@ -1372,20 +1368,20 @@ class TestExtractSavedJobsPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_to_bottom",
                 side_effect=reload_in_place,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier",
                 side_effect=barrier,
             ),
             pytest.raises(AuthenticationError, match="--login"),
@@ -1414,16 +1410,16 @@ class TestExtractSavedJobsPage:
                 PageNavigator, "_navigate_to_page", new_callable=AsyncMock
             ) as navigate_to,
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_to_bottom",
                 new_callable=AsyncMock,
             ) as scroll,
         ):
@@ -1463,16 +1459,16 @@ class TestExtractSavedJobsPage:
         with (
             patch.object(PageNavigator, "_navigate_to_page", new_callable=AsyncMock),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.job_pages.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.job_pages.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.job_pages.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.job_pages.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1503,73 +1499,3 @@ class TestExtractJobIds:
             assert await reader._extract_job_ids(scoped=True) == ["101", "999"]
 
         assert "No results rail" in caplog.text
-
-
-class TestReadEasyApplyForm:
-    URL = "https://www.linkedin.com/jobs/view/123/"
-
-    async def test_a_failed_walk_that_leaves_a_draft_raises_its_own_type(
-        self, mock_page
-    ):
-        """The draft is what the caller must act on, so it names the error."""
-        reader = _reader(mock_page)
-        failure = RuntimeError("The Easy Apply dialog closed while it was read")
-        with (
-            patch.object(
-                reader,
-                "_read_apply_type",
-                new_callable=AsyncMock,
-                return_value=("easy_apply", None),
-            ),
-            patch.object(
-                reader, "_walk_easy_apply", new_callable=AsyncMock, side_effect=failure
-            ),
-            patch.object(
-                reader,
-                "_discard_easy_apply",
-                new_callable=AsyncMock,
-                return_value=False,
-            ),
-        ):
-            with pytest.raises(EasyApplyDraftLeftError) as raised:
-                await reader.read_easy_apply_form(self.URL, "123", JOB_APPLY_EN_US)
-
-        assert raised.value.__cause__ is failure
-
-    async def test_a_tool_deadline_waits_for_the_discard_without_spinning(
-        self, mock_page
-    ):
-        """A tool timeout is an AnyIO deadline, re-delivered on every pass of
-        the event loop. The read still waits for the discard, and while it
-        waits the process stays idle: an unshielded wait re-entered after each
-        delivery spends the whole discard spinning on the CPU."""
-        reader = _reader(mock_page)
-        discarded = asyncio.Event()
-
-        async def walk(*_: object) -> bool:
-            await asyncio.sleep(10)
-            return True
-
-        async def discard(_grace: float) -> bool:
-            await asyncio.sleep(0.5)
-            discarded.set()
-            return True
-
-        with (
-            patch.object(
-                reader,
-                "_read_apply_type",
-                new_callable=AsyncMock,
-                return_value=("easy_apply", None),
-            ),
-            patch.object(reader, "_walk_easy_apply", side_effect=walk),
-            patch.object(reader, "_discard_easy_apply", side_effect=discard),
-        ):
-            started = time.process_time()
-            with pytest.raises(TimeoutError):
-                with anyio.fail_after(0.05):
-                    await reader.read_easy_apply_form(self.URL, "123", JOB_APPLY_EN_US)
-            spent = time.process_time() - started
-
-        assert discarded.is_set()
-        assert spent < 0.05

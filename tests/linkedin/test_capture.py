@@ -14,24 +14,24 @@ import re
 
 import pytest
 
-from linkedin_mcp_server.core.exceptions import AuthenticationError
-from linkedin_mcp_server.linkedin import capture as capture_module
-from linkedin_mcp_server.linkedin.capture import (
+from linkedin_scraper_mcp.core.exceptions import AuthenticationError
+from linkedin_scraper_mcp.linkedin import capture as capture_module
+from linkedin_scraper_mcp.linkedin.capture import (
     RATE_LIMIT_RETRY_DELAY,
     CaptureMode,
     CapturePlan,
     SectionCapture,
     capture_plan_for_url,
 )
-from linkedin_mcp_server.linkedin.content import PageContentReader
-from linkedin_mcp_server.linkedin.contracts import (
+from linkedin_scraper_mcp.linkedin.content import PageContentReader
+from linkedin_scraper_mcp.linkedin.contracts import (
     RATE_LIMITED_SECTION_TEXT,
     ExtractedSection,
 )
-from linkedin_mcp_server.linkedin.navigation import PageNavigator
-from linkedin_mcp_server.linkedin.session import PageSession
+from linkedin_scraper_mcp.linkedin.navigation import PageNavigator
+from linkedin_scraper_mcp.linkedin.session import PageSession
 from .support.navigation import held_in
-from linkedin_mcp_server.linkedin.text import (
+from linkedin_scraper_mcp.linkedin.text import (
     JOB_POSTING_EN_US,
     DetailCaptureTextTable,
     JobPostingTextTable,
@@ -57,15 +57,15 @@ class TestExtractPage:
         # Patch scroll_to_bottom and detect_rate_limit to avoid complex mock chains
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -102,7 +102,7 @@ class TestExtractPage:
         capture = _capture(mock_page)
 
         with patch(
-            "linkedin_mcp_server.linkedin.capture.build_issue_diagnostics",
+            "linkedin_scraper_mcp.linkedin.capture.build_issue_diagnostics",
             return_value={"issue_template_path": "/tmp/issue.md"},
         ):
             result = await capture.extract_page(
@@ -119,7 +119,7 @@ class TestExtractPage:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.navigation.detect_auth_barrier",
+                "linkedin_scraper_mcp.linkedin.navigation.detect_auth_barrier",
                 new_callable=AsyncMock,
                 return_value="auth barrier text: welcome back + sign in using another account",
             ),
@@ -131,12 +131,12 @@ class TestExtractPage:
             )
 
     async def test_rate_limit_detected(self, mock_page):
-        from linkedin_mcp_server.core.exceptions import RateLimitError
+        from linkedin_scraper_mcp.core.exceptions import RateLimitError
 
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
                 side_effect=RateLimitError("Rate limited", suggested_wait_time=3600),
             ),
@@ -160,20 +160,20 @@ class TestExtractPage:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -209,20 +209,20 @@ class TestExtractPage:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -246,15 +246,15 @@ class TestExtractPage:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -287,15 +287,15 @@ class TestActivityFeedExtraction:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ) as mock_scroll,
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -329,15 +329,15 @@ class TestActivityFeedExtraction:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ) as mock_scroll,
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -369,15 +369,15 @@ class TestActivityFeedExtraction:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ) as mock_scroll,
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -403,15 +403,15 @@ class TestActivityFeedExtraction:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ) as mock_scroll,
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -441,15 +441,15 @@ class TestActivityFeedExtraction:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ) as mock_scroll,
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -489,15 +489,15 @@ class TestActivityFeedExtraction:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -530,16 +530,16 @@ class TestActivityFeedExtraction:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
                 side_effect=lambda *_, **__: events.append("scroll"),
             ) as mock_scroll,
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -576,15 +576,15 @@ class TestActivityFeedExtraction:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -616,15 +616,15 @@ class TestActivityFeedExtraction:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ) as mock_scroll,
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -653,15 +653,15 @@ class TestActivityFeedExtraction:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ) as mock_scroll,
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -689,15 +689,15 @@ class TestActivityFeedExtraction:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ) as mock_scroll,
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -739,20 +739,20 @@ class TestActivityFeedExtraction:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -790,20 +790,20 @@ class TestActivityFeedExtraction:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -848,20 +848,20 @@ class TestActivityFeedExtraction:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -897,15 +897,15 @@ class TestActivityFeedExtraction:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -932,15 +932,15 @@ class TestActivityFeedExtraction:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -974,15 +974,15 @@ class TestCompanyPeopleExtraction:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ) as mock_scroll,
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -1020,15 +1020,15 @@ class TestCompanyPeopleExtraction:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ) as mock_scroll,
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -1059,15 +1059,15 @@ class TestSearchResultsExtraction:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -1090,15 +1090,15 @@ class TestSearchResultsExtraction:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -1125,15 +1125,15 @@ class TestSearchResultsExtraction:
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
@@ -1196,20 +1196,20 @@ class TestPostPermalinkCapture:
     def _quiet_patches(scroll):
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new=scroll,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1386,7 +1386,7 @@ class TestPostPermalinkCapture:
         with (
             self._quiet_patches(scroll),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new=sleep_during_backoff,
             ),
         ):
@@ -1531,11 +1531,11 @@ class TestExtractOverlay:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ) as modal,
@@ -1576,11 +1576,11 @@ class TestExtractOverlay:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ) as sleep,
         ):
@@ -1600,11 +1600,11 @@ class TestExtractOverlay:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -1620,7 +1620,7 @@ class TestExtractOverlay:
         capture = _capture(mock_page)
 
         with patch(
-            "linkedin_mcp_server.linkedin.capture.build_issue_diagnostics",
+            "linkedin_scraper_mcp.linkedin.capture.build_issue_diagnostics",
             return_value={"issue_template_path": "/tmp/issue.md"},
         ) as diagnostics:
             result = await capture._extract_overlay(
@@ -1706,15 +1706,15 @@ class TestMissingOverlayRoot:
         """
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ) as sleep,
             patch(
-                "linkedin_mcp_server.linkedin.capture.build_issue_diagnostics",
+                "linkedin_scraper_mcp.linkedin.capture.build_issue_diagnostics",
                 side_effect=PermissionError("diagnostic directory is unwritable"),
             ) as diagnostics,
         ):
@@ -1937,12 +1937,12 @@ class TestMissingOverlayRoot:
         diagnostics.assert_not_called()
 
     async def test_a_rate_limit_error_still_propagates(self, mock_page):
-        from linkedin_mcp_server.core.exceptions import RateLimitError
+        from linkedin_scraper_mcp.core.exceptions import RateLimitError
 
         capture = _capture(mock_page)
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
                 side_effect=RateLimitError("Rate limited", suggested_wait_time=30),
             ),
@@ -1967,11 +1967,11 @@ class TestMissingOverlayRoot:
 
         with (
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.capture.build_issue_diagnostics",
+                "linkedin_scraper_mcp.linkedin.capture.build_issue_diagnostics",
                 return_value={"issue_template_path": "/tmp/issue.md"},
             ) as diagnostics,
         ):
@@ -2078,7 +2078,7 @@ def _detail_capture_policy_literals(source: str) -> set[str]:
 
 
 def test_capture_module_has_no_en_us_detail_text_policy_literals():
-    capture_source = Path("linkedin_mcp_server/linkedin/capture.py").read_text(
+    capture_source = Path("linkedin_scraper_mcp/linkedin/capture.py").read_text(
         encoding="utf-8"
     )
     assert _detail_capture_policy_literals(capture_source) == set()
@@ -2219,7 +2219,7 @@ def _generic_capture_domain_path_literals(source: str) -> set[str]:
 
 
 def test_generic_capture_has_no_domain_path_policy_branches():
-    capture_source = Path("linkedin_mcp_server/linkedin/capture.py").read_text(
+    capture_source = Path("linkedin_scraper_mcp/linkedin/capture.py").read_text(
         encoding="utf-8"
     )
     assert _generic_capture_domain_path_literals(capture_source) == set()

@@ -16,28 +16,24 @@ os.environ["FASTMCP_MCP_CAMELCASE_COMPAT"] = "false"
 
 import pytest  # noqa: E402
 
-# The differential accounting is a plugin rather than a directory conftest so
-# that it is loaded wherever those cases run, the xdist controller included,
-# and counts cases no fixture ever set up.
-pytest_plugins = ("linkedin.support.navigation", "differential.accounting")
+pytest_plugins = ("linkedin.support.navigation",)
 
 
 @pytest.fixture(autouse=True)
 def reset_singletons():
     """Reset global state for test isolation."""
-    from linkedin_mcp_server.bootstrap import reset_bootstrap_for_testing
-    from linkedin_mcp_server.config import reset_config
-    from linkedin_mcp_server.core.throttle import reset_throttle_record
-    from linkedin_mcp_server.daemon.descriptor import (
+    from linkedin_scraper_mcp.bootstrap import reset_bootstrap_for_testing
+    from linkedin_scraper_mcp.config import reset_config
+    from linkedin_scraper_mcp.core.throttle import reset_throttle_record
+    from linkedin_scraper_mcp.daemon.descriptor import (
         reset_daemon_descriptor_for_testing,
     )
-    from linkedin_mcp_server.daemon.liveness import reset_liveness_for_testing
-    from linkedin_mcp_server.debug_trace import reset_trace_state_for_testing
-    from linkedin_mcp_server.logging_config import teardown_trace_logging
-    from linkedin_mcp_server.drivers.browser import reset_browser_for_testing
-    from linkedin_mcp_server.profile_lease import reset_leases_for_testing
-    from linkedin_mcp_server import remote_catalog, remote_tools
-    from linkedin_mcp_server.server_role import reset_process_role_for_testing
+    from linkedin_scraper_mcp.daemon.liveness import reset_liveness_for_testing
+    from linkedin_scraper_mcp.debug_trace import reset_trace_state_for_testing
+    from linkedin_scraper_mcp.logging_config import teardown_trace_logging
+    from linkedin_scraper_mcp.drivers.browser import reset_browser_for_testing
+    from linkedin_scraper_mcp.profile_lease import reset_leases_for_testing
+    from linkedin_scraper_mcp.server_role import reset_process_role_for_testing
 
     reset_bootstrap_for_testing()
     reset_daemon_descriptor_for_testing()
@@ -58,10 +54,6 @@ def reset_singletons():
     # from process state. Left standing, one OWNER would refuse logins in every
     # test after it, in a suite where most never mention a role.
     reset_process_role_for_testing()
-    # A catalog request one test started, and the tools it installed, are
-    # process state: left standing, the next server installs nothing.
-    remote_catalog.reset_for_testing()
-    remote_tools.reset_for_testing()
     # The trace directory is derived from the profile root and cached, so a
     # test pointing USER_DATA_DIR at its tmp_path otherwise leaves every later
     # test on this worker writing into a directory pytest has removed. The log
@@ -82,8 +74,6 @@ def reset_singletons():
     reset_throttle_record()
     reset_process_role_for_testing()
     reset_liveness_for_testing()
-    remote_catalog.reset_for_testing()
-    remote_tools.reset_for_testing()
     teardown_trace_logging(keep_traces=True)
     reset_trace_state_for_testing()
 
@@ -100,7 +90,7 @@ def installed_browser_for_dom_tests(request, reset_singletons, monkeypatch):
     ``reset_bootstrap_for_testing`` deletes ``PLAYWRIGHT_BROWSERS_PATH`` so that
     no bootstrap test measures, reports on or installs into a real cache. That
     also hid a browser installed outside patchright's default cache, such as the
-    server's own under ``~/.linkedin-mcp/patchright-browsers``, and every DOM
+    server's own under ``~/.linkedin-scraper-mcp/patchright-browsers``, and every DOM
     test skipped. These tests only launch Chromium against synthetic markup, so
     they get the caller's cache back and nothing else does.
     """
@@ -141,7 +131,7 @@ def ignore_the_developers_environment(monkeypatch):
     """
     import os
 
-    from linkedin_mcp_server.config.loaders import EnvironmentKeys
+    from linkedin_scraper_mcp.config.loaders import EnvironmentKeys
 
     from_the_table = [
         value
@@ -151,10 +141,6 @@ def ignore_the_developers_environment(monkeypatch):
     ours = [key for key in os.environ if key.startswith("LINKEDIN")]
     for key in (*from_the_table, *ours):
         monkeypatch.delenv(key, raising=False)
-    # A server any test starts, in-process or spawned, would otherwise ask the
-    # live catalog and list whatever it serves today. The catalog tests clear
-    # this and point the URL at a local stub instead.
-    monkeypatch.setenv("LINKEDIN_MCP_REMOTE_TOOLS", "off")
 
 
 @pytest.fixture(autouse=True)
@@ -167,7 +153,7 @@ def isolate_profile_dir(ignore_the_developers_environment, tmp_path, monkeypatch
     the order these two run in today comes from ``dir()`` being alphabetical,
     which is a coincidence a rename would end. Reversed, the clearing would
     delete the ``USER_DATA_DIR`` this sets, and tests would fall back to the
-    real profile at ``~/.linkedin-mcp/profile`` — including anything that spawns
+    real profile at ``~/.linkedin-scraper-mcp/profile`` — including anything that spawns
     a subprocess, which the in-process patches below do not reach.
     """
     fake_profile = tmp_path / "profile"
@@ -175,11 +161,11 @@ def isolate_profile_dir(ignore_the_developers_environment, tmp_path, monkeypatch
 
     # Patch DEFAULT_PROFILE_DIR for any code still referencing the constant
     for module in [
-        "linkedin_mcp_server.drivers.browser",
-        "linkedin_mcp_server.authentication",
-        "linkedin_mcp_server.cli_main",
-        "linkedin_mcp_server.setup",
-        "linkedin_mcp_server.session_state",
+        "linkedin_scraper_mcp.drivers.browser",
+        "linkedin_scraper_mcp.authentication",
+        "linkedin_scraper_mcp.cli_main",
+        "linkedin_scraper_mcp.setup",
+        "linkedin_scraper_mcp.session_state",
     ]:
         try:
             monkeypatch.setattr(f"{module}.DEFAULT_PROFILE_DIR", fake_profile)
@@ -188,10 +174,10 @@ def isolate_profile_dir(ignore_the_developers_environment, tmp_path, monkeypatch
 
     # Patch get_profile_dir() in all modules that import it
     for gp_module in [
-        "linkedin_mcp_server.drivers.browser",
-        "linkedin_mcp_server.authentication",
-        "linkedin_mcp_server.cli_main",
-        "linkedin_mcp_server.setup",
+        "linkedin_scraper_mcp.drivers.browser",
+        "linkedin_scraper_mcp.authentication",
+        "linkedin_scraper_mcp.cli_main",
+        "linkedin_scraper_mcp.setup",
     ]:
         try:
             monkeypatch.setattr(f"{gp_module}.get_profile_dir", lambda: fake_profile)
@@ -200,17 +186,17 @@ def isolate_profile_dir(ignore_the_developers_environment, tmp_path, monkeypatch
 
     try:
         monkeypatch.setattr(
-            "linkedin_mcp_server.session_state.get_source_profile_dir",
+            "linkedin_scraper_mcp.session_state.get_source_profile_dir",
             lambda: fake_profile,
         )
     except AttributeError:
         pass
 
     for source_module in [
-        "linkedin_mcp_server.authentication",
-        "linkedin_mcp_server.drivers.browser",
-        "linkedin_mcp_server.debug_trace",
-        "linkedin_mcp_server.error_diagnostics",
+        "linkedin_scraper_mcp.authentication",
+        "linkedin_scraper_mcp.drivers.browser",
+        "linkedin_scraper_mcp.debug_trace",
+        "linkedin_scraper_mcp.error_diagnostics",
     ]:
         try:
             monkeypatch.setattr(
@@ -225,27 +211,17 @@ def isolate_profile_dir(ignore_the_developers_environment, tmp_path, monkeypatch
     # clears would be refused: tmp_path is not the canonical default, and the
     # guard exists precisely to refuse roots nobody claimed. Tests that prove
     # the refusal use a *different* directory, which stays unclaimed.
-    from linkedin_mcp_server.profile_claim import ensure_profile_claim
+    from linkedin_scraper_mcp.profile_claim import ensure_profile_claim
 
     ensure_profile_claim(fake_profile)
 
     return fake_profile
 
 
-def _is_differential_row(request: pytest.FixtureRequest) -> bool:
-    """Whether this is a release-gate row of the differential harness.
-
-    Those keep the account's real daemon state root on purpose: the decision
-    record of 2026-09-26 makes it part of what the gate measures, and the frozen
-    baseline those rows run predates the variable below.
-    """
-    return request.node.get_closest_marker("differential_row") is not None
-
-
 @pytest.fixture(scope="session")
 def real_daemon_state_root() -> Path | None:
     """The daemon state root of the account running the suite, if it has one."""
-    from linkedin_mcp_server.daemon import descriptor as daemon_descriptor
+    from linkedin_scraper_mcp.daemon import descriptor as daemon_descriptor
 
     with pytest.MonkeyPatch.context() as patch:
         patch.delenv(daemon_descriptor.TEST_ACCOUNT_HOME_ENV, raising=False)
@@ -359,11 +335,8 @@ def isolate_daemon_state(
     read in this teardown because it runs before ``tmp_path``'s own, which
     deletes a passing test's directory under ``tmp_path_retention_policy=failed``.
     """
-    if _is_differential_row(request):
-        yield
-        return
-    from linkedin_mcp_server.daemon.descriptor import TEST_ACCOUNT_HOME_ENV
-    from linkedin_mcp_server.private_state import harden_directory
+    from linkedin_scraper_mcp.daemon.descriptor import TEST_ACCOUNT_HOME_ENV
+    from linkedin_scraper_mcp.private_state import harden_directory
 
     home = tmp_path_factory.mktemp("account") / "home"
     harden_directory(home)
@@ -424,7 +397,7 @@ def _daemon_state_on_the_real_root(item: pytest.Item) -> str | None:
 
 
 #: The real state root, read before any test can move ``HOME``.
-_REAL_STATE_ROOT = os.path.realpath(os.path.expanduser("~/.linkedin-mcp"))
+_REAL_STATE_ROOT = os.path.realpath(os.path.expanduser("~/.linkedin-scraper-mcp"))
 
 
 @pytest.fixture(autouse=True)
@@ -434,7 +407,7 @@ def no_owner_on_the_real_profile(monkeypatch):
     The owner is a separate process, so none of the in-process patches in
     ``isolate_profile_dir`` reach it: it takes its profile from the CONFIG
     frame on its standard input. An ``AppConfig()`` built in a
-    test names ``~/.linkedin-mcp/profile``, and an election that got as far as
+    test names ``~/.linkedin-scraper-mcp/profile``, and an election that got as far as
     spawning ran a real owner against it, which opened its trace directory
     there and left a ``run-*/server.log`` behind on every full run, while
     racing any server already holding that profile.
@@ -445,7 +418,7 @@ def no_owner_on_the_real_profile(monkeypatch):
     as raised: the election runs in a worker thread whose caller turns any
     failure into "no owner", so a raise alone could pass unseen.
     """
-    from linkedin_mcp_server.daemon import spawn as daemon_spawn
+    from linkedin_scraper_mcp.daemon import spawn as daemon_spawn
 
     spawn = daemon_spawn._spawn
     refused: list[str] = []
@@ -545,3 +518,16 @@ def pytest_runtest_makereport(item, call):
         result = report.get_result()
         result.outcome = "failed"
         result.longrepr = written
+
+
+@pytest.fixture(autouse=True)
+def _no_call_pacing(monkeypatch):
+    """Keep the real call pacing out of tests, which would sleep for seconds.
+
+    The pacer reads these variables when a middleware is built, so setting them
+    here covers every test that builds one. ``tests/test_call_pacing.py`` drives
+    the pacer with explicit values and a fake clock instead.
+    """
+    monkeypatch.setenv("LINKEDIN_MIN_CALL_GAP_SECONDS", "0")
+    monkeypatch.setenv("LINKEDIN_CALL_GAP_JITTER_SECONDS", "0")
+    monkeypatch.setenv("LINKEDIN_MAX_CALLS_PER_MINUTE", "0")

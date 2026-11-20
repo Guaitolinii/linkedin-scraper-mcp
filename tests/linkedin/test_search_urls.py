@@ -13,8 +13,8 @@ from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-from linkedin_mcp_server.linkedin.contracts import FilterValidationError
-from linkedin_mcp_server.linkedin.search_urls import (
+from linkedin_scraper_mcp.linkedin.contracts import FilterValidationError
+from linkedin_scraper_mcp.linkedin.search_urls import (
     CONTENT_DATE_POSTED_MAP,
     CONTENT_TYPE_MAP,
     EXPERIENCE_LEVEL_MAP,

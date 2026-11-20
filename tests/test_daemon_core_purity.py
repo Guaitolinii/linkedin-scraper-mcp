@@ -1,7 +1,7 @@
 """The daemon's decision cores stay free of I/O, and ruff is what says so.
 
 Each case hands ruff a source on stdin under a file name inside or outside
-``linkedin_mcp_server/daemon/core``, so the directory's own ``ruff.toml`` is
+``linkedin_scraper_mcp/daemon/core``, so the directory's own ``ruff.toml`` is
 found the way ``ruff check .`` finds it, and nothing is written anywhere.
 """
 
@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-DAEMON = ROOT / "linkedin_mcp_server" / "daemon"
+DAEMON = ROOT / "linkedin_scraper_mcp" / "daemon"
 IN_THE_CORE = DAEMON / "core" / "_probe.py"
 BESIDE_IT = DAEMON / "_probe.py"
 
@@ -83,8 +83,8 @@ def test_the_core_refuses_the_open_builtin():
 @pytest.mark.parametrize(
     "spelling",
     [
-        "from linkedin_mcp_server.daemon import {module}",
-        "import linkedin_mcp_server.daemon.{module}",
+        "from linkedin_scraper_mcp.daemon import {module}",
+        "import linkedin_scraper_mcp.daemon.{module}",
         "from .. import {module}",
     ],
 )
@@ -95,7 +95,7 @@ def test_the_core_refuses_every_adapter_module(module: str, spelling: str):
 
 
 def test_the_cores_may_import_each_other():
-    source = "from linkedin_mcp_server.daemon.core import call  # noqa: F401\n"
+    source = "from linkedin_scraper_mcp.daemon.core import call  # noqa: F401\n"
     assert _findings(source, IN_THE_CORE) == {}
 
 

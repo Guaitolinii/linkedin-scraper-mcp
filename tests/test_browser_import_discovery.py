@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from linkedin_mcp_server.browser_import import discovery
-from linkedin_mcp_server.browser_import.discovery import (
+from linkedin_scraper_mcp.browser_import import discovery
+from linkedin_scraper_mcp.browser_import.discovery import (
     SUPPORTED_BROWSERS,
     browser_roots,
     discover_profiles,

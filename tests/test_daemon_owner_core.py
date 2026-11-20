@@ -14,8 +14,8 @@ from dataclasses import dataclass, field
 
 import pytest
 
-from linkedin_mcp_server.daemon.core import owner as lifecycle
-from linkedin_mcp_server.daemon.core.owner import (
+from linkedin_scraper_mcp.daemon.core import owner as lifecycle
+from linkedin_scraper_mcp.daemon.core.owner import (
     EXPIRY_SECONDS,
     SETUP_FAILURE_RETRY_GRACE_SECONDS,
     STALL_SECONDS,

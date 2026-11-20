@@ -9,11 +9,11 @@ from patchright.async_api import (
     TimeoutError as PlaywrightTimeoutError,
 )
 
-from linkedin_mcp_server.core.exceptions import (
+from linkedin_scraper_mcp.core.exceptions import (
     AccountRestrictedError,
     AuthenticationError,
 )
-from linkedin_mcp_server.core.auth import (
+from linkedin_scraper_mcp.core.auth import (
     _REMEMBER_ME_CONTAINER_SELECTOR,
     detect_auth_barrier,
     detect_auth_barrier_quick,
@@ -523,7 +523,7 @@ async def test_wait_for_manual_login_clicks_saved_account(monkeypatch):
 
     page.context.cookies = AsyncMock(side_effect=fake_cookies)
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.auth.resolve_remember_me_prompt", fake_resolve
+        "linkedin_scraper_mcp.core.auth.resolve_remember_me_prompt", fake_resolve
     )
 
     await wait_for_manual_login(page, timeout=1000)
@@ -545,10 +545,10 @@ async def test_wait_for_manual_login_times_out_when_remember_me_repeats(monkeypa
 
     resolve_prompt = AsyncMock(return_value=True)
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.auth.resolve_remember_me_prompt", resolve_prompt
+        "linkedin_scraper_mcp.core.auth.resolve_remember_me_prompt", resolve_prompt
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.auth.asyncio.get_running_loop",
+        "linkedin_scraper_mcp.core.auth.asyncio.get_running_loop",
         lambda: _FakeLoop(),
     )
 
@@ -576,14 +576,14 @@ async def test_wait_for_manual_login_unlimited_when_timeout_zero(monkeypatch):
             return next(self._times, 10**12)
 
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.auth.resolve_remember_me_prompt",
+        "linkedin_scraper_mcp.core.auth.resolve_remember_me_prompt",
         AsyncMock(return_value=False),
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.auth.asyncio.get_running_loop",
+        "linkedin_scraper_mcp.core.auth.asyncio.get_running_loop",
         lambda: _FakeLoop(),
     )
-    monkeypatch.setattr("linkedin_mcp_server.core.auth.asyncio.sleep", AsyncMock())
+    monkeypatch.setattr("linkedin_scraper_mcp.core.auth.asyncio.sleep", AsyncMock())
 
     await wait_for_manual_login(page, timeout=0)
 
@@ -605,10 +605,10 @@ async def test_wait_for_manual_login_waits_for_applicable_cookie(monkeypatch):
     page = _manual_login_page()
     page.context.cookies = AsyncMock(side_effect=[[], [_linkedin_cookie()]])
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.auth.resolve_remember_me_prompt",
+        "linkedin_scraper_mcp.core.auth.resolve_remember_me_prompt",
         AsyncMock(return_value=False),
     )
-    monkeypatch.setattr("linkedin_mcp_server.core.auth.asyncio.sleep", AsyncMock())
+    monkeypatch.setattr("linkedin_scraper_mcp.core.auth.asyncio.sleep", AsyncMock())
 
     await wait_for_manual_login(page, timeout=1000)
 
@@ -626,10 +626,10 @@ async def test_wait_for_manual_login_survives_tracked_tab_closing(monkeypatch):
     page.context.pages = [_tab()]
     page.context.cookies = AsyncMock(side_effect=[[], [_linkedin_cookie()]])
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.auth.resolve_remember_me_prompt",
+        "linkedin_scraper_mcp.core.auth.resolve_remember_me_prompt",
         AsyncMock(return_value=False),
     )
-    monkeypatch.setattr("linkedin_mcp_server.core.auth.asyncio.sleep", AsyncMock())
+    monkeypatch.setattr("linkedin_scraper_mcp.core.auth.asyncio.sleep", AsyncMock())
 
     await wait_for_manual_login(page, timeout=0)
 
@@ -670,14 +670,14 @@ async def test_wait_for_manual_login_logs_while_waiting(monkeypatch, caplog):
             return next(self._times, 31.0)
 
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.auth.resolve_remember_me_prompt",
+        "linkedin_scraper_mcp.core.auth.resolve_remember_me_prompt",
         AsyncMock(return_value=False),
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.auth.asyncio.get_running_loop",
+        "linkedin_scraper_mcp.core.auth.asyncio.get_running_loop",
         lambda: _FakeLoop(),
     )
-    monkeypatch.setattr("linkedin_mcp_server.core.auth.asyncio.sleep", AsyncMock())
+    monkeypatch.setattr("linkedin_scraper_mcp.core.auth.asyncio.sleep", AsyncMock())
 
     with caplog.at_level("INFO"):
         await wait_for_manual_login(page, timeout=0)
@@ -691,7 +691,7 @@ async def test_wait_for_manual_login_checks_cookie_before_repeated_prompt(monkey
     page.context.cookies = AsyncMock(side_effect=[[], [_linkedin_cookie()]])
     resolve_prompt = AsyncMock(return_value=True)
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.auth.resolve_remember_me_prompt", resolve_prompt
+        "linkedin_scraper_mcp.core.auth.resolve_remember_me_prompt", resolve_prompt
     )
 
     await wait_for_manual_login(page, timeout=1000)
@@ -717,10 +717,10 @@ async def test_wait_for_manual_login_does_not_poll_other_tabs(monkeypatch):
             return next(self._times)
 
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.auth.resolve_remember_me_prompt", resolve_prompt
+        "linkedin_scraper_mcp.core.auth.resolve_remember_me_prompt", resolve_prompt
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.auth.asyncio.get_running_loop",
+        "linkedin_scraper_mcp.core.auth.asyncio.get_running_loop",
         lambda: _FakeLoop(),
     )
 
@@ -747,7 +747,7 @@ async def test_wait_for_manual_login_rejects_cookie_after_deadline(monkeypatch):
             return next(self._times)
 
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.auth.asyncio.get_running_loop",
+        "linkedin_scraper_mcp.core.auth.asyncio.get_running_loop",
         lambda: _FakeLoop(),
     )
 
@@ -831,7 +831,7 @@ async def test_wait_for_manual_login_does_not_log_waiting_after_cookie(
             return next(self._times)
 
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.auth.asyncio.get_running_loop",
+        "linkedin_scraper_mcp.core.auth.asyncio.get_running_loop",
         lambda: _FakeLoop(),
     )
 
@@ -863,7 +863,7 @@ async def test_wait_for_manual_login_stops_on_a_restricted_account(
     tabs[restricted_tab].url = restriction
     page.context.pages = tabs
     monkeypatch.setattr(
-        "linkedin_mcp_server.core.auth.resolve_remember_me_prompt",
+        "linkedin_scraper_mcp.core.auth.resolve_remember_me_prompt",
         AsyncMock(return_value=False),
     )
 

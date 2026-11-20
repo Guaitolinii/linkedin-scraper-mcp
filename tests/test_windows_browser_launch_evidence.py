@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from linkedin_mcp_server import process_tree
+from linkedin_scraper_mcp import process_tree
 
 _PROBE = Path(__file__).with_name("windows_guardian_probe.py")
 _REPO_ROOT = Path(__file__).resolve().parents[1]

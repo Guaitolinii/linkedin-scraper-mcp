@@ -11,7 +11,7 @@ from typing import Any, cast
 
 import pytest
 
-import linkedin_mcp_server.installer_worker as worker
+import linkedin_scraper_mcp.installer_worker as worker
 
 _NONCE = "0123456789abcdef" * 4
 
@@ -208,7 +208,7 @@ def test_the_target_does_not_inherit_the_supervisor_lease():
             sys.executable,
             "-P",
             "-m",
-            "linkedin_mcp_server.installer_worker",
+            "linkedin_scraper_mcp.installer_worker",
             "--",
             sys.executable,
             "-P",

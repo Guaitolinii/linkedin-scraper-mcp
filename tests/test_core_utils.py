@@ -4,12 +4,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from linkedin_mcp_server.core.exceptions import (
+from linkedin_scraper_mcp.core.exceptions import (
     AccountRestrictedError,
     AuthenticationError,
     RateLimitError,
 )
-from linkedin_mcp_server.core.utils import detect_rate_limit, scroll_job_sidebar
+from linkedin_scraper_mcp.core.utils import detect_rate_limit, scroll_job_sidebar
 
 
 @pytest.fixture

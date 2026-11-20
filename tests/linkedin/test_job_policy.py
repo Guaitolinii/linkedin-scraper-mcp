@@ -4,7 +4,7 @@ from urllib.parse import quote
 
 import pytest
 
-from linkedin_mcp_server.linkedin.job_policy import (
+from linkedin_scraper_mcp.linkedin.job_policy import (
     dropped_filters_section_error,
     employer_apply_url,
     label_similar_jobs,
@@ -13,7 +13,7 @@ from linkedin_mcp_server.linkedin.job_policy import (
     route,
     same_job_search,
 )
-from linkedin_mcp_server.linkedin.link_metadata import (
+from linkedin_scraper_mcp.linkedin.link_metadata import (
     Reference,
     _SEARCH_RESULTS_REFERENCE_CAP,
 )

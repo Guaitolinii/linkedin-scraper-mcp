@@ -14,13 +14,13 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from linkedin_mcp_server.drivers.browser import (
+from linkedin_scraper_mcp.drivers.browser import (
     close_browser,
     ensure_authenticated,
     get_or_create_browser,
     set_headless,
 )
-from linkedin_mcp_server.linkedin import (
+from linkedin_scraper_mcp.linkedin import (
     LinkedInExtractor,
     parse_company_sections,
     parse_person_sections,

@@ -3,7 +3,7 @@
 import re
 
 
-from linkedin_mcp_server.linkedin.text import (
+from linkedin_scraper_mcp.linkedin.text import (
     DETAIL_CAPTURE_EN_US,
     JOB_APPLY_EN_US,
     JOB_POSTING_EN_US,

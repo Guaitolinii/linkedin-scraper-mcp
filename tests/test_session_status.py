@@ -9,19 +9,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastmcp import Client
 
-import linkedin_mcp_server.bootstrap as bootstrap
-import linkedin_mcp_server.server as server_module
-from linkedin_mcp_server.config import get_config
-from linkedin_mcp_server.core.browser import BrowserManager
-from linkedin_mcp_server.core.exceptions import AccountRestrictedError, RateLimitError
-from linkedin_mcp_server.exceptions import (
+import linkedin_scraper_mcp.bootstrap as bootstrap
+import linkedin_scraper_mcp.server as server_module
+from linkedin_scraper_mcp.config import get_config
+from linkedin_scraper_mcp.core.browser import BrowserManager
+from linkedin_scraper_mcp.core.exceptions import AccountRestrictedError, RateLimitError
+from linkedin_scraper_mcp.exceptions import (
     AuthenticationInProgressError,
     BrowserSetupFailedError,
 )
-from linkedin_mcp_server.drivers import browser as driver
-from linkedin_mcp_server.profile_lease import ProfileLease
-from linkedin_mcp_server.server import create_mcp_server
-from linkedin_mcp_server.session_state import (
+from linkedin_scraper_mcp.drivers import browser as driver
+from linkedin_scraper_mcp.profile_lease import ProfileLease
+from linkedin_scraper_mcp.server import create_mcp_server
+from linkedin_scraper_mcp.session_state import (
     get_runtime_id,
     get_source_profile_dir,
     portable_cookie_path,
@@ -74,7 +74,7 @@ def nothing_may_start(monkeypatch):
         "start_background_browser_setup_if_needed",
         "start_login_if_needed",
     ):
-        monkeypatch.setattr(f"linkedin_mcp_server.bootstrap.{name}", refuse)
+        monkeypatch.setattr(f"linkedin_scraper_mcp.bootstrap.{name}", refuse)
 
 
 async def _status(server) -> dict:
@@ -137,7 +137,7 @@ async def test_it_answers_while_another_call_holds_the_browser(
         raise RateLimitError("done")
 
     ready = AsyncMock(side_effect=holding)
-    with patch("linkedin_mcp_server.tools.person.get_ready_extractor", ready):
+    with patch("linkedin_scraper_mcp.tools.person.get_ready_extractor", ready):
         async with Client(server) as client:
             running = asyncio.create_task(
                 client.call_tool(
@@ -178,29 +178,6 @@ async def test_asking_does_not_reset_the_idle_clock(server, monkeypatch):
     assert status["browser"]["idle_seconds"] >= 42.0
 
 
-async def test_the_answer_leaves_the_update_notice_for_a_browser_tool(
-    server, monkeypatch
-):
-    import linkedin_mcp_server.update_check as update_check
-
-    monkeypatch.setattr(update_check, "__version__", "4.16.1")
-    monkeypatch.setattr(update_check, "_latest_known", "4.18.0")
-    prime = MagicMock()
-    monkeypatch.setattr(update_check, "prime_from_cache", prime)
-    refresh = AsyncMock()
-    monkeypatch.setattr(update_check, "refresh_latest_version", refresh)
-    notice = update_check.pending_update_notice()
-    assert notice is not None
-
-    async with Client(server) as client:
-        status = await client.call_tool("get_session_status", {})
-
-    assert notice not in [getattr(part, "text", None) for part in status.content]
-    # Neither the cache on disk nor PyPI is asked.
-    prime.assert_not_called()
-    refresh.assert_not_called()
-
-
 @pytest.fixture
 def forbid_effects(monkeypatch):
     attempted = []
@@ -238,10 +215,8 @@ def forbid_effects(monkeypatch):
                 patcher.setattr(target, name, trap)
                 attempted.append(trap)
         for name in (
-            "linkedin_mcp_server.update_check.prime_from_cache",
-            "linkedin_mcp_server.update_check.refresh_latest_version",
-            "linkedin_mcp_server.daemon.auth_repair.start_sign_in",
-            "linkedin_mcp_server.daemon.auth_repair.wait_for_sign_in",
+            "linkedin_scraper_mcp.daemon.auth_repair.start_sign_in",
+            "linkedin_scraper_mcp.daemon.auth_repair.wait_for_sign_in",
         ):
             trap = MagicMock(side_effect=AssertionError(f"status invoked {name}"))
             patcher.setattr(name, trap)
@@ -483,7 +458,7 @@ async def test_known_crash_is_reported_without_draining_the_browser(
 async def test_closing_and_unconfirmed_close_keep_lease_evidence(
     server, monkeypatch, confirmed
 ):
-    from linkedin_mcp_server.profile_lease import get_profile_lease
+    from linkedin_scraper_mcp.profile_lease import get_profile_lease
 
     lease = get_profile_lease()
     assert lease.try_acquire()
@@ -522,13 +497,13 @@ async def test_closing_and_unconfirmed_close_keep_lease_evidence(
 async def test_authenticated_proxy_status_bypasses_browser_work_not_owner_admission(
     quiet_lifespan, monkeypatch, forbid_effects, quiescent
 ):
-    from linkedin_mcp_server import __version__, update_check
-    from linkedin_mcp_server.daemon import owner
-    from linkedin_mcp_server.daemon.descriptor import build, new_instance_id, new_token
-    from linkedin_mcp_server.daemon.discovery import Attachment
-    from linkedin_mcp_server.daemon.liveness import get_liveness
-    from linkedin_mcp_server.daemon.proxy import DaemonProxyBackend
-    from linkedin_mcp_server.server_role import (
+    from linkedin_scraper_mcp import __version__
+    from linkedin_scraper_mcp.daemon import owner
+    from linkedin_scraper_mcp.daemon.descriptor import build, new_instance_id, new_token
+    from linkedin_scraper_mcp.daemon.discovery import Attachment
+    from linkedin_scraper_mcp.daemon.liveness import get_liveness
+    from linkedin_scraper_mcp.daemon.proxy import DaemonProxyBackend
+    from linkedin_scraper_mcp.server_role import (
         ServerRole,
         reset_process_role_for_testing,
     )
@@ -548,8 +523,6 @@ async def test_authenticated_proxy_status_bypasses_browser_work_not_owner_admiss
 
     monkeypatch.setattr(socket.socket, "connect", loopback_only)
     monkeypatch.setattr(socket, "getaddrinfo", resolve_loopback)
-    monkeypatch.setattr(update_check, "prime_from_cache", MagicMock())
-    monkeypatch.setattr(update_check, "refresh_latest_version", AsyncMock())
     profile = get_source_profile_dir()
     config = get_config()
     config.server.tool_timeout_seconds = 10
@@ -597,7 +570,9 @@ async def test_authenticated_proxy_status_bypasses_browser_work_not_owner_admiss
         await release.wait()
         raise RateLimitError("done")
 
-    monkeypatch.setattr("linkedin_mcp_server.tools.person.get_ready_extractor", holding)
+    monkeypatch.setattr(
+        "linkedin_scraper_mcp.tools.person.get_ready_extractor", holding
+    )
     admissions = MagicMock(wraps=liveness.admit)
     monkeypatch.setattr(liveness, "admit", admissions)
     try:

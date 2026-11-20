@@ -8,7 +8,7 @@
 
 The daemon's decisions live in pure reducers, and the code that carries them out talks to FastMCP and the MCP SDK only through their public names.
 
-- **Cores.** Each module in `linkedin_mcp_server/daemon/core` is one reducer, `on_event(state, event) -> (state, effects)`: `call` for a forwarded call's binding, dispatch and deadline, `owner` for the owner's admission, retirement, heartbeats and drain, `lookup`, `spawn` and `election` for choosing and starting an owner. Several small reducers, not one state machine.
+- **Cores.** Each module in `linkedin_scraper_mcp/daemon/core` is one reducer, `on_event(state, event) -> (state, effects)`: `call` for a forwarded call's binding, dispatch and deadline, `owner` for the owner's admission, retirement, heartbeats and drain, `lookup`, `spawn` and `election` for choosing and starting an owner. Several small reducers, not one state machine.
 - **Shells.** Everything that awaits, reads a clock, starts a process or touches a file or socket stays outside `core` and executes the effects a reducer names. Time and identifiers reach a reducer as event values, and each completion names the operation it answers, so a late completion of an abandoned operation changes nothing.
 - **Boundary guard.** `core/ruff.toml` bans the obvious ways into I/O and every adapter module beside the core; `tests/test_daemon_core_purity.py` reads the adapter list off the package, so a new adapter fails until it is banned. A guard against accident, not a proof of purity.
 - **Owner binding stays in the shell.** Refusing a call to a written-off owner is a core decision; capturing and retaining which owner a call is bound to stays in the proxy middleware.

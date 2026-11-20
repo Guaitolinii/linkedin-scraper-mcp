@@ -16,8 +16,8 @@ from dataclasses import dataclass
 
 import pytest
 
-from linkedin_mcp_server.daemon.core import call as core
-from linkedin_mcp_server.daemon.core.call import AttemptKind, Because, Dispatch
+from linkedin_scraper_mcp.daemon.core import call as core
+from linkedin_scraper_mcp.daemon.core.call import AttemptKind, Because, Dispatch
 
 START = 100.0
 BUDGET = 10.0

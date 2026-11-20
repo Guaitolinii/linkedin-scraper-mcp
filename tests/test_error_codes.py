@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastmcp import Client
 
-import linkedin_mcp_server.server as server_module
-from linkedin_mcp_server.core.exceptions import (
+import linkedin_scraper_mcp.server as server_module
+from linkedin_scraper_mcp.core.exceptions import (
     AccountRestrictedError,
     AuthenticationError,
     ElementNotFoundError,
@@ -19,13 +19,13 @@ from linkedin_mcp_server.core.exceptions import (
     ProxyConnectionError,
     RateLimitError,
 )
-from linkedin_mcp_server.error_handler import (
+from linkedin_scraper_mcp.error_handler import (
     ERROR_META_KEY,
     CodedToolError,
     ErrorCode,
     raise_tool_error,
 )
-from linkedin_mcp_server.exceptions import (
+from linkedin_scraper_mcp.exceptions import (
     AuthenticationBootstrapFailedError,
     AuthenticationInProgressError,
     AuthenticationStartedError,
@@ -42,11 +42,11 @@ from linkedin_mcp_server.exceptions import (
     OwnerStandingDownError,
     SessionExpiredError,
 )
-from linkedin_mcp_server.sequential_tool_middleware import (
+from linkedin_scraper_mcp.sequential_tool_middleware import (
     SequentialToolExecutionMiddleware,
 )
-from linkedin_mcp_server.server import create_mcp_server
-from linkedin_mcp_server.session_state import PeerSessionInPlaceError
+from linkedin_scraper_mcp.server import create_mcp_server
+from linkedin_scraper_mcp.session_state import PeerSessionInPlaceError
 
 C = ErrorCode
 
@@ -93,7 +93,7 @@ def no_issue_reports(monkeypatch):
         raise RuntimeError("no diagnostics in this test")
 
     monkeypatch.setattr(
-        "linkedin_mcp_server.error_handler.build_issue_diagnostics", refuse
+        "linkedin_scraper_mcp.error_handler.build_issue_diagnostics", refuse
     )
 
 
@@ -109,14 +109,14 @@ def test_every_branch_names_its_code(failure, code):
 
 
 def test_a_redacted_pass_through_keeps_its_code(monkeypatch):
-    from linkedin_mcp_server.config.schema import AppConfig
+    from linkedin_scraper_mcp.config.schema import AppConfig
 
     user, secret = "acct" + "zone9", "s3" + "cr3t"
     config = AppConfig()
     config.browser.proxy_server = "http://gate.example:7000"
     config.browser.proxy_username = user
     config.browser.proxy_password = secret
-    monkeypatch.setattr("linkedin_mcp_server.config.get_config", lambda: config)
+    monkeypatch.setattr("linkedin_scraper_mcp.config.get_config", lambda: config)
     shaped = CodedToolError(
         f"failed via http://{user}:{secret}@gate.example:7000",
         C.RATE_LIMITED,
@@ -135,7 +135,7 @@ async def test_a_lease_wait_that_gives_up_is_browser_busy(monkeypatch):
     lease.try_acquire.return_value = False
     lease.acquire = AsyncMock(return_value=False)
     monkeypatch.setattr(
-        "linkedin_mcp_server.sequential_tool_middleware.get_profile_lease",
+        "linkedin_scraper_mcp.sequential_tool_middleware.get_profile_lease",
         lambda: lease,
     )
     context = MagicMock(fastmcp_context=None)
@@ -211,7 +211,7 @@ async def test_a_client_reads_the_code_beside_the_message(
 ):
     name, arguments = call
     ready = AsyncMock(side_effect=failure or AssertionError("reached the browser"))
-    with patch("linkedin_mcp_server.tools.person.get_ready_extractor", ready):
+    with patch("linkedin_scraper_mcp.tools.person.get_ready_extractor", ready):
         async with Client(server, mode=mode) as client:
             result = await client.call_tool(name, arguments, raise_on_error=False)
 

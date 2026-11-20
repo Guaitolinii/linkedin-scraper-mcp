@@ -2,13 +2,13 @@
 
 import pytest
 
-from linkedin_mcp_server.core.destination import (
+from linkedin_scraper_mcp.core.destination import (
     describe_landing,
     is_another_site,
     is_linkedin_landing,
     raise_if_off_linkedin,
 )
-from linkedin_mcp_server.core.exceptions import (
+from linkedin_scraper_mcp.core.exceptions import (
     AuthenticationError,
     NetworkError,
     OffLinkedInLandingError,

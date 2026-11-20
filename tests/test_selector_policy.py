@@ -206,8 +206,8 @@ def test_an_exception_pins_the_decoded_js_selector(
 def tree(tmp_path: Path) -> Path:
     """A copy of the package and its exceptions that passes the check."""
     shutil.copytree(
-        _REPO_ROOT / "linkedin_mcp_server",
-        tmp_path / "linkedin_mcp_server",
+        _REPO_ROOT / "linkedin_scraper_mcp",
+        tmp_path / "linkedin_scraper_mcp",
         ignore=shutil.ignore_patterns("__pycache__"),
     )
     (tmp_path / "scripts").mkdir()
@@ -237,7 +237,7 @@ def test_a_class_in_a_shared_selector_constant_fails(
 ) -> None:
     _plant(
         tree,
-        "linkedin_mcp_server/core/utils.py",
+        "linkedin_scraper_mcp/core/utils.py",
         """_JOB_CARD_SELECTOR = 'a[href*="/jobs/view/"], [componentkey^="job-card-component-ref-"]'""",
         '_JOB_CARD_SELECTOR = "div.job-card-container__link"',
     )
@@ -247,25 +247,27 @@ def test_a_class_in_a_shared_selector_constant_fails(
 
 
 @pytest.mark.parametrize(
-    ("added", "expected"),
+    ("selector", "expected"),
     [
-        ("'.msg-form__footer'", "bem-class: .msg-form__footer"),
         (
-            "'.msg-form__send-toggle'",
-            ".msg-form__send-toggle in _MESSAGE_COMPOSER_INSPECT_JS: "
+            "ul.artdeco-pagination__pages li button, .msg-form__footer",
+            "bem-class: .msg-form__footer",
+        ),
+        (
+            "ul.artdeco-pagination__pages li button, ul.artdeco-pagination__pages li a",
+            ".artdeco-pagination__pages in _get_total_list_pages: "
             "registered 1, found 2",
         ),
     ],
 )
 def test_a_second_selector_in_an_exempted_symbol_fails(
-    tree: Path, capsys: pytest.CaptureFixture[str], added: str, expected: str
+    tree: Path, capsys: pytest.CaptureFixture[str], selector: str, expected: str
 ) -> None:
     _plant(
         tree,
-        "linkedin_mcp_server/linkedin/message_sender.py",
-        "Array.from(scope.querySelectorAll('.msg-form__send-toggle'))",
-        f"Array.from(scope.querySelectorAll({added}))"
-        ".concat(Array.from(scope.querySelectorAll('.msg-form__send-toggle')))",
+        "linkedin_scraper_mcp/linkedin/job_pages.py",
+        "'ul.artdeco-pagination__pages li button'",
+        f"'{selector}'",
     )
     assert expected in _report(tree, capsys)
 
@@ -275,7 +277,7 @@ def test_a_substituted_label_value_fails(
 ) -> None:
     _plant(
         tree,
-        "linkedin_mcp_server/core/utils.py",
+        "linkedin_scraper_mcp/core/utils.py",
         'button[aria-label="Dismiss"]',
         'button[aria-label="Unreviewed"]',
     )
@@ -291,7 +293,7 @@ def test_a_substituted_text_selector_value_fails(
 ) -> None:
     _plant(
         tree,
-        "linkedin_mcp_server/core/auth.py",
+        "linkedin_scraper_mcp/core/auth.py",
         'nav button:has-text("Home")',
         'nav button:has-text("Start")',
     )
@@ -305,7 +307,7 @@ def test_a_removed_occurrence_fails_as_a_stale_count(
 ) -> None:
     _plant(
         tree,
-        "linkedin_mcp_server/linkedin/capture.py",
+        "linkedin_scraper_mcp/linkedin/capture.py",
         "(dialog[open] or .artdeco-modal__content)",
         "(dialog[open])",
     )

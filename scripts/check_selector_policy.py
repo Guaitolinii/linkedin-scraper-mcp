@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refuse selectors that depend on LinkedIn's class names or English labels.
 
-Scans every string constant under ``linkedin_mcp_server/`` except docstrings
+Scans every string constant under ``linkedin_scraper_mcp/`` except docstrings
 and reports five kinds of match:
 
 1. ``bem-class``: a BEM class token such as ``.artdeco-modal__dismiss``,
@@ -62,7 +62,7 @@ from pathlib import Path
 from typing import Iterator, Literal
 
 ROOT = Path(__file__).resolve().parents[1]
-PACKAGE = "linkedin_mcp_server"
+PACKAGE = "linkedin_scraper_mcp"
 EXCEPTIONS = Path("scripts/selector_policy_exceptions.toml")
 
 Rule = Literal[

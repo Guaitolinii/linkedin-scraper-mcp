@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from linkedin_mcp_server.error_diagnostics import (
+from linkedin_scraper_mcp.error_diagnostics import (
     ISSUE_URL,
     PACKET_GUIDANCE,
     PACKET_SKILL_URL,
@@ -14,7 +14,7 @@ from linkedin_mcp_server.error_diagnostics import (
 def test_build_issue_diagnostics_includes_existing_issues(monkeypatch, tmp_path):
     monkeypatch.setenv("USER_DATA_DIR", str(tmp_path / "profile"))
     monkeypatch.setattr(
-        "linkedin_mcp_server.error_diagnostics._find_existing_issues",
+        "linkedin_scraper_mcp.error_diagnostics._find_existing_issues",
         lambda payload: [
             {
                 "number": 220,
@@ -97,13 +97,16 @@ def test_format_tool_error_empty_search_still_requires_packet_search():
     assert PACKET_GUIDANCE in message
 
 
-def test_find_existing_issues_query_failure_is_tolerated(monkeypatch, tmp_path):
+def test_diagnostics_never_use_the_network(monkeypatch, tmp_path):
+    # Error text is not sent to a third-party service: no issue lookup exists.
+    import socket
+
     monkeypatch.setenv("USER_DATA_DIR", str(tmp_path / "profile"))
 
-    monkeypatch.setattr(
-        "linkedin_mcp_server.error_diagnostics.urlopen",
-        lambda *args, **kwargs: (_ for _ in ()).throw(OSError("no network")),
-    )
+    def no_network(*args, **kwargs):
+        raise AssertionError("diagnostics must not open a network connection")
+
+    monkeypatch.setattr(socket.socket, "connect", no_network)
 
     diagnostics = build_issue_diagnostics(
         RuntimeError("boom"),
@@ -122,7 +125,7 @@ def test_find_existing_issues_query_failure_is_tolerated(monkeypatch, tmp_path):
 def test_build_issue_diagnostics_sets_gist_command_none(monkeypatch, tmp_path):
     monkeypatch.setenv("USER_DATA_DIR", str(tmp_path / "profile"))
     monkeypatch.setattr(
-        "linkedin_mcp_server.error_diagnostics._find_existing_issues",
+        "linkedin_scraper_mcp.error_diagnostics._find_existing_issues",
         lambda payload: [],
     )
 
@@ -157,9 +160,9 @@ async def test_build_issue_diagnostics_skips_network_search_in_event_loop(
             "_find_existing_issues should not be called inside the event loop"
         )
 
-    monkeypatch.setattr("linkedin_mcp_server.error_diagnostics.urlopen", fail_urlopen)
+    monkeypatch.setattr("linkedin_scraper_mcp.error_diagnostics.urlopen", fail_urlopen)
     monkeypatch.setattr(
-        "linkedin_mcp_server.error_diagnostics._find_existing_issues", fail_find
+        "linkedin_scraper_mcp.error_diagnostics._find_existing_issues", fail_find
     )
 
     diagnostics = build_issue_diagnostics(
@@ -181,7 +184,7 @@ async def test_build_issue_diagnostics_skips_network_search_in_event_loop(
 def test_build_issue_diagnostics_preserves_captured_failure(monkeypatch, tmp_path):
     monkeypatch.setenv("USER_DATA_DIR", str(tmp_path / "profile"))
     monkeypatch.setattr(
-        "linkedin_mcp_server.error_diagnostics._find_existing_issues",
+        "linkedin_scraper_mcp.error_diagnostics._find_existing_issues",
         lambda payload: [],
     )
 
@@ -206,7 +209,7 @@ def test_build_issue_diagnostics_preserves_captured_failure(monkeypatch, tmp_pat
     assert "- Error: RuntimeError: boom" in issue_body
     assert "MCP client" not in issue_body
     assert "Installation method" not in issue_body
-    assert "uv run -m linkedin_mcp_server --login" not in issue_body
+    assert "uv run -m linkedin_scraper_mcp --login" not in issue_body
     assert "Expected behavior" not in issue_body
     assert "curl-based" not in issue_body
     assert "Call `search_jobs` again" not in issue_body
@@ -217,11 +220,11 @@ def test_build_issue_diagnostics_does_not_invent_install_or_tool_call(
 ):
     monkeypatch.setenv("USER_DATA_DIR", str(tmp_path / "profile"))
     monkeypatch.setattr(
-        "linkedin_mcp_server.error_diagnostics.get_runtime_id",
+        "linkedin_scraper_mcp.error_diagnostics.get_runtime_id",
         lambda: "linux-amd64-container",
     )
     monkeypatch.setattr(
-        "linkedin_mcp_server.error_diagnostics._find_existing_issues",
+        "linkedin_scraper_mcp.error_diagnostics._find_existing_issues",
         lambda payload: [],
     )
 
@@ -237,7 +240,7 @@ def test_build_issue_diagnostics_does_not_invent_install_or_tool_call(
     assert "- Context: extract_saved_jobs_page" in issue_body
     assert "Tool: get_saved_jobs" not in issue_body
     assert "Docker using" not in issue_body
-    assert "`~/.linkedin-mcp` mounted" not in issue_body
+    assert "`~/.linkedin-scraper-mcp` mounted" not in issue_body
 
 
 def test_build_issue_diagnostics_keeps_sensitive_runtime_details_out_of_mcp_payload(
@@ -245,7 +248,7 @@ def test_build_issue_diagnostics_keeps_sensitive_runtime_details_out_of_mcp_payl
 ):
     monkeypatch.setenv("USER_DATA_DIR", str(tmp_path / "profile"))
     monkeypatch.setattr(
-        "linkedin_mcp_server.error_diagnostics._find_existing_issues",
+        "linkedin_scraper_mcp.error_diagnostics._find_existing_issues",
         lambda payload: [],
     )
 
@@ -268,11 +271,11 @@ def test_build_issue_diagnostics_keeps_sensitive_runtime_details_out_of_mcp_payl
 
 
 def test_build_issue_diagnostics_redacts_proxy_credentials(monkeypatch, tmp_path):
-    from linkedin_mcp_server.config import get_config
+    from linkedin_scraper_mcp.config import get_config
 
     monkeypatch.setenv("USER_DATA_DIR", str(tmp_path / "profile"))
     monkeypatch.setattr(
-        "linkedin_mcp_server.error_diagnostics._find_existing_issues",
+        "linkedin_scraper_mcp.error_diagnostics._find_existing_issues",
         lambda payload: [],
     )
     config = get_config()

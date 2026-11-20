@@ -12,13 +12,13 @@ import pytest
 from fastmcp import Client, FastMCP
 from fastmcp.exceptions import ToolError
 
-from linkedin_mcp_server.core.exceptions import (
+from linkedin_scraper_mcp.core.exceptions import (
     AuthenticationError,
     NetworkError,
     RateLimitError,
 )
-from linkedin_mcp_server.dependencies import get_ready_extractor, handle_auth_error
-from linkedin_mcp_server.exceptions import (
+from linkedin_scraper_mcp.dependencies import get_ready_extractor, handle_auth_error
+from linkedin_scraper_mcp.exceptions import (
     AuthenticationStartedError,
     AuthStaleOnOwnerError,
     BrowserBusyError,
@@ -30,7 +30,7 @@ from linkedin_mcp_server.exceptions import (
 # Bound at import, before the autouse isolation replaces it with a fixed path.
 # The tests that retarget the profile root need the real resolution, which reads
 # USER_DATA_DIR through a symlink, and restore it deliberately.
-from linkedin_mcp_server.session_state import (
+from linkedin_scraper_mcp.session_state import (
     get_source_profile_dir as _resolve_the_configured_profile,
 )
 
@@ -40,19 +40,19 @@ class TestHandleAuthError:
         """On managed runtime, close browser + trigger relogin."""
         with (
             patch(
-                "linkedin_mcp_server.dependencies.get_runtime_policy",
+                "linkedin_scraper_mcp.dependencies.get_runtime_policy",
                 return_value="managed",
             ),
             patch(
-                "linkedin_mcp_server.dependencies.close_browser",
+                "linkedin_scraper_mcp.dependencies.close_browser",
                 new_callable=AsyncMock,
             ) as mock_close,
             patch(
-                "linkedin_mcp_server.dependencies.current_login_generation",
+                "linkedin_scraper_mcp.dependencies.current_login_generation",
                 return_value="the-dead-one",
             ),
             patch(
-                "linkedin_mcp_server.dependencies.invalidate_auth_and_trigger_relogin",
+                "linkedin_scraper_mcp.dependencies.invalidate_auth_and_trigger_relogin",
                 new_callable=AsyncMock,
                 side_effect=AuthenticationStartedError("login opened"),
             ) as mock_relogin,
@@ -76,7 +76,7 @@ class TestHandleAuthError:
     async def test_docker_raises_host_error(self):
         """On Docker runtime, raise DockerHostLoginRequiredError."""
         with patch(
-            "linkedin_mcp_server.dependencies.get_runtime_policy",
+            "linkedin_scraper_mcp.dependencies.get_runtime_policy",
             return_value="docker",
         ):
             with pytest.raises(
@@ -109,20 +109,20 @@ class TestGetReadyExtractor:
         browser = _a_live_browser()
         with (
             patch(
-                "linkedin_mcp_server.dependencies.ensure_tool_ready_or_raise",
+                "linkedin_scraper_mcp.dependencies.ensure_tool_ready_or_raise",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.dependencies.get_or_create_browser",
+                "linkedin_scraper_mcp.dependencies.get_or_create_browser",
                 new_callable=AsyncMock,
                 return_value=browser,
             ) as mock_get_browser,
             patch(
-                "linkedin_mcp_server.dependencies.ensure_authenticated",
+                "linkedin_scraper_mcp.dependencies.ensure_authenticated",
                 new_callable=AsyncMock,
             ) as mock_ensure_auth,
         ):
-            from linkedin_mcp_server.linkedin import LinkedInExtractor
+            from linkedin_scraper_mcp.linkedin import LinkedInExtractor
 
             extractor = await get_ready_extractor(ctx=None, tool_name="test_tool")
 
@@ -134,21 +134,21 @@ class TestGetReadyExtractor:
         """AuthenticationError from ensure_authenticated triggers relogin."""
         with (
             patch(
-                "linkedin_mcp_server.dependencies.ensure_tool_ready_or_raise",
+                "linkedin_scraper_mcp.dependencies.ensure_tool_ready_or_raise",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.dependencies.get_or_create_browser",
+                "linkedin_scraper_mcp.dependencies.get_or_create_browser",
                 new_callable=AsyncMock,
                 return_value=_a_live_browser(),
             ),
             patch(
-                "linkedin_mcp_server.dependencies.ensure_authenticated",
+                "linkedin_scraper_mcp.dependencies.ensure_authenticated",
                 new_callable=AsyncMock,
                 side_effect=AuthenticationError("Session expired or invalid."),
             ),
             patch(
-                "linkedin_mcp_server.dependencies.handle_auth_error",
+                "linkedin_scraper_mcp.dependencies.handle_auth_error",
                 new_callable=AsyncMock,
                 side_effect=AuthenticationStartedError("login opened"),
             ) as mock_handle,
@@ -162,16 +162,16 @@ class TestGetReadyExtractor:
         """RateLimitError goes through raise_tool_error, not relogin."""
         with (
             patch(
-                "linkedin_mcp_server.dependencies.ensure_tool_ready_or_raise",
+                "linkedin_scraper_mcp.dependencies.ensure_tool_ready_or_raise",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.dependencies.get_or_create_browser",
+                "linkedin_scraper_mcp.dependencies.get_or_create_browser",
                 new_callable=AsyncMock,
                 side_effect=RateLimitError("Too many requests"),
             ),
             patch(
-                "linkedin_mcp_server.dependencies.handle_auth_error",
+                "linkedin_scraper_mcp.dependencies.handle_auth_error",
                 new_callable=AsyncMock,
             ) as mock_handle,
         ):
@@ -190,16 +190,16 @@ class TestGetReadyExtractor:
         )
         with (
             patch(
-                "linkedin_mcp_server.dependencies.ensure_tool_ready_or_raise",
+                "linkedin_scraper_mcp.dependencies.ensure_tool_ready_or_raise",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.dependencies.get_or_create_browser",
+                "linkedin_scraper_mcp.dependencies.get_or_create_browser",
                 new_callable=AsyncMock,
                 side_effect=err,
             ),
             patch(
-                "linkedin_mcp_server.dependencies.invalidate_browser_setup"
+                "linkedin_scraper_mcp.dependencies.invalidate_browser_setup"
             ) as mock_invalidate,
         ):
             with pytest.raises(
@@ -214,16 +214,16 @@ class TestGetReadyExtractor:
         err = NetworkError("Failed to start browser: connection reset by peer")
         with (
             patch(
-                "linkedin_mcp_server.dependencies.ensure_tool_ready_or_raise",
+                "linkedin_scraper_mcp.dependencies.ensure_tool_ready_or_raise",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.dependencies.get_or_create_browser",
+                "linkedin_scraper_mcp.dependencies.get_or_create_browser",
                 new_callable=AsyncMock,
                 side_effect=err,
             ),
             patch(
-                "linkedin_mcp_server.dependencies.invalidate_browser_setup"
+                "linkedin_scraper_mcp.dependencies.invalidate_browser_setup"
             ) as mock_invalidate,
         ):
             with pytest.raises(ToolError, match="Network error"):
@@ -233,7 +233,7 @@ class TestGetReadyExtractor:
 
     async def test_mid_read_auth_error_triggers_relogin(self):
         """AuthenticationError caught in tool wrapper invokes handle_auth_error."""
-        from linkedin_mcp_server.tools.person import register_person_tools
+        from linkedin_scraper_mcp.tools.person import register_person_tools
 
         mock_mcp = MagicMock()
         tools = {}
@@ -258,11 +258,11 @@ class TestGetReadyExtractor:
 
         with (
             patch(
-                "linkedin_mcp_server.tools.person.get_ready_extractor",
+                "linkedin_scraper_mcp.tools.person.get_ready_extractor",
                 AsyncMock(return_value=mock_extractor),
             ),
             patch(
-                "linkedin_mcp_server.dependencies.handle_auth_error",
+                "linkedin_scraper_mcp.dependencies.handle_auth_error",
                 new_callable=AsyncMock,
                 side_effect=AuthenticationStartedError("login opened"),
             ) as mock_handle,
@@ -277,50 +277,52 @@ class TestGetReadyExtractor:
             # First arg should be the AuthenticationError
             assert isinstance(mock_handle.call_args[0][0], AuthenticationError)
 
-    async def test_registered_feed_tool_routes_exact_auth_error_to_recovery(self):
+    async def test_registered_person_tool_routes_exact_auth_error_to_recovery(self):
         """The registered MCP boundary awaits the real recovery policy."""
-        from linkedin_mcp_server.tools import feed as feed_tools
+        from linkedin_scraper_mcp.tools import person as person_tools
 
-        challenged = AuthenticationError("feed session challenged")
+        challenged = AuthenticationError("profile session challenged")
         extractor = MagicMock()
-        extractor.extract_feed = AsyncMock(side_effect=challenged)
-        mcp = FastMCP("feed-auth-recovery")
-        feed_tools.register_feed_tools(mcp)
+        extractor.read_person = AsyncMock(side_effect=challenged)
+        mcp = FastMCP("person-auth-recovery")
+        person_tools.register_person_tools(mcp)
 
         with (
             patch.object(
-                feed_tools,
+                person_tools,
                 "get_ready_extractor",
                 new_callable=AsyncMock,
                 return_value=extractor,
             ),
             patch(
-                "linkedin_mcp_server.dependencies.handle_auth_error",
+                "linkedin_scraper_mcp.dependencies.handle_auth_error",
                 new=AsyncMock(wraps=handle_auth_error),
             ) as routed,
             patch(
-                "linkedin_mcp_server.dependencies.get_runtime_policy",
+                "linkedin_scraper_mcp.dependencies.get_runtime_policy",
                 return_value="managed",
             ),
             patch(
-                "linkedin_mcp_server.dependencies.current_login_generation",
+                "linkedin_scraper_mcp.dependencies.current_login_generation",
                 return_value="challenged-generation",
             ),
             patch(
-                "linkedin_mcp_server.dependencies.close_browser",
+                "linkedin_scraper_mcp.dependencies.close_browser",
                 new_callable=AsyncMock,
             ) as close,
             patch(
-                "linkedin_mcp_server.dependencies.invalidate_auth_and_trigger_relogin",
+                "linkedin_scraper_mcp.dependencies.invalidate_auth_and_trigger_relogin",
                 new_callable=AsyncMock,
                 side_effect=AuthenticationStartedError("login opened"),
             ) as relogin,
         ):
             async with Client(mcp) as client:
                 with pytest.raises(ToolError, match="login opened"):
-                    await client.call_tool("get_feed", {"num_posts": 1})
+                    await client.call_tool(
+                        "get_person_profile", {"linkedin_username": "ada"}
+                    )
 
-        extractor.extract_feed.assert_awaited_once_with(num_posts=1)
+        extractor.read_person.assert_awaited_once()
         routed.assert_awaited_once()
         routed_call = routed.await_args
         assert routed_call is not None
@@ -340,7 +342,7 @@ class TestAnOwnerGoesQuiescentInsteadOfLoggingIn:
         that landed in that gap would be recorded as the broken one, and the owner
         would then hold its latch against the very session it asked for.
         """
-        from linkedin_mcp_server.server_role import ServerRole, set_process_role
+        from linkedin_scraper_mcp.server_role import ServerRole, set_process_role
 
         set_process_role(ServerRole.OWNER)
         order: list[str] = []
@@ -350,20 +352,20 @@ class TestAnOwnerGoesQuiescentInsteadOfLoggingIn:
 
         with (
             patch(
-                "linkedin_mcp_server.dependencies.get_runtime_policy",
+                "linkedin_scraper_mcp.dependencies.get_runtime_policy",
                 return_value="managed",
             ),
             patch(
-                "linkedin_mcp_server.dependencies.current_login_generation",
+                "linkedin_scraper_mcp.dependencies.current_login_generation",
                 side_effect=lambda: (order.append("read"), "gen-1")[1],
             ),
-            patch("linkedin_mcp_server.dependencies.close_browser", closing),
+            patch("linkedin_scraper_mcp.dependencies.close_browser", closing),
             patch(
-                "linkedin_mcp_server.dependencies.go_auth_quiescent",
+                "linkedin_scraper_mcp.dependencies.go_auth_quiescent",
                 side_effect=lambda gen: order.append(f"latch:{gen}"),
             ),
             patch(
-                "linkedin_mcp_server.dependencies.invalidate_auth_and_trigger_relogin",
+                "linkedin_scraper_mcp.dependencies.invalidate_auth_and_trigger_relogin",
                 new_callable=AsyncMock,
                 side_effect=AuthStaleOnOwnerError("owner cannot sign in"),
             ),
@@ -392,14 +394,14 @@ class TestAnOwnerGoesQuiescentInsteadOfLoggingIn:
 
         with (
             patch(
-                "linkedin_mcp_server.dependencies.get_runtime_policy",
+                "linkedin_scraper_mcp.dependencies.get_runtime_policy",
                 return_value="managed",
             ),
-            patch("linkedin_mcp_server.dependencies.current_login_generation", read),
-            patch("linkedin_mcp_server.dependencies.close_browser", AsyncMock()),
-            patch("linkedin_mcp_server.dependencies.go_auth_quiescent", latched),
+            patch("linkedin_scraper_mcp.dependencies.current_login_generation", read),
+            patch("linkedin_scraper_mcp.dependencies.close_browser", AsyncMock()),
+            patch("linkedin_scraper_mcp.dependencies.go_auth_quiescent", latched),
             patch(
-                "linkedin_mcp_server.dependencies.invalidate_auth_and_trigger_relogin",
+                "linkedin_scraper_mcp.dependencies.invalidate_auth_and_trigger_relogin",
                 new_callable=AsyncMock,
                 side_effect=AuthenticationStartedError("login opened"),
             ),
@@ -423,8 +425,8 @@ class TestAnOwnerGoesQuiescentInsteadOfLoggingIn:
         will open a login window" while holding the lease with ``browser_open``
         still set.
         """
-        from linkedin_mcp_server.exceptions import BrowserShutdownUnconfirmedError
-        from linkedin_mcp_server.server_role import ServerRole, set_process_role
+        from linkedin_scraper_mcp.exceptions import BrowserShutdownUnconfirmedError
+        from linkedin_scraper_mcp.server_role import ServerRole, set_process_role
 
         set_process_role(ServerRole.OWNER)
         latched = MagicMock()
@@ -433,26 +435,26 @@ class TestAnOwnerGoesQuiescentInsteadOfLoggingIn:
 
         with (
             patch(
-                "linkedin_mcp_server.dependencies.get_runtime_policy",
+                "linkedin_scraper_mcp.dependencies.get_runtime_policy",
                 return_value="managed",
             ),
             patch(
-                "linkedin_mcp_server.dependencies.current_login_generation",
+                "linkedin_scraper_mcp.dependencies.current_login_generation",
                 return_value="gen-1",
             ),
-            patch("linkedin_mcp_server.dependencies.close_browser", AsyncMock()),
+            patch("linkedin_scraper_mcp.dependencies.close_browser", AsyncMock()),
             patch(
-                "linkedin_mcp_server.dependencies.get_profile_lease",
+                "linkedin_scraper_mcp.dependencies.get_profile_lease",
                 return_value=lease,
             ),
             # Also at the source: the stand-down helper lives in `server_role`
             # and reads the lease through `profile_lease`, not through the
             # module under test.
             patch(
-                "linkedin_mcp_server.profile_lease.get_profile_lease",
+                "linkedin_scraper_mcp.profile_lease.get_profile_lease",
                 return_value=lease,
             ),
-            patch("linkedin_mcp_server.dependencies.go_auth_quiescent", latched),
+            patch("linkedin_scraper_mcp.dependencies.go_auth_quiescent", latched),
         ):
             with pytest.raises(BrowserShutdownUnconfirmedError, match="Restart"):
                 await handle_auth_error(AuthenticationError("expired"), ctx=None)
@@ -470,7 +472,7 @@ class TestAnOwnerGoesQuiescentInsteadOfLoggingIn:
         "a login browser window has been opened", opened none, kept the dead
         session, and left a state only a restart clears.
         """
-        from linkedin_mcp_server.exceptions import BrowserShutdownUnconfirmedError
+        from linkedin_scraper_mcp.exceptions import BrowserShutdownUnconfirmedError
 
         relogin = AsyncMock()
         lease = MagicMock()
@@ -478,27 +480,27 @@ class TestAnOwnerGoesQuiescentInsteadOfLoggingIn:
 
         with (
             patch(
-                "linkedin_mcp_server.dependencies.get_runtime_policy",
+                "linkedin_scraper_mcp.dependencies.get_runtime_policy",
                 return_value="managed",
             ),
             patch(
-                "linkedin_mcp_server.dependencies.current_login_generation",
+                "linkedin_scraper_mcp.dependencies.current_login_generation",
                 return_value="gen-1",
             ),
-            patch("linkedin_mcp_server.dependencies.close_browser", AsyncMock()),
+            patch("linkedin_scraper_mcp.dependencies.close_browser", AsyncMock()),
             patch(
-                "linkedin_mcp_server.dependencies.get_profile_lease",
+                "linkedin_scraper_mcp.dependencies.get_profile_lease",
                 return_value=lease,
             ),
             # Also at the source: the stand-down helper lives in `server_role`
             # and reads the lease through `profile_lease`, not through the
             # module under test.
             patch(
-                "linkedin_mcp_server.profile_lease.get_profile_lease",
+                "linkedin_scraper_mcp.profile_lease.get_profile_lease",
                 return_value=lease,
             ),
             patch(
-                "linkedin_mcp_server.dependencies.invalidate_auth_and_trigger_relogin",
+                "linkedin_scraper_mcp.dependencies.invalidate_auth_and_trigger_relogin",
                 relogin,
             ),
         ):
@@ -521,8 +523,8 @@ class TestAnOwnerGoesQuiescentInsteadOfLoggingIn:
         exit itself belongs to the serve loop; ``test_daemon_owner`` covers that
         the loop acts on this.
         """
-        from linkedin_mcp_server.exceptions import BrowserShutdownUnconfirmedError
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.exceptions import BrowserShutdownUnconfirmedError
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             set_process_role,
             stand_down_reason,
@@ -534,23 +536,23 @@ class TestAnOwnerGoesQuiescentInsteadOfLoggingIn:
 
         with (
             patch(
-                "linkedin_mcp_server.dependencies.get_runtime_policy",
+                "linkedin_scraper_mcp.dependencies.get_runtime_policy",
                 return_value="managed",
             ),
             patch(
-                "linkedin_mcp_server.dependencies.current_login_generation",
+                "linkedin_scraper_mcp.dependencies.current_login_generation",
                 return_value="gen-1",
             ),
-            patch("linkedin_mcp_server.dependencies.close_browser", AsyncMock()),
+            patch("linkedin_scraper_mcp.dependencies.close_browser", AsyncMock()),
             patch(
-                "linkedin_mcp_server.dependencies.get_profile_lease",
+                "linkedin_scraper_mcp.dependencies.get_profile_lease",
                 return_value=lease,
             ),
             # Also at the source: the stand-down helper lives in `server_role`
             # and reads the lease through `profile_lease`, not through the
             # module under test.
             patch(
-                "linkedin_mcp_server.profile_lease.get_profile_lease",
+                "linkedin_scraper_mcp.profile_lease.get_profile_lease",
                 return_value=lease,
             ),
         ):
@@ -573,7 +575,7 @@ class TestAnOwnerGoesQuiescentInsteadOfLoggingIn:
         ``TimeoutError`` with ``stand_down_reason()`` still None and the lease
         still held.
         """
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             set_process_role,
             stand_down_reason,
@@ -593,26 +595,26 @@ class TestAnOwnerGoesQuiescentInsteadOfLoggingIn:
 
         with (
             patch(
-                "linkedin_mcp_server.dependencies.get_runtime_policy",
+                "linkedin_scraper_mcp.dependencies.get_runtime_policy",
                 return_value="managed",
             ),
             patch(
-                "linkedin_mcp_server.dependencies.current_login_generation",
+                "linkedin_scraper_mcp.dependencies.current_login_generation",
                 return_value="gen-1",
             ),
             patch(
-                "linkedin_mcp_server.dependencies.close_browser",
+                "linkedin_scraper_mcp.dependencies.close_browser",
                 close_that_defers_its_cancel,
             ),
             patch(
-                "linkedin_mcp_server.dependencies.get_profile_lease",
+                "linkedin_scraper_mcp.dependencies.get_profile_lease",
                 return_value=lease,
             ),
             # Also at the source: the stand-down helper lives in `server_role`
             # and reads the lease through `profile_lease`, not through the
             # module under test.
             patch(
-                "linkedin_mcp_server.profile_lease.get_profile_lease",
+                "linkedin_scraper_mcp.profile_lease.get_profile_lease",
                 return_value=lease,
             ),
         ):
@@ -632,35 +634,35 @@ class TestAnOwnerGoesQuiescentInsteadOfLoggingIn:
         A DIRECT server has no successor to elect. Asking it to stand down would
         end the only server the client has, over something a restart fixes.
         """
-        from linkedin_mcp_server.exceptions import BrowserShutdownUnconfirmedError
-        from linkedin_mcp_server.server_role import stand_down_reason
+        from linkedin_scraper_mcp.exceptions import BrowserShutdownUnconfirmedError
+        from linkedin_scraper_mcp.server_role import stand_down_reason
 
         lease = MagicMock()
         lease.browser_open = True
 
         with (
             patch(
-                "linkedin_mcp_server.dependencies.get_runtime_policy",
+                "linkedin_scraper_mcp.dependencies.get_runtime_policy",
                 return_value="managed",
             ),
             patch(
-                "linkedin_mcp_server.dependencies.current_login_generation",
+                "linkedin_scraper_mcp.dependencies.current_login_generation",
                 return_value="gen-1",
             ),
-            patch("linkedin_mcp_server.dependencies.close_browser", AsyncMock()),
+            patch("linkedin_scraper_mcp.dependencies.close_browser", AsyncMock()),
             patch(
-                "linkedin_mcp_server.dependencies.get_profile_lease",
+                "linkedin_scraper_mcp.dependencies.get_profile_lease",
                 return_value=lease,
             ),
             # Also at the source: the stand-down helper lives in `server_role`
             # and reads the lease through `profile_lease`, not through the
             # module under test.
             patch(
-                "linkedin_mcp_server.profile_lease.get_profile_lease",
+                "linkedin_scraper_mcp.profile_lease.get_profile_lease",
                 return_value=lease,
             ),
             patch(
-                "linkedin_mcp_server.dependencies.invalidate_auth_and_trigger_relogin",
+                "linkedin_scraper_mcp.dependencies.invalidate_auth_and_trigger_relogin",
                 AsyncMock(),
             ),
         ):
@@ -681,13 +683,13 @@ class TestAWedgeFromAnywhereFreesTheOwner:
     """
 
     def teardown_method(self):
-        from linkedin_mcp_server.server_role import reset_process_role_for_testing
+        from linkedin_scraper_mcp.server_role import reset_process_role_for_testing
 
         reset_process_role_for_testing()
 
     def test_raising_it_asks_an_owner_to_give_way(self):
-        from linkedin_mcp_server.exceptions import BrowserShutdownUnconfirmedError
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.exceptions import BrowserShutdownUnconfirmedError
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             set_process_role,
             stand_down_reason,
@@ -702,7 +704,7 @@ class TestAWedgeFromAnywhereFreesTheOwner:
         lease = MagicMock()
         lease.browser_open = True
         with patch(
-            "linkedin_mcp_server.profile_lease.get_profile_lease", return_value=lease
+            "linkedin_scraper_mcp.profile_lease.get_profile_lease", return_value=lease
         ):
             BrowserShutdownUnconfirmedError("the startup teardown timed out")
 
@@ -724,9 +726,9 @@ class TestAWedgeFromAnywhereFreesTheOwner:
         said True, which is exactly the state production has not reached yet, and
         that mock is what hid it.
         """
-        from linkedin_mcp_server.drivers import browser as drv
-        from linkedin_mcp_server.exceptions import BrowserShutdownUnconfirmedError
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.drivers import browser as drv
+        from linkedin_scraper_mcp.exceptions import BrowserShutdownUnconfirmedError
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             set_process_role,
             stand_down_reason,
@@ -762,7 +764,7 @@ class TestAWedgeFromAnywhereFreesTheOwner:
             patch.object(drv, "_browser", None),
             patch.object(drv, "get_profile_lease", return_value=lease),
             patch(
-                "linkedin_mcp_server.profile_lease.get_profile_lease",
+                "linkedin_scraper_mcp.profile_lease.get_profile_lease",
                 return_value=lease,
             ),
             patch.object(drv, "start_browser_guardian"),
@@ -780,13 +782,13 @@ class TestAWedgeFromAnywhereFreesTheOwner:
 
     def test_a_single_server_is_left_alone(self):
         """Its client owns it, so "restart the server" is something to act on."""
-        from linkedin_mcp_server.exceptions import BrowserShutdownUnconfirmedError
-        from linkedin_mcp_server.server_role import stand_down_reason
+        from linkedin_scraper_mcp.exceptions import BrowserShutdownUnconfirmedError
+        from linkedin_scraper_mcp.server_role import stand_down_reason
 
         lease = MagicMock()
         lease.browser_open = True
         with patch(
-            "linkedin_mcp_server.profile_lease.get_profile_lease", return_value=lease
+            "linkedin_scraper_mcp.profile_lease.get_profile_lease", return_value=lease
         ):
             BrowserShutdownUnconfirmedError("the startup teardown timed out")
 
@@ -805,8 +807,8 @@ class TestAWedgeFromAnywhereFreesTheOwner:
         Reproduced before this: close returned, the lease was kept, and
         ``stand_down_reason()`` was still None.
         """
-        from linkedin_mcp_server.drivers import browser as drv
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.drivers import browser as drv
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             set_process_role,
             stand_down_reason,
@@ -823,7 +825,7 @@ class TestAWedgeFromAnywhereFreesTheOwner:
             patch.object(drv, "_browser_lease", lease),
             patch.object(drv, "get_profile_lease", return_value=lease),
             patch(
-                "linkedin_mcp_server.profile_lease.get_profile_lease",
+                "linkedin_scraper_mcp.profile_lease.get_profile_lease",
                 return_value=lease,
             ),
         ):
@@ -846,7 +848,7 @@ class TestAWedgeFromAnywhereFreesTheOwner:
         Without the guard every call here would end the owner, healthy or not,
         and the daemon would churn a process per stale session.
         """
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             a_held_profile_means_this_owner_must_go,
             set_process_role,
@@ -858,7 +860,7 @@ class TestAWedgeFromAnywhereFreesTheOwner:
         lease.browser_open = False  # a confirmed teardown clears it
 
         with patch(
-            "linkedin_mcp_server.profile_lease.get_profile_lease", return_value=lease
+            "linkedin_scraper_mcp.profile_lease.get_profile_lease", return_value=lease
         ):
             a_held_profile_means_this_owner_must_go()
 
@@ -866,8 +868,8 @@ class TestAWedgeFromAnywhereFreesTheOwner:
 
     async def test_a_confirmed_close_does_not_reach_the_request(self):
         """And the ordinary close path stays silent end to end."""
-        from linkedin_mcp_server.drivers import browser as drv
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.drivers import browser as drv
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             set_process_role,
             stand_down_reason,
@@ -884,7 +886,7 @@ class TestAWedgeFromAnywhereFreesTheOwner:
             patch.object(drv, "_browser_lease", lease),
             patch.object(drv, "get_profile_lease", return_value=lease),
             patch(
-                "linkedin_mcp_server.profile_lease.get_profile_lease",
+                "linkedin_scraper_mcp.profile_lease.get_profile_lease",
                 return_value=lease,
             ),
         ):
@@ -899,7 +901,7 @@ class TestAWedgeFromAnywhereFreesTheOwner:
         election, a stranded owner costs every later call. Measured with the read
         raising ``PermissionError``: the owner kept serving.
         """
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             a_held_profile_means_this_owner_must_go,
             set_process_role,
@@ -912,7 +914,7 @@ class TestAWedgeFromAnywhereFreesTheOwner:
             raise PermissionError("the profile path cannot be resolved")
 
         with patch(
-            "linkedin_mcp_server.profile_lease.get_profile_lease",
+            "linkedin_scraper_mcp.profile_lease.get_profile_lease",
             side_effect=unreadable,
         ):
             a_held_profile_means_this_owner_must_go()
@@ -940,8 +942,8 @@ class TestAWedgeFromAnywhereFreesTheOwner:
         whatever goes wrong between clearing ``_browser`` and settling the lease,
         the profile must not be left held in silence.
         """
-        from linkedin_mcp_server.drivers import browser as drv
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.drivers import browser as drv
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             set_process_role,
             stand_down_reason,
@@ -961,7 +963,7 @@ class TestAWedgeFromAnywhereFreesTheOwner:
             patch.object(drv, "_browser_lease", lease),
             patch.object(drv, "get_profile_lease", side_effect=unreadable),
             patch(
-                "linkedin_mcp_server.profile_lease.get_profile_lease",
+                "linkedin_scraper_mcp.profile_lease.get_profile_lease",
                 side_effect=unreadable,
             ),
         ):
@@ -983,8 +985,8 @@ class TestAWedgeFromAnywhereFreesTheOwner:
         this owner's own next launch refused with ``BrowserBusyError`` while
         nobody had asked for a replacement.
         """
-        from linkedin_mcp_server.drivers import browser as drv
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.drivers import browser as drv
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             set_process_role,
             stand_down_reason,
@@ -1004,7 +1006,7 @@ class TestAWedgeFromAnywhereFreesTheOwner:
             patch.object(drv, "_browser_lease", lease),
             patch.object(drv, "get_profile_lease", side_effect=unreadable),
             patch(
-                "linkedin_mcp_server.profile_lease.get_profile_lease",
+                "linkedin_scraper_mcp.profile_lease.get_profile_lease",
                 side_effect=unreadable,
             ),
         ):
@@ -1018,7 +1020,7 @@ class TestAWedgeFromAnywhereFreesTheOwner:
 def test_browser_activation_applies_the_default_timeout(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    from linkedin_mcp_server.drivers import browser as drv
+    from linkedin_scraper_mcp.drivers import browser as drv
 
     browser = MagicMock()
     config = MagicMock()
@@ -1031,8 +1033,8 @@ def test_browser_activation_applies_the_default_timeout(
 
 
 def test_confirmed_shutdown_retains_other_detached_process_groups():
-    from linkedin_mcp_server import process_tree
-    from linkedin_mcp_server.drivers import browser as drv
+    from linkedin_scraper_mcp import process_tree
+    from linkedin_scraper_mcp.drivers import browser as drv
 
     original = dict(process_tree._registered_posix_groups)
     registration = process_tree._PosixGroupRegistration("leader", {124: "member"})
@@ -1049,13 +1051,13 @@ def test_confirmed_shutdown_retains_other_detached_process_groups():
 def test_unconfirmed_shutdown_without_local_lease_requires_hard_exit(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    from linkedin_mcp_server.drivers import browser as drv
-    from linkedin_mcp_server import server_role
+    from linkedin_scraper_mcp.drivers import browser as drv
+    from linkedin_scraper_mcp import server_role
 
     lease = MagicMock()
     lease.browser_open = True
     monkeypatch.setattr(
-        "linkedin_mcp_server.profile_lease.get_profile_lease", lambda: lease
+        "linkedin_scraper_mcp.profile_lease.get_profile_lease", lambda: lease
     )
     drv._browser_lease = None
     server_role.set_process_role(server_role.ServerRole.OWNER)
@@ -1076,7 +1078,7 @@ class TestTheBrowserKeepsItsOwnLease:
     """
 
     def teardown_method(self):
-        from linkedin_mcp_server.server_role import reset_process_role_for_testing
+        from linkedin_scraper_mcp.server_role import reset_process_role_for_testing
 
         reset_process_role_for_testing()
 
@@ -1090,8 +1092,8 @@ class TestTheBrowserKeepsItsOwnLease:
         behave identically everywhere else, which is exactly why this asserts
         identity rather than behaviour.
         """
-        from linkedin_mcp_server.drivers import browser as drv
-        from linkedin_mcp_server.profile_lease import get_profile_lease
+        from linkedin_scraper_mcp.drivers import browser as drv
+        from linkedin_scraper_mcp.profile_lease import get_profile_lease
 
         lease = get_profile_lease(tmp_path / "profile")
 
@@ -1120,8 +1122,8 @@ class TestTheBrowserKeepsItsOwnLease:
         would drop one this module never took, and the next test would meet a
         lease reporting itself free while the kernel lock is still open.
         """
-        from linkedin_mcp_server.drivers import browser as drv
-        from linkedin_mcp_server.profile_lease import get_profile_lease
+        from linkedin_scraper_mcp.drivers import browser as drv
+        from linkedin_scraper_mcp.profile_lease import get_profile_lease
 
         lease = get_profile_lease(tmp_path / "profile")
         assert lease.try_acquire()
@@ -1143,7 +1145,7 @@ class TestTheBrowserKeepsItsOwnLease:
         release the wrong one, leaving the browser's own profile held. Holding
         the object is what makes that unrepresentable.
         """
-        from linkedin_mcp_server.drivers import browser as drv
+        from linkedin_scraper_mcp.drivers import browser as drv
 
         took = MagicMock()
         took.browser_open = True
@@ -1178,7 +1180,7 @@ class TestTheBrowserKeepsItsOwnLease:
         which is the same verdict the correct code reaches. The mutation was
         invisible until the assertion moved here.
         """
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             a_held_profile_means_this_owner_must_go,
             hard_exit_required,
@@ -1190,7 +1192,7 @@ class TestTheBrowserKeepsItsOwnLease:
         held = MagicMock()
         held.browser_open = True
 
-        with patch("linkedin_mcp_server.profile_lease.get_profile_lease") as looked_up:
+        with patch("linkedin_scraper_mcp.profile_lease.get_profile_lease") as looked_up:
             a_held_profile_means_this_owner_must_go(held)
 
         looked_up.assert_not_called()
@@ -1209,9 +1211,9 @@ class TestTheBrowserKeepsItsOwnLease:
         let a second launch start on top of a live Chromium. The kernel frees it
         when the process exits, which is the whole recovery.
         """
-        from linkedin_mcp_server.drivers import browser as drv
-        from linkedin_mcp_server.exceptions import BrowserShutdownUnconfirmedError
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.drivers import browser as drv
+        from linkedin_scraper_mcp.exceptions import BrowserShutdownUnconfirmedError
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             set_process_role,
             stand_down_reason,
@@ -1248,7 +1250,7 @@ class TestTheBrowserKeepsItsOwnLease:
             patch.object(drv, "_browser_lease", None),
             patch.object(drv, "get_profile_lease", return_value=lease),
             patch(
-                "linkedin_mcp_server.profile_lease.get_profile_lease",
+                "linkedin_scraper_mcp.profile_lease.get_profile_lease",
                 return_value=lease,
             ),
             patch.object(drv, "start_browser_guardian"),
@@ -1325,8 +1327,8 @@ def driver(monkeypatch):
     is not a state the gate can meet, and would say nothing about its verdict.
     Each launch publishes the next of ``upcoming``, or a live ``_Browser``.
     """
-    from linkedin_mcp_server import dependencies
-    from linkedin_mcp_server.drivers import browser as drv
+    from linkedin_scraper_mcp import dependencies
+    from linkedin_scraper_mcp.drivers import browser as drv
 
     # Fresh, because an earlier test's loop may have bound the module's own.
     monkeypatch.setattr(drv, "_browser_lifecycle_lock", asyncio.Lock())
@@ -1353,7 +1355,7 @@ def driver(monkeypatch):
 
 async def _cached_with_a_call_reference(driver) -> tuple[Any, Any]:
     """Launch the singleton, then take the reference a tool call's middleware holds."""
-    from linkedin_mcp_server.profile_lease import get_profile_lease
+    from linkedin_scraper_mcp.profile_lease import get_profile_lease
 
     manager = await driver.drv.get_or_create_browser()
     lease = get_profile_lease()
@@ -1372,7 +1374,7 @@ async def _until(condition, timeout: float = 5.0) -> None:
 
 def _on_the_tool_path() -> Any:
     """The real sequential middleware, and a tool body that only acquires."""
-    from linkedin_mcp_server.sequential_tool_middleware import (
+    from linkedin_scraper_mcp.sequential_tool_middleware import (
         SequentialToolExecutionMiddleware,
     )
 
@@ -1397,9 +1399,9 @@ def two_roots(tmp_path, monkeypatch):
     Undoes only the autouse path patch, and only for the source profile:
     USER_DATA_DIR still names a directory inside *tmp_path*.
     """
-    from linkedin_mcp_server import session_state
-    from linkedin_mcp_server.config import set_config
-    from linkedin_mcp_server.config.schema import AppConfig, BrowserConfig
+    from linkedin_scraper_mcp import session_state
+    from linkedin_scraper_mcp.config import set_config
+    from linkedin_scraper_mcp.config.schema import AppConfig, BrowserConfig
 
     a, b = tmp_path / "a", tmp_path / "b"
     for root in (a, b):
@@ -1479,8 +1481,8 @@ class TestTheCloseDecidesTheAnswer:
         ids=["confirmed", "unconfirmed", "close-raised"],
     )
     async def test_one_close_and_no_login(self, driver, monkeypatch, owner, verdict):
-        from linkedin_mcp_server import dependencies
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp import dependencies
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             set_process_role,
             stand_down_reason,
@@ -1563,8 +1565,8 @@ class TestTheCloseDecidesTheAnswer:
         A lookup by path after the close would answer for B, which nothing ever
         marked, and report an unconfirmed close on A as a clean restart.
         """
-        from linkedin_mcp_server.profile_lease import get_profile_lease
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.profile_lease import get_profile_lease
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             set_process_role,
             stand_down_reason,
@@ -1603,7 +1605,7 @@ class TestARetainedBrowserBlocksEveryRoot:
         resolves to now let B start beside a Chromium that may still be on A,
         and B's later confirmed close then cleared A without draining it.
         """
-        from linkedin_mcp_server.profile_lease import get_profile_lease
+        from linkedin_scraper_mcp.profile_lease import get_profile_lease
 
         call = _on_the_tool_path()
         await call()
@@ -1638,7 +1640,7 @@ class TestABrowserAnotherCloseRetired:
     async def test_one_reacquisition_and_the_current_browser_is_left_alone(
         self, driver, monkeypatch, confirmed, replaced
     ):
-        from linkedin_mcp_server import dependencies
+        from linkedin_scraper_mcp import dependencies
 
         stale, lease = await _cached_with_a_call_reference(driver)
         stale.page_closed = True
@@ -1722,7 +1724,7 @@ class TestABrowserAnotherCloseRetired:
         self, driver, monkeypatch
     ):
         """One reacquisition, bounded by construction rather than by luck."""
-        from linkedin_mcp_server import dependencies
+        from linkedin_scraper_mcp import dependencies
 
         handed_out: list[_Browser] = []
 
@@ -1750,8 +1752,8 @@ def real_close(driver, monkeypatch, tmp_path):
     the R7 control fixture: cancellation has to meet the real export, context
     close and threaded drain, which a mocked ``close()`` never reaches.
     """
-    from linkedin_mcp_server.core import browser as core
-    from linkedin_mcp_server.core.browser import BrowserManager
+    from linkedin_scraper_mcp.core import browser as core
+    from linkedin_scraper_mcp.core.browser import BrowserManager
 
     manager = BrowserManager(user_data_dir=tmp_path / "profile")
     manager.is_authenticated = True
@@ -1785,7 +1787,7 @@ class TestACancelWaitsForTheProfile:
     async def test_the_caller_is_let_go_only_after_settlement(
         self, driver, real_close, monkeypatch, tmp_path, stage, verdict
     ):
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             set_process_role,
             stand_down_reason,
@@ -1845,7 +1847,7 @@ class TestACancelWaitsForTheProfile:
     async def test_a_teardown_that_throws_after_a_cancel_is_unconfirmed(
         self, driver, real_close
     ):
-        from linkedin_mcp_server.server_role import (
+        from linkedin_scraper_mcp.server_role import (
             ServerRole,
             set_process_role,
             stand_down_reason,
@@ -1931,33 +1933,37 @@ class TestACancelWaitsForTheProfile:
 class TestTheCallerSeesAnOrdinaryFailure:
     async def test_through_the_mcp_boundary(self, driver):
         """An error result like any other, then a working call after it."""
-        from linkedin_mcp_server.daemon.auth_repair import (
+        from linkedin_scraper_mcp.daemon.auth_repair import (
             MARKER_KEY,
             OwnerAuthSignalMiddleware,
         )
-        from linkedin_mcp_server.sequential_tool_middleware import (
+        from linkedin_scraper_mcp.sequential_tool_middleware import (
             SequentialToolExecutionMiddleware,
         )
-        from linkedin_mcp_server.server_role import ServerRole, set_process_role
-        from linkedin_mcp_server.tools import feed as feed_tools
+        from linkedin_scraper_mcp.server_role import ServerRole, set_process_role
+        from linkedin_scraper_mcp.tools import person as person_tools
 
         set_process_role(ServerRole.OWNER)
         read = AsyncMock(
-            return_value=SimpleNamespace(text="a post", references=[], error=None)
+            return_value={
+                "url": "https://www.linkedin.com/in/ada/",
+                "sections": {"main_profile": "a profile"},
+            }
         )
-        driver.extractor.return_value.extract_feed = read
+        driver.extractor.return_value.read_person = read
         mcp = FastMCP("dead-browser")
         mcp.add_middleware(OwnerAuthSignalMiddleware())
         mcp.add_middleware(SequentialToolExecutionMiddleware())
-        feed_tools.register_feed_tools(mcp)
+        person_tools.register_person_tools(mcp)
+        arguments = {"linkedin_username": "ada"}
 
         async with Client(mcp) as client:
-            first = await client.call_tool("get_feed", {"num_posts": 1})
+            first = await client.call_tool("get_person_profile", arguments)
             driver.launched[0].page_closed = True
             failed = await client.call_tool(
-                "get_feed", {"num_posts": 1}, raise_on_error=False
+                "get_person_profile", arguments, raise_on_error=False
             )
-            again = await client.call_tool("get_feed", {"num_posts": 1})
+            again = await client.call_tool("get_person_profile", arguments)
 
         assert not first.is_error and not again.is_error
         assert failed.is_error
@@ -1978,7 +1984,7 @@ class TestTheCallerSeesAnOrdinaryFailure:
         from mcp import types as mt
         from fastmcp.server.middleware import MiddlewareContext
 
-        from linkedin_mcp_server.daemon.proxy import FrontendCallMiddleware
+        from linkedin_scraper_mcp.daemon.proxy import FrontendCallMiddleware
 
         manager, lease = await _cached_with_a_call_reference(driver)
         manager.page_closed = True

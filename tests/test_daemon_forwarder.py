@@ -23,7 +23,6 @@ import json
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock
 
 import httpx2
 import mcp.types as mt
@@ -33,23 +32,13 @@ from fastmcp.tools import ToolResult
 from owner_hop import Forward, Interceptor, method_of, reach_owners_in_process
 from test_daemon_proxy import _attachment, _backend
 
-import linkedin_mcp_server.daemon as daemon_package
-from linkedin_mcp_server.daemon.liveness import CALL_HEADER
-
-
-@pytest.fixture(autouse=True)
-def _no_update_notice(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Keep the update check off the network and out of the compared results."""
-    import linkedin_mcp_server.update_check as update_check
-
-    monkeypatch.setattr(update_check, "prime_from_cache", lambda: None)
-    monkeypatch.setattr(update_check, "refresh_latest_version", AsyncMock())
-    monkeypatch.setattr(update_check, "pending_update_notice", lambda: None)
+import linkedin_scraper_mcp.daemon as daemon_package
+from linkedin_scraper_mcp.daemon.liveness import CALL_HEADER
 
 
 def _proxy(tmp_path: Path, *, tool_timeout: float = 5.0) -> FastMCP:
-    from linkedin_mcp_server.server import create_mcp_server
-    from linkedin_mcp_server.server_role import ServerRole
+    from linkedin_scraper_mcp.server import create_mcp_server
+    from linkedin_scraper_mcp.server_role import ServerRole
 
     return create_mcp_server(
         role=ServerRole.PROXY,
@@ -196,7 +185,7 @@ class TestWhatAClientReads:
         # The frontend runs the same error-code layer as the owner. A code the
         # owner already named must come through as the owner named it, not be
         # reclassified on the way.
-        from linkedin_mcp_server.error_handler import (
+        from linkedin_scraper_mcp.error_handler import (
             ERROR_META_KEY,
             CodedToolError,
             ErrorCode,
@@ -392,7 +381,7 @@ class TestHowFarTheRequestGot:
 
     @staticmethod
     def _bound(tmp_path: Path) -> tuple[Any, Any]:
-        from linkedin_mcp_server.daemon.forwarder import CallBinding, OwnerForwarder
+        from linkedin_scraper_mcp.daemon.forwarder import CallBinding, OwnerForwarder
 
         backend = _backend(_attachment(tmp_path), tmp_path)
         binding = CallBinding("call-1", backend.attachment_for_a_call())
@@ -401,8 +390,8 @@ class TestHowFarTheRequestGot:
     async def test_a_refused_connection_sent_nothing(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server.daemon.core.call import Dispatch
-        from linkedin_mcp_server.daemon.forwarder import (
+        from linkedin_scraper_mcp.daemon.core.call import Dispatch
+        from linkedin_scraper_mcp.daemon.forwarder import (
             OwnerFailure,
             OwnerUnreachableError,
             bound_to,
@@ -425,8 +414,8 @@ class TestHowFarTheRequestGot:
         # the wire can say the owner answered it.
         from mcp import MCPError
 
-        from linkedin_mcp_server.daemon.core.call import Dispatch
-        from linkedin_mcp_server.daemon.forwarder import bound_to
+        from linkedin_scraper_mcp.daemon.core.call import Dispatch
+        from linkedin_scraper_mcp.daemon.forwarder import bound_to
 
         from test_daemon_proxy import _answers_with_an_error
 
@@ -452,8 +441,8 @@ class TestHowFarTheRequestGot:
         # The owner's whole answer is on the stream except the blank line that
         # ends its event, and then the stream ends. The SDK discards an
         # unterminated event, so the caller never got an answer.
-        from linkedin_mcp_server.daemon.core.call import Dispatch
-        from linkedin_mcp_server.daemon.forwarder import (
+        from linkedin_scraper_mcp.daemon.core.call import Dispatch
+        from linkedin_scraper_mcp.daemon.forwarder import (
             OwnerUnreachableError,
             bound_to,
         )
@@ -500,8 +489,8 @@ class TestHowFarTheRequestGot:
         assert binding.dispatch.state is Dispatch.POSSIBLY_SENT
 
     def test_the_record_never_moves_back(self):
-        from linkedin_mcp_server.daemon.core.call import Dispatch
-        from linkedin_mcp_server.daemon.forwarder import DispatchRecord
+        from linkedin_scraper_mcp.daemon.core.call import Dispatch
+        from linkedin_scraper_mcp.daemon.forwarder import DispatchRecord
 
         record = DispatchRecord()
         record.advance(Dispatch.ANSWERED)

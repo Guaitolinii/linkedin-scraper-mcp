@@ -3,7 +3,7 @@
 import pytest
 from patchright.async_api import async_playwright
 
-from linkedin_mcp_server.core.auth import _has_auth_cookie, wait_for_manual_login
+from linkedin_scraper_mcp.core.auth import _has_auth_cookie, wait_for_manual_login
 
 #: CI uses ``--dist loadgroup``. Keep every test that launches Chromium on one
 #: worker so browser startups cannot compete with the DOM cases' wall-clock

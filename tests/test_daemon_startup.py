@@ -24,17 +24,17 @@ from typing import Any, cast
 import pytest
 from test_daemon_config import _Frontend, _greeting
 
-import linkedin_mcp_server
-import linkedin_mcp_server.daemon.descriptor as daemon_descriptor
-import linkedin_mcp_server.daemon.spawn as spawn_module
+import linkedin_scraper_mcp
+import linkedin_scraper_mcp.daemon.descriptor as daemon_descriptor
+import linkedin_scraper_mcp.daemon.spawn as spawn_module
 import zipfile
-from linkedin_mcp_server.config.schema import AppConfig
-from linkedin_mcp_server.daemon import config as daemon_config
-from linkedin_mcp_server.daemon import startup
-from linkedin_mcp_server.daemon import version as daemon_version
-from linkedin_mcp_server.daemon.core.spawn import Started
-from linkedin_mcp_server.daemon.discovery import _DescriptorInspector
-from linkedin_mcp_server.daemon.election import obtain_owner
+from linkedin_scraper_mcp.config.schema import AppConfig
+from linkedin_scraper_mcp.daemon import config as daemon_config
+from linkedin_scraper_mcp.daemon import startup
+from linkedin_scraper_mcp.daemon import version as daemon_version
+from linkedin_scraper_mcp.daemon.core.spawn import Started
+from linkedin_scraper_mcp.daemon.discovery import _DescriptorInspector
+from linkedin_scraper_mcp.daemon.election import obtain_owner
 
 _NONCE = "0123456789abcdef" * 4
 _OTHER_NONCE = "fedcba9876543210" * 4
@@ -422,7 +422,7 @@ class TestClosingTheOutput:
 
 
 #: A stand-in owner, run as a script by the real interpreter in place of
-#: ``python -m linkedin_mcp_server.daemon.owner``. It speaks raw bytes on its own
+#: ``python -m linkedin_scraper_mcp.daemon.owner``. It speaks raw bytes on its own
 #: standard streams rather than through ``OwnerChannel``, so it can say what a
 #: genuine owner never would. Arguments: mode, fault, output directory.
 _STAND_IN_OWNER = r"""
@@ -432,7 +432,7 @@ import sys
 import time
 from pathlib import Path
 
-from linkedin_mcp_server.daemon import startup, version
+from linkedin_scraper_mcp.daemon import startup, version
 
 mode, fault, out = sys.argv[1], sys.argv[2], Path(sys.argv[3])
 
@@ -534,7 +534,7 @@ class _StandIns:
         real = subprocess.Popen
 
         def substitute(command: list[str], **kwargs: Any) -> subprocess.Popen[Any]:
-            if command[1:4] != ["-P", "-m", "linkedin_mcp_server.daemon.owner"]:
+            if command[1:4] != ["-P", "-m", "linkedin_scraper_mcp.daemon.owner"]:
                 return real(command, **kwargs)
             child = real(
                 [command[0], str(self.script), self.mode, self.fault, str(self.out)],
@@ -717,7 +717,7 @@ class TestRefusedBeforeSpawning:
         monkeypatch.setattr(
             daemon_version,
             "installed_build_identity",
-            lambda: "mcp-server-linkedin:9.9.9:sha256:" + "f" * 64,
+            lambda: "linkedin-scraper-mcp:9.9.9:sha256:" + "f" * 64,
         )
 
         outcome = obtain_owner(
@@ -777,20 +777,20 @@ class TestRefusedBeforeSpawning:
 class TestBuildIdentity:
     @pytest.fixture
     def package(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-        root = tmp_path / "linkedin_mcp_server"
+        root = tmp_path / "linkedin_scraper_mcp"
         (root / "daemon").mkdir(parents=True)
         (root / "__init__.py").write_text("")
         (root / "daemon" / "owner.py").write_text("SERVE = True\n")
         (root / "__pycache__").mkdir()
         (root / "__pycache__" / "x.cpython-313.pyc").write_bytes(b"\x00compiled")
-        monkeypatch.setattr(linkedin_mcp_server, "__file__", str(root / "__init__.py"))
+        monkeypatch.setattr(linkedin_scraper_mcp, "__file__", str(root / "__init__.py"))
         return root
 
     def test_it_names_the_distribution_and_version(self, package: Path):
         identity = daemon_version.installed_build_identity()
 
         assert identity.startswith(
-            f"mcp-server-linkedin:{linkedin_mcp_server.__version__}:"
+            f"linkedin-scraper-mcp:{linkedin_scraper_mcp.__version__}:"
         )
 
     @pytest.mark.parametrize(
@@ -817,12 +817,12 @@ class TestBuildIdentity:
     ):
         archive = tmp_path / "build.pyz"
         with zipfile.ZipFile(archive, "w") as bundle:
-            bundle.writestr("linkedin_mcp_server/__init__.py", "")
-            bundle.writestr("linkedin_mcp_server/daemon/owner.py", "SERVE = True\n")
+            bundle.writestr("linkedin_scraper_mcp/__init__.py", "")
+            bundle.writestr("linkedin_scraper_mcp/daemon/owner.py", "SERVE = True\n")
         monkeypatch.setattr(
-            linkedin_mcp_server,
+            linkedin_scraper_mcp,
             "__file__",
-            str(archive / "linkedin_mcp_server" / "__init__.py"),
+            str(archive / "linkedin_scraper_mcp" / "__init__.py"),
         )
 
         with pytest.raises(OSError):
@@ -890,7 +890,7 @@ class TestTheOwnersEnd:
         # meant for the protocol either.
         script = (
             "import os, subprocess, sys\n"
-            "from linkedin_mcp_server.daemon import startup\n"
+            "from linkedin_scraper_mcp.daemon import startup\n"
             "channel = startup.OwnerChannel.claim()\n"
             "print('stray print', flush=True)\n"
             "os.write(1, b'stray write\\n')\n"
@@ -932,8 +932,8 @@ class TestOwnerFinalization:
     def test_an_unauthorized_owner_frees_the_lock_it_holds(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ):
-        from linkedin_mcp_server.daemon import lock as daemon_lock
-        from linkedin_mcp_server.daemon import owner as daemon_owner
+        from linkedin_scraper_mcp.daemon import lock as daemon_lock
+        from linkedin_scraper_mcp.daemon import owner as daemon_owner
 
         monkeypatch.setattr(daemon_descriptor, "_account_home", lambda: tmp_path)
         profile = tmp_path / "profile"

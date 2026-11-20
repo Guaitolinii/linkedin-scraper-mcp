@@ -20,14 +20,14 @@ import pytest
 from patchright.async_api import TimeoutError as PlaywrightTimeoutError
 from patchright.async_api import async_playwright
 
-from linkedin_mcp_server.linkedin.capture import (
+from linkedin_scraper_mcp.linkedin.capture import (
     OverlayRootNotFoundError,
     SectionCapture,
 )
-from linkedin_mcp_server.linkedin.content import PageContentReader
-from linkedin_mcp_server.linkedin.contracts import RATE_LIMITED_SECTION_TEXT
-from linkedin_mcp_server.linkedin.navigation import PageNavigator
-from linkedin_mcp_server.linkedin.session import PageSession
+from linkedin_scraper_mcp.linkedin.content import PageContentReader
+from linkedin_scraper_mcp.linkedin.contracts import RATE_LIMITED_SECTION_TEXT
+from linkedin_scraper_mcp.linkedin.navigation import PageNavigator
+from linkedin_scraper_mcp.linkedin.session import PageSession
 
 #: Keep every test that launches Chromium on one worker; see
 #: ``test_root_content_dom.py``.

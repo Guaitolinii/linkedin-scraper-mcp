@@ -1,4 +1,4 @@
-from linkedin_mcp_server.exceptions import SessionExpiredError
+from linkedin_scraper_mcp.exceptions import SessionExpiredError
 
 
 def test_session_expired_default_message():

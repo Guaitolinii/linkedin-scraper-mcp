@@ -7,27 +7,27 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
-from linkedin_mcp_server.callbacks import ProgressCallback
-from linkedin_mcp_server.core.exceptions import (
+from linkedin_scraper_mcp.callbacks import ProgressCallback
+from linkedin_scraper_mcp.core.exceptions import (
     AuthenticationError,
     InvalidReferenceError,
 )
-from linkedin_mcp_server.linkedin import company as company_module
-from linkedin_mcp_server.linkedin.capture import (
+from linkedin_scraper_mcp.linkedin import company as company_module
+from linkedin_scraper_mcp.linkedin.capture import (
     CaptureMode,
     CapturePlan,
     SectionCapture,
 )
-from linkedin_mcp_server.linkedin.company import CompanyReader
-from linkedin_mcp_server.linkedin.content import PageContentReader
-from linkedin_mcp_server.linkedin.contracts import (
+from linkedin_scraper_mcp.linkedin.company import CompanyReader
+from linkedin_scraper_mcp.linkedin.content import PageContentReader
+from linkedin_scraper_mcp.linkedin.contracts import (
     RATE_LIMITED_SECTION_TEXT,
     ExtractedSection,
 )
-from linkedin_mcp_server.linkedin.fields import COMPANY_SECTIONS
-from linkedin_mcp_server.linkedin.link_metadata import Reference
-from linkedin_mcp_server.linkedin.navigation import PageNavigator
-from linkedin_mcp_server.linkedin.session import NAV_DELAY, PageSession
+from linkedin_scraper_mcp.linkedin.fields import COMPANY_SECTIONS
+from linkedin_scraper_mcp.linkedin.link_metadata import Reference
+from linkedin_scraper_mcp.linkedin.navigation import PageNavigator
+from linkedin_scraper_mcp.linkedin.session import NAV_DELAY, PageSession
 
 
 def _reader(page) -> CompanyReader:
@@ -62,7 +62,7 @@ class TestReadCompany:
                 return_value=extracted("company text"),
             ) as mock_extract,
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -105,7 +105,7 @@ class TestReadCompany:
                 return_value=extracted("text"),
             ) as mock_extract,
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -149,7 +149,7 @@ class TestReadCompany:
                 return_value=extracted("about text"),
             ) as mock_extract,
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -170,7 +170,7 @@ class TestReadCompany:
                 return_value=extracted("text"),
             ) as mock_extract,
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -212,7 +212,7 @@ class TestReadCompany:
                 return_value=extracted("text"),
             ) as mock_extract,
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -256,7 +256,7 @@ class TestReadCompany:
                 return_value=extracted("overlay text"),
             ) as mock_overlay,
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -296,7 +296,7 @@ class TestReadCompany:
                 return_value=extracted("text"),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ) as mock_sleep,
         ):
@@ -314,7 +314,7 @@ class TestReadCompany:
                 return_value=extracted("about text"),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ) as mock_sleep,
         ):
@@ -337,7 +337,7 @@ class TestReadCompany:
                 ],
             ) as mock_extract,
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -372,7 +372,7 @@ class TestReadCompany:
                 return_value=extracted(RATE_LIMITED_SECTION_TEXT),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -421,20 +421,20 @@ class TestReadCompany:
                 return_value=raw_root,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.scroll_to_bottom",
+                "linkedin_scraper_mcp.linkedin.session.scroll_to_bottom",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.detect_rate_limit",
+                "linkedin_scraper_mcp.linkedin.session.detect_rate_limit",
                 new_callable=AsyncMock,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.handle_modal_close",
+                "linkedin_scraper_mcp.linkedin.session.handle_modal_close",
                 new_callable=AsyncMock,
                 return_value=False,
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -460,7 +460,7 @@ class TestReadCompany:
                 return_value=extracted("about text"),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -486,7 +486,7 @@ class TestReadCompany:
             ),
             patch.object(company_module, "build_issue_diagnostics", diagnostics),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -531,7 +531,7 @@ class TestReadCompany:
                 side_effect=failure,
             ) as mock_extract,
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
@@ -565,7 +565,7 @@ class TestReadCompanyCallbacks:
                 return_value=extracted("text"),
             ),
             patch(
-                "linkedin_mcp_server.linkedin.session.asyncio.sleep",
+                "linkedin_scraper_mcp.linkedin.session.asyncio.sleep",
                 new_callable=AsyncMock,
             ),
         ):
