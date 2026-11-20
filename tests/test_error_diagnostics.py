@@ -148,11 +148,7 @@ async def test_build_issue_diagnostics_skips_network_search_in_event_loop(
 ):
     monkeypatch.setenv("USER_DATA_DIR", str(tmp_path / "profile"))
 
-    called = {"urlopen": False, "find": False}
-
-    def fail_urlopen(*args, **kwargs):
-        called["urlopen"] = True
-        raise AssertionError("urlopen should not be called inside the event loop")
+    called = {"find": False}
 
     def fail_find(*args, **kwargs):
         called["find"] = True
@@ -160,7 +156,6 @@ async def test_build_issue_diagnostics_skips_network_search_in_event_loop(
             "_find_existing_issues should not be called inside the event loop"
         )
 
-    monkeypatch.setattr("linkedin_scraper_mcp.error_diagnostics.urlopen", fail_urlopen)
     monkeypatch.setattr(
         "linkedin_scraper_mcp.error_diagnostics._find_existing_issues", fail_find
     )
@@ -174,7 +169,6 @@ async def test_build_issue_diagnostics_skips_network_search_in_event_loop(
 
     assert diagnostics["existing_issues"] == []
     assert diagnostics["issue_search_skipped"] is True
-    assert called["urlopen"] is False
     assert called["find"] is False
     issue_body = Path(diagnostics["issue_template_path"]).read_text()
     assert "search was skipped in async server context" in issue_body

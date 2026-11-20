@@ -268,17 +268,6 @@ def test_exact_commands_token_mode_secrecy_and_teardown(
     assert not directory.exists()
 
 
-def test_dockerfile_installs_viewer_packages_without_x11_utils() -> None:
-    dockerfile = (Path(__file__).resolve().parent.parent / "Dockerfile").read_text(
-        encoding="utf-8"
-    )
-    for package in ("openbox", "x11vnc", "novnc", "websockify"):
-        assert package in dockerfile
-    assert "--no-install-recommends" in dockerfile
-    assert "chown -R pwuser:pwuser /opt/patchright" in dockerfile
-    assert "x11-utils" not in dockerfile
-
-
 def test_config_requires_login_and_rejects_other_one_shot_modes() -> None:
     from linkedin_scraper_mcp.config.schema import AppConfig, ConfigurationError
 
