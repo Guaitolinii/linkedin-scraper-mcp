@@ -118,4 +118,4 @@ uv run linkedin-scraper-mcp --no-headless   # run locally with a visible browser
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
-Original work Copyright 2025-2026 Daniel Sticker. Modifications Copyright 2026 the linkedin-scraper-mcp authors.
+Original work Copyright 2025-2026 Daniel Sticker. Modifications Copyright 2026 Gustavo Guaitolini.
